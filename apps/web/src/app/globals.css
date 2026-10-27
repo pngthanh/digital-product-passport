@@ -1,0 +1,122 @@
+@import 'tailwindcss';
+
+/*
+ * Bảng màu mệnh Thủy: xanh đại dương đậm + xám lạnh trung tính. Không gradient.
+ * Màu ngữ nghĩa khai báo bằng biến CSS để đổi được theo chế độ sáng/tối.
+ */
+@theme {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-ocean-50: #eef4fa;
+  --color-ocean-100: #dbe8f4;
+  --color-ocean-200: #b7d0e8;
+  --color-ocean-300: #86b0d6;
+  --color-ocean-400: #4f88bf;
+  --color-ocean-500: #2c6aa6;
+  --color-ocean-600: #1b558c;
+  --color-ocean-700: #134673;
+  --color-ocean-800: #0e3859;
+  --color-ocean-900: #0a2a44;
+  --color-ocean-950: #061b2d;
+
+  --radius-control: 6px;
+  --radius-panel: 10px;
+}
+
+:root {
+  --canvas: #f4f6f8;
+  --surface: #ffffff;
+  --line: #dce3ea;
+  --line-strong: #c3ced9;
+  --ink: #0f1a24;
+  --muted: #5b6875;
+  --primary: var(--color-ocean-800);
+  --primary-hover: var(--color-ocean-900);
+  --primary-ink: #ffffff;
+  --tint: var(--color-ocean-50);
+  --tint-ink: var(--color-ocean-700);
+  --focus: var(--color-ocean-500);
+  --ok: #127a62;
+  --ok-tint: #e7f4ef;
+  --warn: #8f5b08;
+  --warn-tint: #fbf2e2;
+  --bad: #b4232c;
+  --bad-tint: #fbeaeb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #0b1117;
+    --surface: #111a23;
+    --line: #22313f;
+    --line-strong: #2f4355;
+    --ink: #e5ecf2;
+    --muted: #93a2b1;
+    --primary: var(--color-ocean-400);
+    --primary-hover: var(--color-ocean-300);
+    --primary-ink: var(--color-ocean-950);
+    --tint: #0e2638;
+    --tint-ink: var(--color-ocean-200);
+    --ok: #46b892;
+    --ok-tint: #0f2a22;
+    --warn: #d9a043;
+    --warn-tint: #2c2210;
+    --bad: #f06a72;
+    --bad-tint: #321619;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-tint: var(--tint);
+  --color-tint-ink: var(--tint-ink);
+  --color-focus: var(--focus);
+  --color-ok: var(--ok);
+  --color-ok-tint: var(--ok-tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-bad: var(--bad);
+  --color-bad-tint: var(--bad-tint);
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-ocean-200);
+    color: var(--color-ocean-950);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-worker/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Hardhat
+packages/contracts/artifacts/
+packages/contracts/cache/
+packages/contracts/types/
+packages/contracts/coverage/
+packages/contracts/ignition/deployments/chain-31337/
+
+# Prisma Client (sinh lại bằng `pnpm db:generate`)
+apps/api/src/infrastructure/database/generated/
+
+# Môi trường — không bao giờ commit khoá riêng
+.env
+.env.*
+!.env.example
+
+# Test & coverage
+coverage/
+
+# Hệ điều hành / IDE
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

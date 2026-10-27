@@ -1,0 +1,26 @@
+name: dpp
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: dpp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dpp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dpp_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-dpp}
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
+    volumes:
+      - dpp_pgdata:/var/lib/postgresql/data
+      # Chỉ chạy lần đầu khi volume còn trống: tạo thêm CSDL dpp_test cho test e2e.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-dpp} -d ${POSTGRES_DB:-dpp}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dpp_pgdata:

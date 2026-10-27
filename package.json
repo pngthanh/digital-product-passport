@@ -1,0 +1,33 @@
+{
+  "name": "dpp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hệ thống Hộ chiếu số sản phẩm (Digital Product Passport) trên Monad Testnet",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.13.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "postinstall": "pnpm --filter @dpp/shared build && pnpm --filter @dpp/api db:generate",
+    "dev": "pnpm --filter @dpp/api --filter @dpp/web --parallel run \"/^dev(:worker)?$/\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @dpp/api test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "pnpm --filter @dpp/api db:migrate",
+    "db:deploy": "pnpm --filter @dpp/api db:deploy",
+    "db:studio": "pnpm --filter @dpp/api db:studio",
+    "contracts:compile": "pnpm --filter @dpp/contracts compile",
+    "contracts:test": "pnpm --filter @dpp/contracts test"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}

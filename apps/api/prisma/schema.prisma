@@ -1,0 +1,783 @@
+// =============================================================================
+// Hộ chiếu số sản phẩm (DPP) — Logical Database Schema
+//
+// Ba loại dữ liệu (đánh dấu ở đầu mỗi model và ở từng cột khi bảng có cả hai):
+//   [A] Off-chain authoritative — Backend (API) ghi.
+//   [P] On-chain projection     — chỉ Indexer (Worker) ghi, chiếu từ event FINALIZED.
+//   [R] Raw event cache         — blockchain_events và checkpoint của Indexer.
+//
+// Quy ước lưu trữ:
+//   - Địa chỉ EVM: CHAR(42) chữ thường; hash/bytes32: CHAR(66) chữ thường.
+//   - Số MON: NUMERIC(78,0) theo wei. Thời gian: TIMESTAMPTZ.
+//   - Khoá ngoại ON DELETE RESTRICT; users/organizations chỉ xoá mềm.
+//   - CHECK constraint và trigger nằm trong file migration (Prisma không mô tả được).
+// =============================================================================
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/infrastructure/database/generated"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+  previewFeatures     = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Enum (PostgreSQL native enum) — khớp packages/shared/src/domain/enums.ts
+// -----------------------------------------------------------------------------
+
+enum SystemRole {
+  ADMIN
+  USER
+
+  @@map("system_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+  DELETED
+
+  @@map("user_status")
+}
+
+enum OrgType {
+  MANUFACTURER
+  RETAILER
+  SERVICE_CENTER
+  INSPECTOR
+
+  @@map("org_type")
+}
+
+enum AuthStatus {
+  PENDING
+  AUTHORIZED
+  REJECTED
+  DISABLED
+
+  @@map("auth_status")
+}
+
+enum PartyType {
+  USER
+  ORGANIZATION
+
+  @@map("party_type")
+}
+
+enum CustodyType {
+  CUSTODIAL
+  NON_CUSTODIAL
+
+  @@map("custody_type")
+}
+
+enum WalletRole {
+  OWNER
+  OPERATIONAL
+  PERSONAL
+
+  @@map("wallet_role")
+}
+
+enum WalletStatus {
+  PENDING
+  ACTIVE
+  ROTATED
+  REVOKED
+
+  @@map("wallet_status")
+}
+
+enum FeeAction {
+  ORG_REGISTRATION
+
+  @@map("fee_action")
+}
+
+enum FeeStatus {
+  ESCROWED
+  SETTLED
+  REFUNDABLE
+  REFUNDED
+
+  @@map("fee_status")
+}
+
+enum ProductState {
+  CREATED
+  IN_DISTRIBUTION
+  AT_RETAIL
+  SOLD
+  RECALLED
+  LOST_STOLEN
+  RETIRED
+
+  @@map("product_state")
+}
+
+/// Chưa có dòng warranties nghĩa là NOT_ACTIVATED.
+enum WarrantyState {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+
+  @@map("warranty_state")
+}
+
+enum ServiceState {
+  REQUESTED
+  IN_REPAIR
+  REPAIRED
+  REJECTED
+  CANCELLED
+
+  @@map("service_state")
+}
+
+enum TransferState {
+  REQUESTED
+  COMPLETED
+  REJECTED
+  CANCELLED
+  EXPIRED
+
+  @@map("transfer_state")
+}
+
+enum InspectionResult {
+  PASS
+  FAIL
+  CONDITIONAL
+
+  @@map("inspection_result")
+}
+
+enum SyncStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+
+  @@map("sync_status")
+}
+
+enum TxStatus {
+  QUEUED
+  SUBMITTED
+  CONFIRMED
+  REVERTED
+  FAILED
+
+  @@map("tx_status")
+}
+
+enum FinalityStatus {
+  PENDING
+  FINALIZED
+  ORPHANED
+
+  @@map("finality_status")
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+
+  @@map("notification_channel")
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+
+  @@map("notification_status")
+}
+
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@map("anomaly_severity")
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  DISMISSED
+
+  @@map("alert_status")
+}
+
+// -----------------------------------------------------------------------------
+// 1. Tài khoản & định danh
+// -----------------------------------------------------------------------------
+
+/// [A] Tài khoản đăng nhập (admin, người dùng cá nhân, đại diện tổ chức).
+model User {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  /// Lưu chữ thường (CHECK).
+  email        String     @unique @db.VarChar(255)
+  /// Mật khẩu đã BĂM bằng Argon2id (có salt), dạng chuỗi PHC `$argon2id$...`.
+  passwordHash String     @map("password_hash") @db.VarChar(255)
+  fullName     String     @map("full_name") @db.VarChar(255)
+  systemRole   SystemRole @default(USER) @map("system_role")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  party             Party?
+  auditLogs         AuditLog[]
+  chainTransactions ChainTransaction[]
+  reviewedAlerts    AnomalyAlert[]
+
+  @@index([status])
+  @@map("users")
+}
+
+/// [A+P] Tổ chức tham gia hệ thống. Cột [P]: authStatus, appliedAt, approvedAt, rejectedAt, disabledAt.
+model Organization {
+  id           String     @id @default(uuid(7)) @db.Uuid
+  name         String     @db.VarChar(255)
+  taxCode      String     @unique @map("tax_code") @db.VarChar(32)
+  orgType      OrgType    @map("org_type")
+  contactEmail String     @map("contact_email") @db.VarChar(255)
+  contactPhone String?    @map("contact_phone") @db.VarChar(32)
+  address      String?    @db.VarChar(500)
+  /// Hash hồ sơ pháp lý gửi kèm giao dịch applyOrganization.
+  profileHash  String?    @map("profile_hash") @db.Char(66)
+  authStatus   AuthStatus @default(PENDING) @map("auth_status")
+  appliedAt    DateTime?  @map("applied_at") @db.Timestamptz(6)
+  approvedAt   DateTime?  @map("approved_at") @db.Timestamptz(6)
+  rejectedAt   DateTime?  @map("rejected_at") @db.Timestamptz(6)
+  disabledAt   DateTime?  @map("disabled_at") @db.Timestamptz(6)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  party           Party?
+  issuedProducts  Product[]        @relation("ProductIssuer")
+  serviceRequests ServiceRequest[] @relation("ServiceCenter")
+  inspections     Inspection[]     @relation("Inspector")
+  recalls         Recall[]         @relation("RecallIssuer")
+
+  @@index([orgType, authStatus])
+  @@map("organizations")
+}
+
+/// [A+P] Chủ thể sở hữu/giữ hàng chung cho User và Organization. Cột [P]: chainPartyId.
+model Party {
+  id             String    @id @default(uuid(7)) @db.Uuid
+  partyType      PartyType @map("party_type")
+  userId         String?   @unique @map("user_id") @db.Uuid
+  organizationId String?   @unique @map("organization_id") @db.Uuid
+  /// partyId (bytes32) trong PartyRegistry.
+  chainPartyId   String?   @unique @map("chain_party_id") @db.Char(66)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  wallets                 PartyWallet[]
+  feePayments             FeePayment[]
+  custodiedProducts       Product[]         @relation("ProductCustodian")
+  incomingCustodyProducts Product[]         @relation("ProductPendingCustodian")
+  ownedProducts           Product[]         @relation("ProductOwner")
+  custodyFrom             CustodyRecord[]   @relation("CustodyFrom")
+  custodyTo               CustodyRecord[]   @relation("CustodyTo")
+  ownershipFrom           OwnershipRecord[] @relation("OwnershipFrom")
+  ownershipTo             OwnershipRecord[] @relation("OwnershipTo")
+  activatedWarranties     Warranty[]        @relation("WarrantyActivator")
+  serviceRequests         ServiceRequest[]  @relation("ServiceRequester")
+  outgoingTransfers       TransferRequest[] @relation("TransferFrom")
+  incomingTransfers       TransferRequest[] @relation("TransferTo")
+  notifications           Notification[]
+  anomalyAlerts           AnomalyAlert[]
+
+  @@map("parties")
+}
+
+/// [A+P] Ví thuộc một Party; giữ lịch sử khi xoay ví. Cột [P]: status, activatedAt, revokedAt, linkTxHash.
+model PartyWallet {
+  id          String       @id @default(uuid(7)) @db.Uuid
+  partyId     String       @map("party_id") @db.Uuid
+  address     String       @unique @db.Char(42)
+  custodyType CustodyType  @map("custody_type")
+  walletRole  WalletRole   @map("wallet_role")
+  status      WalletStatus @default(PENDING)
+  activatedAt DateTime?    @map("activated_at") @db.Timestamptz(6)
+  revokedAt   DateTime?    @map("revoked_at") @db.Timestamptz(6)
+  linkTxHash  String?      @map("link_tx_hash") @db.Char(66)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  party        Party         @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  custodialKey CustodialKey?
+
+  @@unique([partyId], map: "ux_wallet_one_active_owner", where: { walletRole: "OWNER", status: "ACTIVE" })
+  @@unique([partyId], map: "ux_wallet_one_active_personal", where: { walletRole: "PERSONAL", status: "ACTIVE" })
+  @@index([partyId, status])
+  @@map("party_wallets")
+}
+
+/// [A] Khoá riêng của ví custodial, mã hoá AES-256-GCM; khoá gốc nằm ngoài CSDL.
+model CustodialKey {
+  walletId   String   @id @map("wallet_id") @db.Uuid
+  ciphertext Bytes
+  iv         Bytes
+  authTag    Bytes    @map("auth_tag")
+  keyVersion Int      @default(1) @map("key_version")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  wallet PartyWallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@map("custodial_keys")
+}
+
+// -----------------------------------------------------------------------------
+// 2. Phí dịch vụ MON (phương án A: 8 MON vào Treasury, gas trả riêng cho mạng)
+// -----------------------------------------------------------------------------
+
+/// [P] Mức phí hiện hành đọc từ PartyRegistry (FeeUpdated, TreasuryUpdated).
+model FeePolicy {
+  action          FeeAction @id
+  amountWei       Decimal   @map("amount_wei") @db.Decimal(78, 0)
+  treasuryAddress String    @map("treasury_address") @db.Char(42)
+  updatedTxHash   String    @map("updated_tx_hash") @db.Char(66)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("fee_policies")
+}
+
+/// [P] Từng khoản phí đã nộp và dòng tiền của nó (ESCROWED → SETTLED | REFUNDABLE → REFUNDED).
+model FeePayment {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  partyId       String    @map("party_id") @db.Uuid
+  action        FeeAction
+  amountWei     Decimal   @map("amount_wei") @db.Decimal(78, 0)
+  payerAddress  String    @map("payer_address") @db.Char(42)
+  feeStatus     FeeStatus @map("fee_status")
+  paidTxHash    String    @unique @map("paid_tx_hash") @db.Char(66)
+  settledTxHash String?   @map("settled_tx_hash") @db.Char(66)
+  refundTxHash  String?   @map("refund_tx_hash") @db.Char(66)
+  paidAt        DateTime  @map("paid_at") @db.Timestamptz(6)
+  settledAt     DateTime? @map("settled_at") @db.Timestamptz(6)
+  refundedAt    DateTime? @map("refunded_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Restrict)
+
+  @@index([partyId, action])
+  @@index([feeStatus])
+  @@map("fee_payments")
+}
+
+// -----------------------------------------------------------------------------
+// 3. Sản phẩm, custody và ownership
+// -----------------------------------------------------------------------------
+
+/// [A+P] Hồ sơ sản phẩm. Cột [P]: productState, currentCustodianPartyId, pendingCustodianPartyId,
+/// currentOwnerPartyId, createdTxHash, syncStatus, onchainCreatedAt.
+model Product {
+  id                      String        @id @default(uuid(7)) @db.Uuid
+  /// productId (bytes32) on-chain, Backend tính trước từ serial.
+  chainProductId          String        @unique @map("chain_product_id") @db.Char(66)
+  serialNumber            String        @unique @map("serial_number") @db.VarChar(100)
+  /// Mã ngẫu nhiên in trên QR, tránh lộ serial và chống dò quét.
+  publicCode              String        @unique @map("public_code") @db.VarChar(32)
+  modelName               String        @map("model_name") @db.VarChar(255)
+  description             String?
+  metadataHash            String        @map("metadata_hash") @db.Char(66)
+  issuerOrgId             String        @map("issuer_org_id") @db.Uuid
+  productState            ProductState? @map("product_state")
+  currentCustodianPartyId String?       @map("current_custodian_party_id") @db.Uuid
+  pendingCustodianPartyId String?       @map("pending_custodian_party_id") @db.Uuid
+  currentOwnerPartyId     String?       @map("current_owner_party_id") @db.Uuid
+  createdTxHash           String?       @unique @map("created_tx_hash") @db.Char(66)
+  syncStatus              SyncStatus    @default(PENDING) @map("sync_status")
+  onchainCreatedAt        DateTime?     @map("onchain_created_at") @db.Timestamptz(6)
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  issuer           Organization @relation("ProductIssuer", fields: [issuerOrgId], references: [id], onDelete: Restrict)
+  currentCustodian Party?       @relation("ProductCustodian", fields: [currentCustodianPartyId], references: [id], onDelete: Restrict)
+  pendingCustodian Party?       @relation("ProductPendingCustodian", fields: [pendingCustodianPartyId], references: [id], onDelete: Restrict)
+  currentOwner     Party?       @relation("ProductOwner", fields: [currentOwnerPartyId], references: [id], onDelete: Restrict)
+
+  custodyRecords   CustodyRecord[]
+  ownershipRecords OwnershipRecord[]
+  warranty         Warranty?
+  serviceRequests  ServiceRequest[]
+  inspections      Inspection[]
+  recall           Recall?
+  transferRequests TransferRequest[]
+  events           BlockchainEvent[]
+  anomalyAlerts    AnomalyAlert[]
+
+  @@index([issuerOrgId, createdAt])
+  @@index([productState])
+  @@index([currentOwnerPartyId])
+  @@index([currentCustodianPartyId])
+  @@index([syncStatus])
+  @@map("products")
+}
+
+/// [P] «projection» Lịch sử custody, dựng từ event CustodyTransferred.
+model CustodyRecord {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  productId     String   @map("product_id") @db.Uuid
+  /// NULL ở lần ghi đầu tiên khi sản phẩm được tạo.
+  fromPartyId   String?  @map("from_party_id") @db.Uuid
+  toPartyId     String   @map("to_party_id") @db.Uuid
+  eventId       String   @unique @map("event_id") @db.Uuid
+  transferredAt DateTime @map("transferred_at") @db.Timestamptz(6)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  fromParty Party?          @relation("CustodyFrom", fields: [fromPartyId], references: [id], onDelete: Restrict)
+  toParty   Party           @relation("CustodyTo", fields: [toPartyId], references: [id], onDelete: Restrict)
+  event     BlockchainEvent @relation("CustodyEvent", fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([productId, transferredAt])
+  @@map("custody_records")
+}
+
+/// [P] «projection» Lịch sử ownership, dựng từ event OwnershipTransferred.
+model OwnershipRecord {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  productId         String   @map("product_id") @db.Uuid
+  /// NULL ở lần bán đầu tiên (retailer → khách hàng).
+  fromPartyId       String?  @map("from_party_id") @db.Uuid
+  toPartyId         String   @map("to_party_id") @db.Uuid
+  transferRequestId String?  @map("transfer_request_id") @db.Uuid
+  eventId           String   @unique @map("event_id") @db.Uuid
+  transferredAt     DateTime @map("transferred_at") @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  fromParty       Party?           @relation("OwnershipFrom", fields: [fromPartyId], references: [id], onDelete: Restrict)
+  toParty         Party            @relation("OwnershipTo", fields: [toPartyId], references: [id], onDelete: Restrict)
+  transferRequest TransferRequest? @relation(fields: [transferRequestId], references: [id], onDelete: Restrict)
+  event           BlockchainEvent  @relation("OwnershipEvent", fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([productId, transferredAt])
+  @@map("ownership_records")
+}
+
+// -----------------------------------------------------------------------------
+// 4. Bảo hành, dịch vụ, kiểm định, thu hồi
+// -----------------------------------------------------------------------------
+
+/// [P] Bảo hành hiện hành, tối đa 1 bản ghi/sản phẩm.
+model Warranty {
+  id                 String        @id @default(uuid(7)) @db.Uuid
+  productId          String        @unique @map("product_id") @db.Uuid
+  activatedByPartyId String        @map("activated_by_party_id") @db.Uuid
+  activatedAt        DateTime      @map("activated_at") @db.Timestamptz(6)
+  expiresAt          DateTime      @map("expires_at") @db.Timestamptz(6)
+  warrantyState      WarrantyState @map("warranty_state")
+  activationTxHash   String        @unique @map("activation_tx_hash") @db.Char(66)
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  activatedBy Party   @relation("WarrantyActivator", fields: [activatedByPartyId], references: [id], onDelete: Restrict)
+
+  @@index([warrantyState, expiresAt])
+  @@map("warranties")
+}
+
+/// [A+P] Phiếu dịch vụ. Backend ghi REQUESTED/CANCELLED; Indexer ghi IN_REPAIR/REPAIRED/REJECTED
+/// cùng các cột [P]: chainTicketId, warrantyCovered, openedAt, closedAt, openTxHash, closeTxHash.
+model ServiceRequest {
+  id                 String       @id @default(uuid(7)) @db.Uuid
+  productId          String       @map("product_id") @db.Uuid
+  requestedByPartyId String       @map("requested_by_party_id") @db.Uuid
+  serviceCenterOrgId String       @map("service_center_org_id") @db.Uuid
+  issueDesc          String       @map("issue_desc")
+  serviceState       ServiceState @default(REQUESTED) @map("service_state")
+  requestedAt        DateTime     @default(now()) @map("requested_at") @db.Timestamptz(6)
+  cancelledAt        DateTime?    @map("cancelled_at") @db.Timestamptz(6)
+  chainTicketId      String?      @unique @map("chain_ticket_id") @db.Char(66)
+  warrantyCovered    Boolean?     @map("warranty_covered")
+  openedAt           DateTime?    @map("opened_at") @db.Timestamptz(6)
+  closedAt           DateTime?    @map("closed_at") @db.Timestamptz(6)
+  openTxHash         String?      @map("open_tx_hash") @db.Char(66)
+  closeTxHash        String?      @map("close_tx_hash") @db.Char(66)
+  createdAt          DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  requestedBy   Party           @relation("ServiceRequester", fields: [requestedByPartyId], references: [id], onDelete: Restrict)
+  serviceCenter Organization    @relation("ServiceCenter", fields: [serviceCenterOrgId], references: [id], onDelete: Restrict)
+  records       ServiceRecord[]
+
+  @@unique([productId], map: "ux_service_one_open", where: raw("service_state = ANY (ARRAY['REQUESTED'::service_state, 'IN_REPAIR'::service_state])"))
+  @@index([serviceCenterOrgId, serviceState])
+  @@index([requestedByPartyId])
+  @@index([productId, requestedAt])
+  @@map("service_requests")
+}
+
+/// [A+P] Sự kiện sửa chữa kèm bằng chứng. Cột [P]: recordedAt, txHash, syncStatus.
+model ServiceRecord {
+  id               String     @id @default(uuid(7)) @db.Uuid
+  serviceRequestId String     @map("service_request_id") @db.Uuid
+  actionCode       String     @map("action_code") @db.VarChar(64)
+  actionDetail     String?    @map("action_detail")
+  evidenceUrl      String?    @map("evidence_url") @db.VarChar(1000)
+  evidenceHash     String     @map("evidence_hash") @db.Char(66)
+  recordedAt       DateTime?  @map("recorded_at") @db.Timestamptz(6)
+  txHash           String?    @unique @map("tx_hash") @db.Char(66)
+  syncStatus       SyncStatus @default(PENDING) @map("sync_status")
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  serviceRequest ServiceRequest @relation(fields: [serviceRequestId], references: [id], onDelete: Restrict)
+
+  @@index([serviceRequestId, createdAt])
+  @@map("service_records")
+}
+
+/// [A+P] Kết quả kiểm định. Cột [P]: chainInspectionId, inspectedAt, txHash, syncStatus.
+model Inspection {
+  id                String           @id @default(uuid(7)) @db.Uuid
+  productId         String           @map("product_id") @db.Uuid
+  inspectorOrgId    String           @map("inspector_org_id") @db.Uuid
+  result            InspectionResult
+  summary           String?
+  reportUrl         String?          @map("report_url") @db.VarChar(1000)
+  reportHash        String           @map("report_hash") @db.Char(66)
+  chainInspectionId String?          @unique @map("chain_inspection_id") @db.Char(66)
+  inspectedAt       DateTime?        @map("inspected_at") @db.Timestamptz(6)
+  txHash            String?          @unique @map("tx_hash") @db.Char(66)
+  syncStatus        SyncStatus       @default(PENDING) @map("sync_status")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  inspector Organization @relation("Inspector", fields: [inspectorOrgId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt])
+  @@index([inspectorOrgId])
+  @@map("inspections")
+}
+
+/// [A+P] Thu hồi sản phẩm (RECALLED là trạng thái cuối). Cột [P]: recalledAt, txHash, syncStatus.
+model Recall {
+  id          String     @id @default(uuid(7)) @db.Uuid
+  productId   String     @unique @map("product_id") @db.Uuid
+  issuerOrgId String     @map("issuer_org_id") @db.Uuid
+  reason      String
+  reasonHash  String     @map("reason_hash") @db.Char(66)
+  recalledAt  DateTime?  @map("recalled_at") @db.Timestamptz(6)
+  txHash      String?    @unique @map("tx_hash") @db.Char(66)
+  syncStatus  SyncStatus @default(PENDING) @map("sync_status")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  issuer  Organization @relation("RecallIssuer", fields: [issuerOrgId], references: [id], onDelete: Restrict)
+
+  @@index([issuerOrgId])
+  @@map("recalls")
+}
+
+// -----------------------------------------------------------------------------
+// 5. Chuyển quyền sở hữu
+// -----------------------------------------------------------------------------
+
+/// [P] Yêu cầu chuyển quyền, chỉ Indexer tạo/cập nhật từ event. Mọi tx của một request
+/// tra trong blockchain_events theo correlation_key = requestId.
+model TransferRequest {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  chainRequestId BigInt        @unique @map("chain_request_id")
+  productId      String        @map("product_id") @db.Uuid
+  fromPartyId    String        @map("from_party_id") @db.Uuid
+  toPartyId      String        @map("to_party_id") @db.Uuid
+  transferState  TransferState @map("transfer_state")
+  expiresAt      DateTime      @map("expires_at") @db.Timestamptz(6)
+  requestedAt    DateTime      @map("requested_at") @db.Timestamptz(6)
+  closedAt       DateTime?     @map("closed_at") @db.Timestamptz(6)
+  createdTxHash  String        @unique @map("created_tx_hash") @db.Char(66)
+  closedTxHash   String?       @map("closed_tx_hash") @db.Char(66)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product          Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+  fromParty        Party             @relation("TransferFrom", fields: [fromPartyId], references: [id], onDelete: Restrict)
+  toParty          Party             @relation("TransferTo", fields: [toPartyId], references: [id], onDelete: Restrict)
+  ownershipRecords OwnershipRecord[]
+
+  @@unique([productId], map: "ux_transfer_one_active", where: { transferState: "REQUESTED" })
+  @@index([fromPartyId, transferState])
+  @@index([toPartyId, transferState])
+  @@index([transferState, expiresAt])
+  @@index([productId, requestedAt])
+  @@map("transfer_requests")
+}
+
+// -----------------------------------------------------------------------------
+// 6. Thông báo, audit, giám sát
+// -----------------------------------------------------------------------------
+
+/// [A] Thông báo gửi tới Party (ví dụ cảnh báo thu hồi).
+model Notification {
+  id               String              @id @default(uuid(7)) @db.Uuid
+  recipientPartyId String              @map("recipient_party_id") @db.Uuid
+  channel          NotificationChannel @default(IN_APP)
+  notificationType String              @map("notification_type") @db.VarChar(64)
+  payload          Json
+  status           NotificationStatus  @default(PENDING)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  sentAt           DateTime?           @map("sent_at") @db.Timestamptz(6)
+  readAt           DateTime?           @map("read_at") @db.Timestamptz(6)
+
+  recipient Party @relation(fields: [recipientPartyId], references: [id], onDelete: Restrict)
+
+  @@index([recipientPartyId, createdAt])
+  @@index([status])
+  @@map("notifications")
+}
+
+/// [A] Nhật ký thao tác ứng dụng. Chỉ INSERT — trigger trong migration chặn UPDATE/DELETE.
+model AuditLog {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String   @db.VarChar(64)
+  targetType  String   @map("target_type") @db.VarChar(64)
+  targetId    String?  @map("target_id") @db.VarChar(100)
+  metadata    Json?
+  ipAddress   String?  @map("ip_address") @db.Inet
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// [A] Cảnh báo bất thường do Scheduler phát hiện, Admin xử lý.
+model AnomalyAlert {
+  id               String          @id @default(uuid(7)) @db.Uuid
+  ruleCode         String          @map("rule_code") @db.VarChar(64)
+  severity         AnomalySeverity
+  productId        String?         @map("product_id") @db.Uuid
+  partyId          String?         @map("party_id") @db.Uuid
+  details          Json?
+  alertStatus      AlertStatus     @default(OPEN) @map("alert_status")
+  detectedAt       DateTime        @default(now()) @map("detected_at") @db.Timestamptz(6)
+  reviewedByUserId String?         @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt       DateTime?       @map("reviewed_at") @db.Timestamptz(6)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Restrict)
+  party      Party?   @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  reviewedBy User?    @relation(fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([alertStatus, detectedAt])
+  @@index([ruleCode])
+  @@map("anomaly_alerts")
+}
+
+// -----------------------------------------------------------------------------
+// 7. Giao dịch và đồng bộ blockchain
+// -----------------------------------------------------------------------------
+
+/// [A] Giao dịch do Backend gửi (outbox + theo dõi). Nguồn số liệu benchmark gas.
+model ChainTransaction {
+  id                   String    @id @default(uuid(7)) @db.Uuid
+  initiatedByUserId    String?   @map("initiated_by_user_id") @db.Uuid
+  chainId              Int       @map("chain_id")
+  fromAddress          String    @map("from_address") @db.Char(42)
+  toAddress            String    @map("to_address") @db.Char(42)
+  contractName         String    @map("contract_name") @db.VarChar(64)
+  method               String    @db.VarChar(64)
+  txHash               String?   @unique @map("tx_hash") @db.Char(66)
+  nonce                Int?
+  /// Monad tính phí theo gas limit nên phải lưu để đối chiếu chi phí.
+  gasLimit             BigInt?   @map("gas_limit")
+  maxFeePerGas         Decimal?  @map("max_fee_per_gas") @db.Decimal(78, 0)
+  maxPriorityFeePerGas Decimal?  @map("max_priority_fee_per_gas") @db.Decimal(78, 0)
+  valueWei             Decimal   @default(0) @map("value_wei") @db.Decimal(78, 0)
+  txStatus             TxStatus  @default(QUEUED) @map("tx_status")
+  errorReason          String?   @map("error_reason")
+  blockNumber          BigInt?   @map("block_number")
+  gasUsed              BigInt?   @map("gas_used")
+  effectiveGasPrice    Decimal?  @map("effective_gas_price") @db.Decimal(78, 0)
+  submittedAt          DateTime? @map("submitted_at") @db.Timestamptz(6)
+  confirmedAt          DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  initiatedBy User? @relation(fields: [initiatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([txStatus, createdAt])
+  @@index([fromAddress, nonce])
+  @@index([contractName, method])
+  @@map("chain_transactions")
+}
+
+/// [R] Bản sao log event, đủ metadata để kiểm tra finality và reorg.
+/// Khoá idempotent: (chain_id, tx_hash, log_index).
+model BlockchainEvent {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  chainId         Int            @map("chain_id")
+  contractAddress String         @map("contract_address") @db.Char(42)
+  blockNumber     BigInt         @map("block_number")
+  blockHash       String         @map("block_hash") @db.Char(66)
+  blockTimestamp  DateTime       @map("block_timestamp") @db.Timestamptz(6)
+  txHash          String         @map("tx_hash") @db.Char(66)
+  txIndex         Int            @map("tx_index")
+  logIndex        Int            @map("log_index")
+  eventName       String         @map("event_name") @db.VarChar(100)
+  /// productId (bytes32) trong event, lưu cả khi chưa khớp được bảng products.
+  chainProductId  String?        @map("chain_product_id") @db.Char(66)
+  productId       String?        @map("product_id") @db.Uuid
+  /// Khoá nghiệp vụ để gom các event cùng đối tượng (requestId, ticketId, partyId…).
+  correlationKey  String?        @map("correlation_key") @db.VarChar(80)
+  actorAddress    String?        @map("actor_address") @db.Char(42)
+  payload         Json
+  finalityStatus  FinalityStatus @default(PENDING) @map("finality_status")
+  observedAt      DateTime       @default(now()) @map("observed_at") @db.Timestamptz(6)
+  finalizedAt     DateTime?      @map("finalized_at") @db.Timestamptz(6)
+  orphanedAt      DateTime?      @map("orphaned_at") @db.Timestamptz(6)
+
+  product         Product?         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  custodyRecord   CustodyRecord?   @relation("CustodyEvent")
+  ownershipRecord OwnershipRecord? @relation("OwnershipEvent")
+
+  @@unique([chainId, txHash, logIndex], map: "ux_blockchain_events_identity")
+  @@index([productId, blockNumber, logIndex])
+  @@index([chainProductId, blockNumber, logIndex])
+  @@index([correlationKey])
+  @@index([chainId, blockNumber])
+  @@index([finalityStatus, blockNumber])
+  @@index([eventName])
+  @@map("blockchain_events")
+}
+
+/// [R] Vị trí đồng bộ của Indexer theo từng contract.
+model IndexerCheckpoint {
+  chainId                Int      @map("chain_id")
+  contractAddress        String   @map("contract_address") @db.Char(42)
+  lastObservedBlock      BigInt   @map("last_observed_block")
+  lastFinalizedBlock     BigInt   @map("last_finalized_block")
+  lastFinalizedBlockHash String   @map("last_finalized_block_hash") @db.Char(66)
+  updatedAt              DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@id([chainId, contractAddress])
+  @@map("indexer_checkpoints")
+}

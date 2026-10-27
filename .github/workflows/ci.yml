@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: dpp
+          POSTGRES_PASSWORD: dpp_ci_password
+          POSTGRES_DB: dpp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dpp -d dpp_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://dpp:dpp_ci_password@localhost:5432/dpp_test
+      TEST_DATABASE_URL: postgresql://dpp:dpp_ci_password@localhost:5432/dpp_test
+      CHAIN_ID: '31337'
+      RPC_URL: http://127.0.0.1:8545
+      NEXT_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Cài đặt
+        run: pnpm install --frozen-lockfile
+
+      - name: Kiểm tra định dạng
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit test (shared, api, web) và test contract
+        run: pnpm test
+
+      - name: Áp migration vào CSDL test
+        run: pnpm --filter @dpp/api db:deploy:test
+
+      - name: Test e2e trên PostgreSQL thật
+        run: pnpm test:e2e
+
+      - name: Build
+        run: pnpm build
