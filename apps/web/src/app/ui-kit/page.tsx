@@ -11,6 +11,7 @@ import {
   SERVICE_STATE_LABELS,
   type StateLabel,
   TRANSFER_STATE_LABELS,
+  WALLET_STATUS_LABELS,
   WARRANTY_STATE_LABELS,
 } from '@/lib/state-labels';
 
@@ -33,6 +34,7 @@ const STATE_GROUPS: ReadonlyArray<{ title: string; labels: Record<string, StateL
   { title: 'Bảo hành', labels: WARRANTY_STATE_LABELS },
   { title: 'Phiếu dịch vụ', labels: SERVICE_STATE_LABELS },
   { title: 'Chuyển quyền', labels: TRANSFER_STATE_LABELS },
+  { title: 'Ví', labels: WALLET_STATUS_LABELS },
 ];
 
 const SAMPLE_ADDRESS = '0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed';

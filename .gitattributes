@@ -1,1 +1,2 @@
+# Luôn lưu và checkout bằng LF, kể cả trên Windows (Prettier kiểm tra LF).
 * text=auto eol=lf

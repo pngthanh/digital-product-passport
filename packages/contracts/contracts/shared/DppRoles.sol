@@ -4,6 +4,9 @@ pragma solidity ^0.8.28;
 // Role theo quy ước OpenZeppelin AccessControl: keccak256("<TÊN>_ROLE").
 // Khớp `packages/shared/src/domain/roles.ts`.
 
+// Khoá ký giấy phép gắn ví của backend; chỉ ký EIP-712, không gửi giao dịch.
+bytes32 constant REGISTRAR_ROLE = keccak256("REGISTRAR_ROLE");
+
 // Role nghiệp vụ, gắn với partyId của tổ chức trong PartyRegistry.
 bytes32 constant MANUFACTURER_ROLE = keccak256("MANUFACTURER_ROLE");
 bytes32 constant RETAILER_ROLE = keccak256("RETAILER_ROLE");

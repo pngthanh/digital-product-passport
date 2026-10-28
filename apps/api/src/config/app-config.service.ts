@@ -3,6 +3,20 @@ import { Injectable, type LogLevel } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from './env.schema.js';
 
+export interface SessionConfig {
+  readonly jwtSecret: string;
+  readonly ttlMinutes: number;
+  /** Cookie chỉ gửi qua HTTPS khi web chạy HTTPS. */
+  readonly secureCookie: boolean;
+  readonly authRateLimitPerMinute: number;
+}
+
+/** Cấu hình PartyRegistry; `null` khi chưa deploy hoặc chưa khai báo khoá ký giấy phép. */
+export interface IdentityChainConfig {
+  readonly registrarPrivateKey: string;
+  readonly partyRegistryAddress: string;
+}
+
 export interface ChainConfig {
   readonly chainId: number;
   readonly network: ChainNetwork;
@@ -58,5 +72,27 @@ export class AppConfigService {
         : [this.config.get('RPC_URL', { infer: true })],
       timeoutMs: this.config.get('RPC_TIMEOUT_MS', { infer: true }),
     };
+  }
+
+  get session(): SessionConfig {
+    return {
+      jwtSecret: this.config.get('JWT_SECRET', { infer: true }),
+      ttlMinutes: this.config.get('SESSION_TTL_MINUTES', { infer: true }),
+      secureCookie: new URL(this.webOrigin).protocol === 'https:',
+      authRateLimitPerMinute: this.config.get('AUTH_RATE_LIMIT_PER_MINUTE', { infer: true }),
+    };
+  }
+
+  /** Địa chỉ PartyRegistry đã deploy; `null` nếu chưa khai báo. */
+  get partyRegistryAddress(): string | null {
+    return this.config.get('PARTY_REGISTRY_ADDRESS', { infer: true }) ?? null;
+  }
+
+  get identityChain(): IdentityChainConfig | null {
+    const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });
+    const partyRegistryAddress = this.config.get('PARTY_REGISTRY_ADDRESS', { infer: true });
+    return registrarPrivateKey && partyRegistryAddress
+      ? { registrarPrivateKey, partyRegistryAddress }
+      : null;
   }
 }

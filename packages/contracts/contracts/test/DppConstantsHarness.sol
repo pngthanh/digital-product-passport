@@ -15,6 +15,7 @@ import {
     INSPECTOR_ROLE,
     MANUFACTURER_ROLE,
     PRODUCT_CONTRACT_ROLE,
+    REGISTRAR_ROLE,
     RETAILER_ROLE,
     SERVICE_CENTER_ROLE,
     TRANSFER_CONTRACT_ROLE
@@ -22,8 +23,9 @@ import {
 
 /// @notice Chỉ dùng trong test: lộ hằng số đã biên dịch để đối chiếu với @dpp/shared.
 contract DppConstantsHarness {
-    function roleIds() external pure returns (bytes32[6] memory) {
+    function roleIds() external pure returns (bytes32[7] memory) {
         return [
+            REGISTRAR_ROLE,
             MANUFACTURER_ROLE,
             RETAILER_ROLE,
             SERVICE_CENTER_ROLE,

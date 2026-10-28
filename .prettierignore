@@ -9,3 +9,5 @@ packages/contracts/cache
 packages/contracts/types
 apps/api/src/infrastructure/database/generated
 apps/api/prisma/migrations
+packages/shared/src/abi
+packages/contracts/ignition/deployments

@@ -31,6 +31,17 @@ const blockchainEvent = (overrides: Record<string, unknown> = {}) => ({
  * Kiểm chứng các ràng buộc CSDL theo góp ý của giảng viên trên PostgreSQL thật.
  * Mỗi test vi phạm đúng một ràng buộc và kiểm tra tên ràng buộc trong lỗi trả về.
  */
+/** Yêu cầu liên kết ví cá nhân đang chờ (M2). */
+function pendingPersonalWallet(partyId: string, address: string) {
+  return {
+    partyId,
+    address,
+    custodyType: 'NON_CUSTODIAL' as const,
+    walletRole: 'PERSONAL' as const,
+    status: 'PENDING' as const,
+  };
+}
+
 describe('Ràng buộc CSDL', () => {
   let prisma: PrismaClient;
   let fixtures: Fixtures;
@@ -305,6 +316,19 @@ describe('Ràng buộc CSDL', () => {
         'ux_wallet_one_active_owner',
       );
     });
+
+    it('mỗi người dùng chỉ có một yêu cầu liên kết ví cá nhân đang chờ (M2)', async () => {
+      await prisma.partyWallet.create({
+        data: pendingPersonalWallet(fixtures.ownerPartyId, randomAddress()),
+      });
+
+      await expectConstraintViolation(
+        prisma.partyWallet.create({
+          data: pendingPersonalWallet(fixtures.ownerPartyId, randomAddress()),
+        }),
+        'ux_wallet_one_pending_personal',
+      );
+    });
   });
 
   describe('blockchain_events phục vụ Indexer và kiểm tra reorg', () => {
@@ -397,6 +421,20 @@ describe('Ràng buộc CSDL', () => {
           },
         }),
         'ck_users_email_lowercase',
+      );
+    });
+
+    it('session_version không âm (M2, thu hồi JWT)', async () => {
+      await expectConstraintViolation(
+        prisma.user.create({
+          data: {
+            email: 'nguyenvand@example.vn',
+            fullName: 'D',
+            passwordHash: SAMPLE_ARGON2ID_HASH,
+            sessionVersion: -1,
+          },
+        }),
+        'ck_users_session_version_non_negative',
       );
     });
   });

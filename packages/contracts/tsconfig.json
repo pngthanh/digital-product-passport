@@ -9,5 +9,11 @@
     "types": ["node", "mocha"],
     "verbatimModuleSyntax": true
   },
-  "include": ["hardhat.config.ts", "test/**/*.ts", "scripts/**/*.ts", "ignition/**/*.ts"]
+  "include": [
+    "hardhat.config.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "ignition/**/*.ts",
+    "types/ethers-contracts/**/*.ts"
+  ]
 }

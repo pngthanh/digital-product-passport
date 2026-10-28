@@ -7,6 +7,8 @@ import { OrgType } from './enums.js';
  * Khớp với `packages/contracts/contracts/shared/DppRoles.sol`.
  */
 export const DEFAULT_ADMIN_ROLE = ZeroHash;
+/** Khoá ký giấy phép gắn ví của backend (chỉ ký EIP-712, không gửi giao dịch). */
+export const REGISTRAR_ROLE = id('REGISTRAR_ROLE');
 export const MANUFACTURER_ROLE = id('MANUFACTURER_ROLE');
 export const RETAILER_ROLE = id('RETAILER_ROLE');
 export const SERVICE_CENTER_ROLE = id('SERVICE_CENTER_ROLE');

@@ -1,0 +1,84 @@
+import { Injectable } from '@nestjs/common';
+import { PARTY_REGISTRY_ABI, PARTY_REGISTRY_CONTRACT_NAME } from '@dpp/shared';
+import { type InterfaceAbi, Interface, type ParamType } from 'ethers';
+import { AppConfigService } from '../../../config/app-config.service.js';
+import type { ChainLog } from '../application/chain-reader.port.js';
+import type { ContractCatalog, DecodedLog } from '../application/contract-catalog.port.js';
+import type { ChainEventArg } from '../domain/chain-event.js';
+
+interface CatalogEntry {
+  name: string;
+  address: string;
+  abi: Interface;
+  /** Tham số event dùng làm correlation_key. */
+  correlationArg: string | null;
+}
+
+/** Số nguyên tới 48 bit giữ dạng number (enum, chỉ số); lớn hơn thì dạng chuỗi để không mất chính xác. */
+const SAFE_INTEGER_BITS = 48;
+
+/** Danh mục contract từ cấu hình; ABI lấy từ @dpp/shared (sinh từ artifact Hardhat). */
+@Injectable()
+export class AbiContractCatalog implements ContractCatalog {
+  private readonly entries: CatalogEntry[];
+
+  constructor(config: AppConfigService) {
+    const definitions: Array<[string, string | null, InterfaceAbi, string | null]> = [
+      [PARTY_REGISTRY_CONTRACT_NAME, config.partyRegistryAddress, PARTY_REGISTRY_ABI, 'partyId'],
+    ];
+    this.entries = definitions.flatMap(([name, address, abi, correlationArg]) =>
+      address
+        ? [{ name, address: address.toLowerCase(), abi: new Interface(abi), correlationArg }]
+        : [],
+    );
+  }
+
+  addressOf(contractName: string): string | null {
+    return this.entries.find((entry) => entry.name === contractName)?.address ?? null;
+  }
+
+  decodeMethod(contractName: string, data: string): string | null {
+    const entry = this.entries.find((candidate) => candidate.name === contractName);
+    try {
+      return entry?.abi.parseTransaction({ data })?.name ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  decodeLog(log: ChainLog): DecodedLog | null {
+    const entry = this.entries.find((candidate) => candidate.address === log.address);
+    const parsed = entry?.abi.parseLog({ topics: [...log.topics], data: log.data });
+    if (!entry || !parsed) {
+      return null;
+    }
+    const args = Object.fromEntries(
+      parsed.fragment.inputs.map((input, index) => [
+        input.name,
+        normalizeArg(input, parsed.args[index]),
+      ]),
+    );
+    const correlation = entry.correlationArg ? args[entry.correlationArg] : undefined;
+    return {
+      contractName: entry.name,
+      contractAddress: entry.address,
+      eventName: parsed.name,
+      args,
+      correlationKey: typeof correlation === 'string' ? correlation : null,
+    };
+  }
+}
+
+function normalizeArg(input: ParamType, value: unknown): ChainEventArg {
+  if (typeof value === 'bigint') {
+    const bits = Number(/^u?int(\d+)$/.exec(input.type)?.[1] ?? 256);
+    return bits <= SAFE_INTEGER_BITS ? Number(value) : value.toString();
+  }
+  if (typeof value === 'string') {
+    return input.type === 'address' || input.type.startsWith('bytes') ? value.toLowerCase() : value;
+  }
+  if (typeof value === 'boolean' || typeof value === 'number') {
+    return value;
+  }
+  return String(value);
+}

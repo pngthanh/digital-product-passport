@@ -39,6 +39,12 @@ export default defineConfig({
     },
   },
   networks: {
+    // Hardhat node chạy riêng (`pnpm --filter @dpp/contracts node`), dùng khi phát triển giao diện.
+    localhost: {
+      type: 'http',
+      chainType: 'l1',
+      url: 'http://127.0.0.1:8545',
+    },
     monadTestnet: {
       type: 'http',
       chainType: 'l1',

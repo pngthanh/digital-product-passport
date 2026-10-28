@@ -14,7 +14,7 @@ packages/contracts/artifacts/
 packages/contracts/cache/
 packages/contracts/types/
 packages/contracts/coverage/
-packages/contracts/ignition/deployments/chain-31337/
+packages/contracts/ignition/deployments/chain-31337*/
 
 # Prisma Client (sinh lại bằng `pnpm db:generate`)
 apps/api/src/infrastructure/database/generated/

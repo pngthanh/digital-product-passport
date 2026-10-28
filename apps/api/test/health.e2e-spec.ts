@@ -1,4 +1,4 @@
-import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -35,7 +35,7 @@ class FakeChainProvider {
 }
 
 describe('Health API (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   const chain = new FakeChainProvider(parseEnv(process.env).CHAIN_ID);
 
   beforeAll(async () => {
@@ -43,7 +43,7 @@ describe('Health API (e2e)', () => {
       .overrideProvider(ChainProviderService)
       .useValue(chain)
       .compile();
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication<NestExpressApplication>();
     configureHttpApp(app, app.get(AppConfigService));
     await app.init();
   });

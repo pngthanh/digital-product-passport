@@ -8,14 +8,26 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { STATUS_CODES } from 'node:http';
+import { DomainError, type DomainErrorKind } from '../domain/domain-error.js';
 import { REQUEST_ID_HEADER } from './request-id.middleware.js';
 
 const SERVER_ERROR_STATUS = 500;
+
+/** Ánh xạ loại lỗi nghiệp vụ sang mã HTTP; chỉ tầng presentation biết tới HTTP. */
+const DOMAIN_ERROR_STATUS: Readonly<Record<DomainErrorKind, number>> = {
+  invalid: HttpStatus.UNPROCESSABLE_ENTITY,
+  unauthenticated: HttpStatus.UNAUTHORIZED,
+  forbidden: HttpStatus.FORBIDDEN,
+  not_found: HttpStatus.NOT_FOUND,
+  conflict: HttpStatus.CONFLICT,
+  unavailable: HttpStatus.SERVICE_UNAVAILABLE,
+};
 
 export interface ErrorResponseBody {
   statusCode: number;
   error: string;
   message: string;
+  code?: string;
   details?: unknown;
   path: string;
   requestId: string | null;
@@ -45,6 +57,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
   toBody(exception: unknown, path: string, requestId: string | null): ErrorResponseBody {
     const base = { path, requestId, timestamp: new Date().toISOString() };
+
+    if (exception instanceof DomainError) {
+      const statusCode = DOMAIN_ERROR_STATUS[exception.kind];
+      return {
+        ...base,
+        statusCode,
+        error: STATUS_CODES[statusCode] ?? 'Error',
+        message: exception.message,
+        code: exception.code,
+        ...(exception.details === undefined ? {} : { details: exception.details }),
+      };
+    }
 
     if (!(exception instanceof HttpException)) {
       return {

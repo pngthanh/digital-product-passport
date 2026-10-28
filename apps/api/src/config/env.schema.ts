@@ -2,9 +2,24 @@ import { getNetwork } from '@dpp/shared';
 import { z } from 'zod';
 
 /** Chuỗi rỗng trong .env được hiểu là "không khai báo". */
-const optionalUrl = z.preprocess(
-  (value) => (value === '' ? undefined : value),
-  z.url({ protocol: /^https?$/ }).optional(),
+const emptyAsUndefined = (value: unknown) => (value === '' ? undefined : value);
+
+const optionalUrl = z.preprocess(emptyAsUndefined, z.url({ protocol: /^https?$/ }).optional());
+
+const optionalPrivateKey = z.preprocess(
+  emptyAsUndefined,
+  z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/, 'phải là khoá riêng dạng 0x + 64 ký tự hex')
+    .optional(),
+);
+
+const optionalAddress = z.preprocess(
+  emptyAsUndefined,
+  z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{40}$/, 'phải là địa chỉ EVM dạng 0x + 40 ký tự hex')
+    .optional(),
 );
 
 export const envSchema = z.object({
@@ -29,6 +44,16 @@ export const envSchema = z.object({
   RPC_URL: z.url({ protocol: /^https?$/ }),
   RPC_FALLBACK_URL: optionalUrl,
   RPC_TIMEOUT_MS: z.coerce.number().int().min(500).max(60_000).default(5000),
+
+  JWT_SECRET: z
+    .string()
+    .min(32, 'cần ít nhất 32 ký tự ngẫu nhiên (tạo bằng: pnpm --filter @dpp/api secret:new)'),
+  SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(43_200).default(720),
+  AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(10),
+
+  // Để trống thì API vẫn chạy, chỉ phần liên kết ví (ACC-03/04) báo "chưa cấu hình".
+  REGISTRAR_SIGNER_PRIVATE_KEY: optionalPrivateKey,
+  PARTY_REGISTRY_ADDRESS: optionalAddress,
 });
 
 export type Env = z.infer<typeof envSchema>;

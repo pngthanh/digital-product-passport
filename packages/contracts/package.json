@@ -9,9 +9,12 @@
     "compile": "hardhat build",
     "test": "hardhat test mocha",
     "node": "hardhat node",
+    "deploy:local": "hardhat run --network localhost scripts/deploy-identity.ts",
+    "deploy:monad": "hardhat run --network monadTestnet scripts/deploy-identity.ts",
+    "abi:export": "hardhat run scripts/export-abi.ts",
     "clean": "hardhat clean",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint -c ../../.oxlintrc.json test hardhat.config.ts"
+    "typecheck": "hardhat build --quiet && tsc --noEmit",
+    "lint": "oxlint -c ../../.oxlintrc.json test scripts ignition hardhat.config.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.6.1"

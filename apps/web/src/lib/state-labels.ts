@@ -1,4 +1,10 @@
-import type { ProductState, ServiceState, TransferState, WarrantyState } from '@dpp/shared';
+import type {
+  ProductState,
+  ServiceState,
+  TransferState,
+  WalletStatus,
+  WarrantyState,
+} from '@dpp/shared';
 
 export type Tone = 'neutral' | 'ocean' | 'ok' | 'warn' | 'bad';
 
@@ -38,4 +44,11 @@ export const TRANSFER_STATE_LABELS: Record<TransferState, StateLabel> = {
   REJECTED: { label: 'Bên nhận từ chối', tone: 'bad' },
   CANCELLED: { label: 'Chủ đã huỷ', tone: 'neutral' },
   EXPIRED: { label: 'Hết hạn', tone: 'neutral' },
+};
+
+export const WALLET_STATUS_LABELS: Record<WalletStatus, StateLabel> = {
+  PENDING: { label: 'Chờ xác nhận on-chain', tone: 'warn' },
+  ACTIVE: { label: 'Đang dùng', tone: 'ok' },
+  ROTATED: { label: 'Đã thay', tone: 'neutral' },
+  REVOKED: { label: 'Đã thu hồi', tone: 'bad' },
 };

@@ -220,17 +220,19 @@ enum AlertStatus {
 
 /// [A] Tài khoản đăng nhập (admin, người dùng cá nhân, đại diện tổ chức).
 model User {
-  id           String     @id @default(uuid(7)) @db.Uuid
+  id             String     @id @default(uuid(7)) @db.Uuid
   /// Lưu chữ thường (CHECK).
-  email        String     @unique @db.VarChar(255)
+  email          String     @unique @db.VarChar(255)
   /// Mật khẩu đã BĂM bằng Argon2id (có salt), dạng chuỗi PHC `$argon2id$...`.
-  passwordHash String     @map("password_hash") @db.VarChar(255)
-  fullName     String     @map("full_name") @db.VarChar(255)
-  systemRole   SystemRole @default(USER) @map("system_role")
-  status       UserStatus @default(ACTIVE)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  passwordHash   String     @map("password_hash") @db.VarChar(255)
+  fullName       String     @map("full_name") @db.VarChar(255)
+  systemRole     SystemRole @default(USER) @map("system_role")
+  status         UserStatus @default(ACTIVE)
+  /// Tăng khi đăng xuất hoặc bị khoá; JWT mang phiên bản cũ bị từ chối (ACC-02).
+  sessionVersion Int        @default(0) @map("session_version")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
   party             Party?
   auditLogs         AuditLog[]
@@ -323,6 +325,8 @@ model PartyWallet {
 
   @@unique([partyId], map: "ux_wallet_one_active_owner", where: { walletRole: "OWNER", status: "ACTIVE" })
   @@unique([partyId], map: "ux_wallet_one_active_personal", where: { walletRole: "PERSONAL", status: "ACTIVE" })
+  /// Mỗi người dùng chỉ có một yêu cầu liên kết/xoay ví đang chờ (ACC-03/04).
+  @@unique([partyId], map: "ux_wallet_one_pending_personal", where: { walletRole: "PERSONAL", status: "PENDING" })
   @@index([partyId, status])
   @@map("party_wallets")
 }

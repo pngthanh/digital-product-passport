@@ -3,6 +3,7 @@ import {
   INSPECTOR_ROLE,
   MANUFACTURER_ROLE,
   PRODUCT_CONTRACT_ROLE,
+  REGISTRAR_ROLE,
   RETAILER_ROLE,
   SERVICE_CENTER_ROLE,
   TRANSFER_CONTRACT_ROLE,
@@ -61,6 +62,7 @@ describe('DppTypes.sol và DppRoles.sol khớp @dpp/shared', () => {
     const harness = await ethers.deployContract('DppConstantsHarness');
 
     expect(await harness.roleIds()).to.deep.equal([
+      REGISTRAR_ROLE,
       MANUFACTURER_ROLE,
       RETAILER_ROLE,
       SERVICE_CENTER_ROLE,

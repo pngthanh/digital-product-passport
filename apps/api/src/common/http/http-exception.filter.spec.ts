@@ -1,5 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { DomainError } from '../domain/domain-error.js';
 import { HttpExceptionFilter } from './http-exception.filter.js';
+
+class SampleConflictError extends DomainError {
+  readonly code = 'SAMPLE_CONFLICT';
+  readonly kind = 'conflict';
+}
 
 describe('HttpExceptionFilter', () => {
   const filter = new HttpExceptionFilter();
@@ -37,5 +43,21 @@ describe('HttpExceptionFilter', () => {
 
     expect(body.statusCode).toBe(500);
     expect(body.message).not.toContain('secret');
+  });
+
+  it('ánh xạ lỗi nghiệp vụ sang mã HTTP và giữ mã lỗi ổn định', () => {
+    const body = filter.toBody(
+      new SampleConflictError('Ví đã thuộc tài khoản khác', { address: '0xabc' }),
+      '/api/v1/x',
+      null,
+    );
+
+    expect(body).toMatchObject({
+      statusCode: 409,
+      error: 'Conflict',
+      code: 'SAMPLE_CONFLICT',
+      message: 'Ví đã thuộc tài khoản khác',
+      details: { address: '0xabc' },
+    });
   });
 });

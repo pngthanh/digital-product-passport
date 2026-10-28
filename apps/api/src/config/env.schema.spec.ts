@@ -3,6 +3,7 @@ import { EnvValidationError, parseEnv } from './env.schema.js';
 const VALID_ENV = {
   DATABASE_URL: 'postgresql://dpp:secret@localhost:5432/dpp',
   RPC_URL: 'https://testnet-rpc.monad.xyz',
+  JWT_SECRET: 'x'.repeat(32),
 };
 
 describe('parseEnv', () => {
@@ -42,5 +43,22 @@ describe('parseEnv', () => {
     }
     expect(caught.issues.join('\n')).toContain('DATABASE_URL');
     expect(caught.issues.join('\n')).toContain('RPC_URL');
+  });
+
+  it('bắt buộc JWT_SECRET đủ dài', () => {
+    expect(() => parseEnv({ ...VALID_ENV, JWT_SECRET: 'ngan' })).toThrow(/JWT_SECRET/);
+  });
+
+  it('phần liên kết ví là tuỳ chọn, nhưng khai báo thì phải đúng định dạng', () => {
+    const env = parseEnv({
+      ...VALID_ENV,
+      REGISTRAR_SIGNER_PRIVATE_KEY: '',
+      PARTY_REGISTRY_ADDRESS: '',
+    });
+    expect(env.REGISTRAR_SIGNER_PRIVATE_KEY).toBeUndefined();
+    expect(env.PARTY_REGISTRY_ADDRESS).toBeUndefined();
+    expect(() => parseEnv({ ...VALID_ENV, PARTY_REGISTRY_ADDRESS: '0x1234' })).toThrow(
+      /PARTY_REGISTRY_ADDRESS/,
+    );
   });
 });

@@ -21,7 +21,9 @@
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
-    "db:deploy:test": "cross-env PRISMA_DATABASE=test prisma migrate deploy"
+    "db:deploy:test": "cross-env PRISMA_DATABASE=test prisma migrate deploy",
+    "secret:new": "node scripts/generate-secret.mjs jwt",
+    "registrar:new": "node scripts/generate-secret.mjs registrar"
   },
   "dependencies": {
     "@dpp/shared": "workspace:*",
@@ -30,10 +32,14 @@
     "@nestjs/core": "^12.3.1",
     "@nestjs/platform-express": "^12.3.1",
     "@nestjs/schedule": "^12.0.2",
+    "@nestjs/throttler": "^6.7.1",
+    "@node-rs/argon2": "^2.2.2",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^18.0.9",
     "ethers": "^6.17.0",
+    "jose": "^6.2.13",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.6.7"
@@ -42,6 +48,7 @@
     "@nestjs/cli": "^12.0.11",
     "@nestjs/schematics": "^12.0.0",
     "@nestjs/testing": "^12.3.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.2.1",
@@ -49,6 +56,7 @@
     "oxlint": "^1.90.0",
     "oxlint-tsgolint": "^7.0.2005",
     "prisma": "^7.10.1",
+    "siwe": "^3.0.0",
     "source-map-support": "^0.5.21",
     "supertest": "^7.3.1",
     "typescript": "~6.0.3",
