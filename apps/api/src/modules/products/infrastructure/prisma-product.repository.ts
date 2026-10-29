@@ -1,16 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import type { ProductListFilter } from '@dpp/shared';
+import type { InventoryFilter, ProductListFilter } from '@dpp/shared';
 import type { TransactionScope } from '../../../common/persistence/transaction-scope.js';
-import type { Prisma, Product } from '../../../infrastructure/database/generated/client.js';
+import type {
+  Prisma,
+  Product,
+  Warranty,
+} from '../../../infrastructure/database/generated/client.js';
 import { prismaFrom } from '../../../infrastructure/database/prisma-scope.js';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import type {
+  HandoverRecord,
+  InventoryQuery,
   NewProductDraft,
   ProductListQuery,
   ProductRepository,
   RegisteredProjection,
 } from '../application/ports/product.repository.js';
 import type { ProductRecord } from '../domain/product.js';
+import type { WarrantyRecord } from '../domain/warranty.js';
 
 function toRecord(row: Product): ProductRecord {
   return {
@@ -27,11 +34,41 @@ function toRecord(row: Product): ProductRecord {
     issuerOrgId: row.issuerOrgId,
     productState: row.productState,
     currentCustodianPartyId: row.currentCustodianPartyId,
+    pendingCustodianPartyId: row.pendingCustodianPartyId,
+    currentOwnerPartyId: row.currentOwnerPartyId,
     createdTxHash: row.createdTxHash,
     syncStatus: row.syncStatus,
     onchainCreatedAt: row.onchainCreatedAt,
     createdAt: row.createdAt,
   };
+}
+
+function toWarranty(row: Warranty): WarrantyRecord {
+  return {
+    productId: row.productId,
+    activatedByPartyId: row.activatedByPartyId,
+    activatedAt: row.activatedAt,
+    expiresAt: row.expiresAt,
+    warrantyState: row.warrantyState,
+    activationTxHash: row.activationTxHash,
+  };
+}
+
+/**
+ * Kho của nhà bán lẻ: chờ nhận (đang giao tới), đang bán (đang giữ ở cửa hàng), đã bán (từng giao
+ * hàng cho người mua; custody đi từ nhà bán lẻ chỉ xảy ra khi bán).
+ */
+function inventoryWhere(
+  retailerPartyId: string,
+  filter: InventoryFilter,
+): Prisma.ProductWhereInput {
+  if (filter === 'INCOMING') {
+    return { pendingCustodianPartyId: retailerPartyId, productState: 'IN_DISTRIBUTION' };
+  }
+  if (filter === 'IN_STOCK') {
+    return { currentCustodianPartyId: retailerPartyId, productState: 'AT_RETAIL' };
+  }
+  return { custodyRecords: { some: { fromPartyId: retailerPartyId } } };
 }
 
 function filterWhere(filter: ProductListFilter): Prisma.ProductWhereInput {
@@ -58,8 +95,11 @@ export class PrismaProductRepository implements ProductRepository {
     return row && toRecord(row);
   }
 
-  async findByChainProductId(chainProductId: string): Promise<ProductRecord | null> {
-    const row = await this.prisma.product.findUnique({
+  async findByChainProductId(
+    chainProductId: string,
+    scope?: TransactionScope,
+  ): Promise<ProductRecord | null> {
+    const row = await prismaFrom(this.prisma, scope).product.findUnique({
       where: { chainProductId: chainProductId.toLowerCase() },
     });
     return row && toRecord(row);
@@ -188,16 +228,195 @@ export class PrismaProductRepository implements ProductRepository {
     });
   }
 
-  async recordCustody(
-    productId: string,
-    toPartyId: string,
-    eventId: string,
-    at: Date,
-    scope: TransactionScope,
-  ): Promise<void> {
+  async recordCustody(record: HandoverRecord, scope: TransactionScope): Promise<void> {
     await prismaFrom(this.prisma, scope).custodyRecord.createMany({
-      data: [{ productId, fromPartyId: null, toPartyId, eventId, transferredAt: at }],
+      data: [
+        {
+          productId: record.productId,
+          fromPartyId: record.fromPartyId,
+          toPartyId: record.toPartyId,
+          eventId: record.eventId,
+          transferredAt: record.at,
+        },
+      ],
       skipDuplicates: true,
     });
+  }
+
+  async recordOwnership(record: HandoverRecord, scope: TransactionScope): Promise<void> {
+    await prismaFrom(this.prisma, scope).ownershipRecord.createMany({
+      data: [
+        {
+          productId: record.productId,
+          fromPartyId: record.fromPartyId,
+          toPartyId: record.toPartyId,
+          eventId: record.eventId,
+          transferredAt: record.at,
+        },
+      ],
+      skipDuplicates: true,
+    });
+  }
+
+  async markDispatched(id: string, pendingPartyId: string, scope: TransactionScope) {
+    await this.update(
+      id,
+      { productState: 'IN_DISTRIBUTION', pendingCustodianPartyId: pendingPartyId },
+      scope,
+    );
+  }
+
+  async markHandoverClosed(id: string, scope: TransactionScope) {
+    await this.update(id, { productState: 'CREATED', pendingCustodianPartyId: null }, scope);
+  }
+
+  async markReceived(id: string, custodianPartyId: string, scope: TransactionScope) {
+    await this.update(
+      id,
+      {
+        productState: 'AT_RETAIL',
+        currentCustodianPartyId: custodianPartyId,
+        pendingCustodianPartyId: null,
+      },
+      scope,
+    );
+  }
+
+  async markSold(id: string, ownerPartyId: string, scope: TransactionScope) {
+    await this.update(id, { productState: 'SOLD', currentOwnerPartyId: ownerPartyId }, scope);
+  }
+
+  async setCustodian(id: string, custodianPartyId: string, scope: TransactionScope) {
+    await this.update(id, { currentCustodianPartyId: custodianPartyId }, scope);
+  }
+
+  async setOwner(id: string, ownerPartyId: string, scope: TransactionScope) {
+    await this.update(id, { currentOwnerPartyId: ownerPartyId }, scope);
+  }
+
+  async setLifecycleState(
+    id: string,
+    state: 'RECALLED' | 'LOST_STOLEN' | 'RETIRED',
+    scope: TransactionScope,
+  ) {
+    await this.update(id, { productState: state, pendingCustodianPartyId: null }, scope);
+  }
+
+  async listInventory(query: InventoryQuery): Promise<{ items: ProductRecord[]; total: number }> {
+    const where = inventoryWhere(query.retailerPartyId, query.filter);
+    const [rows, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        orderBy: [{ updatedAt: 'desc' }, { serialNumber: 'asc' }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+    return { items: rows.map(toRecord), total };
+  }
+
+  async inventoryCounts(retailerPartyId: string): Promise<Record<InventoryFilter, number>> {
+    const [INCOMING, IN_STOCK, SOLD] = await Promise.all(
+      (['INCOMING', 'IN_STOCK', 'SOLD'] as const).map((filter) =>
+        this.prisma.product.count({ where: inventoryWhere(retailerPartyId, filter) }),
+      ),
+    );
+    return { INCOMING: INCOMING ?? 0, IN_STOCK: IN_STOCK ?? 0, SOLD: SOLD ?? 0 };
+  }
+
+  async findForRetailer(retailerPartyId: string, id: string): Promise<ProductRecord | null> {
+    const row = await this.prisma.product.findFirst({
+      where: {
+        id,
+        OR: (['INCOMING', 'IN_STOCK', 'SOLD'] as const).map((filter) =>
+          inventoryWhere(retailerPartyId, filter),
+        ),
+      },
+    });
+    return row && toRecord(row);
+  }
+
+  async soldAtBy(
+    retailerPartyId: string,
+    productIds: readonly string[],
+  ): Promise<Map<string, Date>> {
+    if (productIds.length === 0) {
+      return new Map();
+    }
+    const rows = await this.prisma.custodyRecord.findMany({
+      where: { fromPartyId: retailerPartyId, productId: { in: [...productIds] } },
+      orderBy: { transferredAt: 'asc' },
+      select: { productId: true, transferredAt: true },
+    });
+    return new Map(rows.map((row) => [row.productId, row.transferredAt]));
+  }
+
+  async listOwned(ownerPartyId: string): Promise<ProductRecord[]> {
+    const rows = await this.prisma.product.findMany({
+      where: { currentOwnerPartyId: ownerPartyId },
+      orderBy: [{ updatedAt: 'desc' }],
+    });
+    return rows.map(toRecord);
+  }
+
+  countOwned(ownerPartyId: string): Promise<number> {
+    return this.prisma.product.count({ where: { currentOwnerPartyId: ownerPartyId } });
+  }
+
+  async acquiredAt(
+    ownerPartyId: string,
+    productIds: readonly string[],
+  ): Promise<Map<string, Date>> {
+    if (productIds.length === 0) {
+      return new Map();
+    }
+    const rows = await this.prisma.ownershipRecord.findMany({
+      where: { toPartyId: ownerPartyId, productId: { in: [...productIds] } },
+      orderBy: { transferredAt: 'asc' },
+      select: { productId: true, transferredAt: true },
+    });
+    // Sắp tăng dần nên lần nhận gần nhất ghi đè lần trước.
+    return new Map(rows.map((row) => [row.productId, row.transferredAt]));
+  }
+
+  async findWarranties(productIds: readonly string[]): Promise<Map<string, WarrantyRecord>> {
+    if (productIds.length === 0) {
+      return new Map();
+    }
+    const rows = await this.prisma.warranty.findMany({
+      where: { productId: { in: [...productIds] } },
+    });
+    return new Map(rows.map((row) => [row.productId, toWarranty(row)]));
+  }
+
+  async activateWarranty(warranty: WarrantyRecord, scope: TransactionScope): Promise<void> {
+    await prismaFrom(this.prisma, scope).warranty.createMany({
+      data: [warranty],
+      skipDuplicates: true,
+    });
+  }
+
+  async setWarrantySuspended(productId: string, suspended: boolean, scope: TransactionScope) {
+    await prismaFrom(this.prisma, scope).warranty.updateMany({
+      where: { productId, warrantyState: suspended ? 'ACTIVE' : 'SUSPENDED' },
+      data: { warrantyState: suspended ? 'SUSPENDED' : 'ACTIVE' },
+    });
+  }
+
+  async expireWarranties(now: Date): Promise<number> {
+    const { count } = await this.prisma.warranty.updateMany({
+      where: { warrantyState: { in: ['ACTIVE', 'SUSPENDED'] }, expiresAt: { lte: now } },
+      data: { warrantyState: 'EXPIRED' },
+    });
+    return count;
+  }
+
+  private async update(
+    id: string,
+    data: Prisma.ProductUncheckedUpdateInput,
+    scope: TransactionScope,
+  ): Promise<void> {
+    await prismaFrom(this.prisma, scope).product.update({ where: { id }, data });
   }
 }

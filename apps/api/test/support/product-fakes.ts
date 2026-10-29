@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import {
+  type InventoryFilter,
   PRODUCT_REGISTRATION_TYPES,
+  PRODUCT_SALE_TYPES,
   type ProductListFilter,
   type ProductRegistration,
+  type ProductSale,
   productPassportDomain,
   PUBLIC_CODE_ALPHABET,
 } from '@dpp/shared';
@@ -15,20 +18,48 @@ import type {
   PublicCodeGenerator,
 } from '../../src/modules/products/application/ports/product-chain.port.js';
 import type {
+  HandoverRecord,
+  InventoryQuery,
   NewProductDraft,
   ProductListQuery,
   ProductRepository,
   RegisteredProjection,
 } from '../../src/modules/products/application/ports/product.repository.js';
 import { isDraft, type ProductRecord } from '../../src/modules/products/domain/product.js';
+import type { WarrantyRecord } from '../../src/modules/products/domain/warranty.js';
 import { TEST_REGISTRAR_KEY } from './test-config.js';
 
 export const TEST_PRODUCT_PASSPORT = '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512';
 
-/** products và custody_records trong bộ nhớ, giữ UNIQUE(issuer, serial) và UNIQUE(public_code). */
+const ZERO_BYTES32 = `0x${'0'.repeat(64)}`;
+
+/** Bản ghi `ProductPassport.product()` của sản phẩm vừa đăng ký (nhà sản xuất giữ hàng). */
+export function onchainProduct(
+  issuerId: string,
+  metadataHash: string,
+  overrides: Partial<OnchainProduct> = {},
+): OnchainProduct {
+  return {
+    issuerId,
+    metadataHash,
+    custodianId: issuerId,
+    pendingCustodianId: ZERO_BYTES32,
+    ownerId: ZERO_BYTES32,
+    state: 1,
+    warrantyMonths: 24,
+    ...overrides,
+  };
+}
+
+/**
+ * products, custody_records, ownership_records, warranties trong bộ nhớ; giữ UNIQUE(issuer, serial),
+ * UNIQUE(public_code) và hai CHECK về owner/bên nhận chờ của bảng products.
+ */
 export class InMemoryProducts implements ProductRepository {
   readonly rows: ProductRecord[] = [];
-  readonly custody: { productId: string; toPartyId: string; eventId: string }[] = [];
+  readonly custody: HandoverRecord[] = [];
+  readonly ownership: HandoverRecord[] = [];
+  readonly warrantyRows = new Map<string, WarrantyRecord>();
 
   async findById(id: string) {
     return this.rows.find((row) => row.id === id) ?? null;
@@ -58,6 +89,8 @@ export class InMemoryProducts implements ProductRepository {
       id: randomUUID(),
       productState: null,
       currentCustodianPartyId: null,
+      pendingCustodianPartyId: null,
+      currentOwnerPartyId: null,
       createdTxHash: null,
       syncStatus: 'PENDING',
       onchainCreatedAt: null,
@@ -133,10 +166,164 @@ export class InMemoryProducts implements ProductRepository {
     }
   }
 
-  async recordCustody(productId: string, toPartyId: string, eventId: string) {
-    if (!this.custody.some((record) => record.eventId === eventId)) {
-      this.custody.push({ productId, toPartyId, eventId });
+  async recordCustody(record: HandoverRecord) {
+    if (!this.custody.some((existing) => existing.eventId === record.eventId)) {
+      this.custody.push(record);
     }
+  }
+
+  async recordOwnership(record: HandoverRecord) {
+    if (!this.ownership.some((existing) => existing.eventId === record.eventId)) {
+      this.ownership.push(record);
+    }
+  }
+
+  async markDispatched(id: string, pendingPartyId: string) {
+    this.patch(id, { productState: 'IN_DISTRIBUTION', pendingCustodianPartyId: pendingPartyId });
+  }
+
+  async markHandoverClosed(id: string) {
+    this.patch(id, { productState: 'CREATED', pendingCustodianPartyId: null });
+  }
+
+  async markReceived(id: string, custodianPartyId: string) {
+    this.patch(id, {
+      productState: 'AT_RETAIL',
+      currentCustodianPartyId: custodianPartyId,
+      pendingCustodianPartyId: null,
+    });
+  }
+
+  async markSold(id: string, ownerPartyId: string) {
+    this.patch(id, { productState: 'SOLD', currentOwnerPartyId: ownerPartyId });
+  }
+
+  async setCustodian(id: string, custodianPartyId: string) {
+    this.patch(id, { currentCustodianPartyId: custodianPartyId });
+  }
+
+  async setOwner(id: string, ownerPartyId: string) {
+    this.patch(id, { currentOwnerPartyId: ownerPartyId });
+  }
+
+  async setLifecycleState(id: string, state: 'RECALLED' | 'LOST_STOLEN' | 'RETIRED') {
+    this.patch(id, { productState: state, pendingCustodianPartyId: null });
+  }
+
+  async listInventory(query: InventoryQuery) {
+    const items = this.rows.filter((row) =>
+      this.inInventory(row, query.retailerPartyId, query.filter),
+    );
+    const start = (query.page - 1) * query.pageSize;
+    return { items: items.slice(start, start + query.pageSize), total: items.length };
+  }
+
+  async inventoryCounts(retailerPartyId: string): Promise<Record<InventoryFilter, number>> {
+    const count = (filter: InventoryFilter) =>
+      this.rows.filter((row) => this.inInventory(row, retailerPartyId, filter)).length;
+    return { INCOMING: count('INCOMING'), IN_STOCK: count('IN_STOCK'), SOLD: count('SOLD') };
+  }
+
+  async findForRetailer(retailerPartyId: string, id: string) {
+    return (
+      this.rows.find(
+        (row) =>
+          row.id === id &&
+          (['INCOMING', 'IN_STOCK', 'SOLD'] as const).some((filter) =>
+            this.inInventory(row, retailerPartyId, filter),
+          ),
+      ) ?? null
+    );
+  }
+
+  async soldAtBy(retailerPartyId: string, productIds: readonly string[]) {
+    return new Map(
+      this.custody
+        .filter(
+          (record) =>
+            record.fromPartyId === retailerPartyId && productIds.includes(record.productId),
+        )
+        .map((record) => [record.productId, record.at]),
+    );
+  }
+
+  async listOwned(ownerPartyId: string) {
+    return this.rows.filter((row) => row.currentOwnerPartyId === ownerPartyId);
+  }
+
+  async countOwned(ownerPartyId: string) {
+    return (await this.listOwned(ownerPartyId)).length;
+  }
+
+  async acquiredAt(ownerPartyId: string, productIds: readonly string[]) {
+    return new Map(
+      this.ownership
+        .filter(
+          (record) => record.toPartyId === ownerPartyId && productIds.includes(record.productId),
+        )
+        .map((record) => [record.productId, record.at]),
+    );
+  }
+
+  async findWarranties(productIds: readonly string[]) {
+    return new Map([...this.warrantyRows].filter(([productId]) => productIds.includes(productId)));
+  }
+
+  async activateWarranty(warranty: WarrantyRecord) {
+    if (!this.warrantyRows.has(warranty.productId)) {
+      this.warrantyRows.set(warranty.productId, warranty);
+    }
+  }
+
+  async setWarrantySuspended(productId: string, suspended: boolean) {
+    const warranty = this.warrantyRows.get(productId);
+    if (warranty && warranty.warrantyState === (suspended ? 'ACTIVE' : 'SUSPENDED')) {
+      this.warrantyRows.set(productId, {
+        ...warranty,
+        warrantyState: suspended ? 'SUSPENDED' : 'ACTIVE',
+      });
+    }
+  }
+
+  async expireWarranties(now: Date) {
+    let expired = 0;
+    for (const [productId, warranty] of this.warrantyRows) {
+      if (warranty.warrantyState !== 'EXPIRED' && warranty.expiresAt <= now) {
+        this.warrantyRows.set(productId, { ...warranty, warrantyState: 'EXPIRED' });
+        expired += 1;
+      }
+    }
+    return expired;
+  }
+
+  private inInventory(row: ProductRecord, retailerPartyId: string, filter: InventoryFilter) {
+    if (filter === 'INCOMING') {
+      return row.pendingCustodianPartyId === retailerPartyId;
+    }
+    if (filter === 'IN_STOCK') {
+      return row.currentCustodianPartyId === retailerPartyId && row.productState === 'AT_RETAIL';
+    }
+    return this.custody.some(
+      (record) => record.productId === row.id && record.fromPartyId === retailerPartyId,
+    );
+  }
+
+  /** Cập nhật như một lệnh UPDATE, kiểm tra hai CHECK của bảng products. */
+  private patch(id: string, changes: Partial<ProductRecord>) {
+    const index = this.rows.findIndex((row) => row.id === id);
+    const row = this.rows[index];
+    if (!row) {
+      throw new Error(`Không có sản phẩm ${id}`);
+    }
+    const next = { ...row, ...changes };
+    const unsold = ['CREATED', 'IN_DISTRIBUTION', 'AT_RETAIL'].includes(next.productState ?? '');
+    if (unsold && next.currentOwnerPartyId !== null) {
+      throw new Error('ck_products_owner_matches_state');
+    }
+    if ((next.productState === 'IN_DISTRIBUTION') !== (next.pendingCustodianPartyId !== null)) {
+      throw new Error('ck_products_pending_custodian');
+    }
+    this.rows[index] = next;
   }
 
   only(): ProductRecord {
@@ -154,6 +341,7 @@ export class FakeProductChain implements ProductChain {
   contractAddress: string | null = TEST_PRODUCT_PASSPORT;
   readonly onchain = new Map<string, OnchainProduct>();
   readonly signed: ProductRegistration[] = [];
+  readonly sales: ProductSale[] = [];
   failing = false;
   private readonly registrar = new Wallet(TEST_REGISTRAR_KEY);
 
@@ -163,6 +351,15 @@ export class FakeProductChain implements ProductChain {
       productPassportDomain(this.chainId, this.contractAddress ?? ''),
       PRODUCT_REGISTRATION_TYPES,
       registration,
+    );
+  }
+
+  async signSale(sale: ProductSale) {
+    this.sales.push(sale);
+    return this.registrar.signTypedData(
+      productPassportDomain(this.chainId, this.contractAddress ?? ''),
+      PRODUCT_SALE_TYPES,
+      sale,
     );
   }
 

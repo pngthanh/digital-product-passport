@@ -5,11 +5,16 @@ export type TransitionTable<S extends string> = Readonly<Record<S, readonly S[]>
 
 /**
  * Product State. RECALLED, LOST_STOLEN, RETIRED là trạng thái cuối.
+ * IN_DISTRIBUTION → CREATED khi nhà sản xuất huỷ gửi hoặc nhà bán lẻ từ chối nhận (M6).
  * Chuyển ra khỏi LOST_STOLEN/RETIRED còn chờ nhóm chốt (quyết định D8).
  */
 export const PRODUCT_STATE_TRANSITIONS: TransitionTable<ProductState> = {
   [ProductState.CREATED]: [ProductState.IN_DISTRIBUTION, ProductState.RECALLED],
-  [ProductState.IN_DISTRIBUTION]: [ProductState.AT_RETAIL, ProductState.RECALLED],
+  [ProductState.IN_DISTRIBUTION]: [
+    ProductState.AT_RETAIL,
+    ProductState.CREATED,
+    ProductState.RECALLED,
+  ],
   [ProductState.AT_RETAIL]: [ProductState.SOLD, ProductState.RECALLED],
   [ProductState.SOLD]: [ProductState.RECALLED, ProductState.LOST_STOLEN, ProductState.RETIRED],
   [ProductState.RECALLED]: [],

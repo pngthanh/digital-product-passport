@@ -17,7 +17,7 @@ import {
   registerStepLabels,
   retryProducts,
 } from './product-flows';
-import { productStatusLabel, warrantyLabel } from './product-status';
+import { locationText, productStatusLabel, warrantyLabel } from './product-status';
 
 /**
  * Danh sách sản phẩm của nhà sản xuất. Chọn nhiều dòng để in tem QR (sản phẩm đã lên blockchain)
@@ -141,9 +141,14 @@ export function ProductTable({
                     {formatPublicCode(item.publicCode)}
                   </p>
                 </div>
-                <Badge tone={status.tone} dot className="justify-self-start">
-                  {status.label}
-                </Badge>
+                <div className="grid justify-items-start gap-1 sm:justify-items-end">
+                  <Badge tone={status.tone} dot>
+                    {status.label}
+                  </Badge>
+                  {locationText(item) ? (
+                    <p className="text-[13px] text-muted sm:text-right">{locationText(item)}</p>
+                  ) : null}
+                </div>
               </div>
             </li>
           );

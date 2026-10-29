@@ -64,6 +64,8 @@ export const envSchema = z.object({
   // M5: để trống thì phần đăng ký sản phẩm báo "chưa cấu hình", phần còn lại vẫn chạy.
   PRODUCT_PASSPORT_ADDRESS: optionalAddress,
   PRODUCT_PASSPORT_DEPLOY_BLOCK: optionalBlockNumber,
+  // M6: deploy cùng ProductPassport v2; Indexer quét từ PRODUCT_PASSPORT_DEPLOY_BLOCK.
+  WARRANTY_MANAGER_ADDRESS: optionalAddress,
 
   INDEXER_POLL_INTERVAL_MS: z.coerce.number().int().min(200).max(60_000).default(1000),
   // RPC công khai của Monad Testnet giới hạn eth_getLogs 100 block mỗi lần.

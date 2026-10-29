@@ -11,7 +11,12 @@ export interface ChainEventReader {
     contractAddress: string,
     correlationKey: string,
   ): Promise<RecordedChainEvent[]>;
-  byProduct(chainId: number, chainProductIds: readonly string[]): Promise<RecordedChainEvent[]>;
+  /** Chỉ lấy event của `contractAddresses` (contract đang dùng), không lẫn bản deploy cũ. */
+  byProduct(
+    chainId: number,
+    contractAddresses: readonly string[],
+    chainProductIds: readonly string[],
+  ): Promise<RecordedChainEvent[]>;
 }
 
 export const CHAIN_EVENT_READER = Symbol('CHAIN_EVENT_READER');
@@ -33,12 +38,17 @@ export class ChainEventHistory {
       : [];
   }
 
-  /** Event của các sản phẩm (theo productId on-chain), từ mọi contract. */
+  /**
+   * Event của các sản phẩm (theo productId on-chain) từ các contract đang cấu hình. productId không
+   * đổi khi deploy lại ProductPassport, nên event của bản deploy cũ được bỏ qua.
+   */
   ofProducts(chainProductIds: readonly string[]): Promise<RecordedChainEvent[]> {
-    return chainProductIds.length === 0
+    const contracts = this.catalog.indexedContracts().map((contract) => contract.address);
+    return chainProductIds.length === 0 || contracts.length === 0
       ? Promise.resolve([])
       : this.events.byProduct(
           this.reader.chainId,
+          contracts,
           chainProductIds.map((id) => id.toLowerCase()),
         );
   }

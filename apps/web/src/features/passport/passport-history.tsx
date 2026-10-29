@@ -1,16 +1,61 @@
 'use client';
 
-import type { ChainEventView } from '@dpp/shared';
+import type { JourneyStep, JourneyStepKind } from '@dpp/shared';
 import { ChainLink } from '@/components/ui/chain-link';
 import { Tabs } from '@/components/ui/tabs';
 import { formatDate, formatTime } from '@/lib/format';
+import { partyText } from '../products/product-status';
 
 type Category = 'distribution' | 'service' | 'ownership';
 type TabId = 'all' | Category;
 
-/** Nhóm của từng event trên hộ chiếu; module sau thêm event bảo hành, chuyển nhượng vào đây. */
-const EVENTS: Readonly<Record<string, { title: string; category: Category }>> = {
-  ProductRegistered: { title: 'Nhà sản xuất phát hành hộ chiếu', category: 'distribution' },
+/** Tiêu đề, mô tả và nhóm của từng bước; lần bán đầu thuộc cả Phân phối lẫn Chuyển nhượng. */
+const STEPS: Readonly<
+  Record<
+    JourneyStepKind,
+    { title: string; categories: readonly Category[]; describe: (step: JourneyStep) => string }
+  >
+> = {
+  REGISTERED: {
+    title: 'Nhà sản xuất phát hành hộ chiếu',
+    categories: ['distribution'],
+    describe: (step) => partyText(step.to),
+  },
+  DISPATCHED: {
+    title: 'Gửi hàng cho nhà bán lẻ',
+    categories: ['distribution'],
+    describe: (step) => `${partyText(step.from)} gửi tới ${partyText(step.to)}`,
+  },
+  DISPATCH_CANCELLED: {
+    title: 'Huỷ lô gửi',
+    categories: ['distribution'],
+    describe: (step) => `${partyText(step.from)} huỷ lô gửi tới ${partyText(step.to)}`,
+  },
+  DISPATCH_REJECTED: {
+    title: 'Nhà bán lẻ từ chối nhận',
+    categories: ['distribution'],
+    describe: (step) => `${partyText(step.to)} từ chối, hàng về lại ${partyText(step.from)}`,
+  },
+  RECEIVED: {
+    title: 'Nhà bán lẻ nhận hàng',
+    categories: ['distribution'],
+    describe: (step) => `${partyText(step.to)} nhận từ ${partyText(step.from)}`,
+  },
+  SOLD: {
+    title: 'Bán cho người dùng',
+    categories: ['distribution', 'ownership'],
+    describe: (step) => `${partyText(step.from)} bán; chủ sở hữu: ${partyText(step.to)}`,
+  },
+  OWNERSHIP_TRANSFERRED: {
+    title: 'Chuyển quyền sở hữu',
+    categories: ['ownership'],
+    describe: (step) => `${partyText(step.from)} chuyển cho ${partyText(step.to)}`,
+  },
+  WARRANTY_ACTIVATED: {
+    title: 'Kích hoạt bảo hành',
+    categories: ['service'],
+    describe: (step) => `${partyText(step.from)} kích hoạt khi bán`,
+  },
 };
 
 const TABS: readonly { id: TabId; label: string; empty: string }[] = [
@@ -20,35 +65,40 @@ const TABS: readonly { id: TabId; label: string; empty: string }[] = [
   { id: 'ownership', label: 'Chuyển nhượng', empty: 'Chưa có lần đổi chủ nào.' },
 ];
 
-function eventsOf(events: readonly ChainEventView[], tab: TabId) {
-  return tab === 'all'
-    ? events
-    : events.filter((event) => EVENTS[event.eventName]?.category === tab);
+function stepsOf(steps: readonly JourneyStep[], tab: TabId) {
+  return tab === 'all' ? steps : steps.filter((step) => STEPS[step.kind].categories.includes(tab));
 }
 
-/** Lịch sử đã ghi trên blockchain, chia tab như hồ sơ mẫu; mỗi mục mở được giao dịch trên explorer. */
+/**
+ * Hành trình đã ghi trên blockchain (mới nhất trước), chia tab Phân phối, Bảo hành, Chuyển nhượng;
+ * mỗi bước mở được giao dịch trên explorer. Người mua không hiện tên.
+ */
 export function PassportHistory({
-  events,
+  steps,
   chainId,
-  issuerName,
+  className = 'px-6 py-4',
+  heading = 'Lịch sử đã ghi nhận',
+  headingClassName = 'text-sm font-medium',
 }: {
-  events: readonly ChainEventView[];
+  steps: readonly JourneyStep[];
   chainId: number;
-  issuerName: string;
+  className?: string;
+  heading?: string;
+  headingClassName?: string;
 }) {
-  const ordered = events.toReversed();
+  const ordered = steps.toReversed();
   const tabs = TABS.map((tab) => ({
     id: tab.id,
     label: tab.label,
-    count: eventsOf(ordered, tab.id).length,
+    count: stepsOf(ordered, tab.id).length,
   }));
 
   return (
-    <section className="px-6 py-4">
-      <h3 className="text-sm font-medium">Lịch sử đã ghi nhận</h3>
+    <section className={className}>
+      <h3 className={headingClassName}>{heading}</h3>
       <Tabs label="Lọc lịch sử theo nhóm sự kiện" items={tabs} className="mt-3">
         {(active) => {
-          const visible = eventsOf(ordered, active);
+          const visible = stepsOf(ordered, active);
           if (visible.length === 0) {
             return (
               <p className="py-4 text-sm text-muted">
@@ -58,29 +108,21 @@ export function PassportHistory({
           }
           return (
             <ol className="mt-4 space-y-3 border-l border-line pl-4">
-              {visible.map((event) => (
-                <li key={`${event.txHash}-${event.logIndex}`} className="relative">
+              {visible.map((step) => (
+                <li key={`${step.txHash}-${step.kind}`} className="relative">
                   <span
                     aria-hidden
                     className="absolute top-1.5 -left-[21px] size-2.5 rounded-full border-2 border-surface bg-primary"
                   />
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                    <p className="text-sm font-medium">
-                      {EVENTS[event.eventName]?.title ?? event.eventName}
-                    </p>
-                    <time
-                      dateTime={event.blockTimestamp}
-                      className="text-xs text-muted tabular-nums"
-                    >
-                      {formatDate(event.blockTimestamp)} {formatTime(event.blockTimestamp)}
+                    <p className="text-sm font-medium">{STEPS[step.kind].title}</p>
+                    <time dateTime={step.at} className="text-xs text-muted tabular-nums">
+                      {formatDate(step.at)} {formatTime(step.at)}
                     </time>
                   </div>
-                  <p className="text-sm text-muted">
-                    {event.eventName === 'ProductRegistered' ? issuerName : 'Bên ghi nhận'}
-                  </p>
+                  <p className="text-sm text-muted">{STEPS[step.kind].describe(step)}</p>
                   <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
-                    Giao dịch <ChainLink chainId={chainId} value={event.txHash} kind="tx" />
-                    <span className="tabular-nums">· block {event.blockNumber}</span>
+                    Giao dịch <ChainLink chainId={chainId} value={step.txHash} kind="tx" />
                   </p>
                 </li>
               ))}

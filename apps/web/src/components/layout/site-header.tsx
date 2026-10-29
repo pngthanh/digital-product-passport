@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/button';
 import { getIdentity } from '@/features/auth/get-identity';
 import { SignOutButton } from '@/features/auth/sign-out-button';
-import { myProductListSchema } from '@/features/products/product.schema';
+import { workspaceSchema } from '@/features/products/product.schema';
 import { serverChainId } from '@/lib/env';
 import { serverGet } from '@/lib/server-api';
 import { BrandMark } from './brand-mark';
@@ -14,15 +14,20 @@ export async function SiteHeader() {
   const chainId = serverChainId();
   const network = getNetwork(chainId);
   const identity = await getIdentity();
-  // Mục Sản phẩm chỉ hiện với người đại diện của một nhà sản xuất.
-  const products = identity
-    ? await serverGet('/me/products?pageSize=1', myProductListSchema)
-    : null;
+  // Menu theo vai trò: nhà sản xuất có Sản phẩm, nhà bán lẻ có Kho hàng; người không đại diện tổ
+  // chức nào (hoặc đã mua hàng) có Đã mua.
+  const workspace = identity ? await serverGet('/me/workspace', workspaceSchema) : null;
+  const orgType = workspace?.organization?.orgType;
+  const showOwned = !!workspace && (workspace.ownedProducts > 0 || !workspace.organization);
   const navItems: NavItem[] = [
     { href: '/lookup', label: 'Tra cứu' },
     ...(identity
       ? [
-          ...(products?.manufacturer ? [{ href: '/products' as const, label: 'Sản phẩm' }] : []),
+          ...(orgType === 'MANUFACTURER'
+            ? [{ href: '/products' as const, label: 'Sản phẩm' }]
+            : []),
+          ...(orgType === 'RETAILER' ? [{ href: '/inventory' as const, label: 'Kho hàng' }] : []),
+          ...(showOwned ? [{ href: '/owned' as const, label: 'Đã mua' }] : []),
           { href: '/organization' as const, label: 'Doanh nghiệp' },
           ...(identity.account.systemRole === 'ADMIN'
             ? [{ href: '/admin' as const, label: 'Quản trị' }]

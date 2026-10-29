@@ -3,12 +3,14 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { ContractFactory, JsonRpcProvider, parseEther } from 'ethers';
+import { PRODUCT_CONTRACT_ROLE } from '@dpp/shared';
+import { Contract, ContractFactory, JsonRpcProvider, parseEther } from 'ethers';
 
 const CONTRACTS_DIR = fileURLToPath(new URL('../../../../packages/contracts/', import.meta.url));
 const HARDHAT_CLI = `${CONTRACTS_DIR}node_modules/hardhat/dist/src/cli.js`;
 const PARTY_REGISTRY_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/registry/PartyRegistry.sol/PartyRegistry.json`;
 const PRODUCT_PASSPORT_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/product/ProductPassport.sol/ProductPassport.json`;
+const WARRANTY_MANAGER_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/warranty/WarrantyManager.sol/WarrantyManager.json`;
 const STARTUP_TIMEOUT_MS = 60_000;
 
 export interface LocalChain {
@@ -21,8 +23,13 @@ export interface LocalChain {
     registrar: string,
     options?: { treasury?: string; registrationFee?: bigint },
   ): Promise<string>;
-  /** ProductPassport trỏ tới PartyRegistry đã deploy. */
-  deployProductPassport(partyRegistry: string): Promise<string>;
+  /**
+   * WarrantyManager và ProductPassport (v2) trỏ tới PartyRegistry đã deploy; ví 0 (Admin) cấp
+   * PRODUCT_CONTRACT_ROLE cho ProductPassport như script deploy-products.
+   */
+  deployProductContracts(
+    partyRegistry: string,
+  ): Promise<{ productPassport: string; warrantyManager: string }>;
   mine(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -97,15 +104,28 @@ export async function startHardhatNode(): Promise<LocalChain> {
       await contract.waitForDeployment();
       return contract.getAddress();
     },
-    async deployProductPassport(partyRegistry) {
+    async deployProductContracts(partyRegistry) {
       const deployer = await provider.getSigner(0);
-      const factory = ContractFactory.fromSolidity(
-        await artifactOf(PRODUCT_PASSPORT_ARTIFACT),
+      const deploy = async (artifact: string, args: unknown[]) => {
+        const factory = ContractFactory.fromSolidity(await artifactOf(artifact), deployer);
+        const contract = await factory.deploy(...args);
+        await contract.waitForDeployment();
+        return contract.getAddress();
+      };
+      const warrantyManager = await deploy(WARRANTY_MANAGER_ARTIFACT, [partyRegistry]);
+      const productPassport = await deploy(PRODUCT_PASSPORT_ARTIFACT, [
+        partyRegistry,
+        warrantyManager,
+      ]);
+      const registry = new Contract(
+        partyRegistry,
+        ['function grantRole(bytes32 role, address account)'],
         deployer,
       );
-      const contract = await factory.deploy(partyRegistry);
-      await contract.waitForDeployment();
-      return contract.getAddress();
+      await (
+        await registry.getFunction('grantRole')(PRODUCT_CONTRACT_ROLE, productPassport)
+      ).wait();
+      return { productPassport, warrantyManager };
     },
     async mine() {
       await provider.send('evm_mine', []);

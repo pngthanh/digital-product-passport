@@ -3,21 +3,40 @@ import { BlockchainModule } from '../../infrastructure/blockchain/blockchain.mod
 import { DatabaseModule } from '../../infrastructure/database/database.module.js';
 import { AuditModule } from '../audit/index.js';
 import { ChainSyncWorkerModule, EventProjectorRegistry } from '../chain-sync/index.js';
+import { IdentityWorkerModule } from '../identity/index.js';
+import { ExpireWarranties } from './application/expire-warranties.use-case.js';
 import { ProductPassportProjector } from './application/product-passport.projector.js';
+import { WarrantyManagerProjector } from './application/warranty-manager.projector.js';
 import { PRODUCT_PORT_PROVIDERS } from './products.providers.js';
+import { WarrantyExpiryScheduler } from './presentation/warranty-expiry.scheduler.js';
 
-/** Phần M5 chạy trong Worker: chiếu ProductRegistered của ProductPassport. */
+/** Phần chạy trong Worker: chiếu event ProductPassport, WarrantyManager và đồng bộ bảo hành hết hạn. */
 @Module({
-  imports: [DatabaseModule, BlockchainModule, AuditModule, ChainSyncWorkerModule],
-  providers: [...PRODUCT_PORT_PROVIDERS, ProductPassportProjector],
+  imports: [
+    DatabaseModule,
+    BlockchainModule,
+    AuditModule,
+    ChainSyncWorkerModule,
+    IdentityWorkerModule,
+  ],
+  providers: [
+    ...PRODUCT_PORT_PROVIDERS,
+    ProductPassportProjector,
+    WarrantyManagerProjector,
+    ExpireWarranties,
+    WarrantyExpiryScheduler,
+  ],
+  exports: [ExpireWarranties],
 })
 export class ProductsWorkerModule implements OnModuleInit {
   constructor(
     private readonly projectors: EventProjectorRegistry,
-    private readonly projector: ProductPassportProjector,
+    private readonly passportProjector: ProductPassportProjector,
+    private readonly warrantyProjector: WarrantyManagerProjector,
   ) {}
 
   onModuleInit(): void {
-    this.projectors.register(this.projector);
+    this.projectors.register(this.passportProjector);
+    this.projectors.register(this.warrantyProjector);
   }
 }

@@ -9,9 +9,10 @@ Hệ thống quản lý vòng đời, bảo hành và chuyển quyền sở hữ
 | M2     | Identity & Auth: tài khoản, ví MetaMask, Party | Xong          |
 | M3     | Indexer quét log, đối soát                     | Xong          |
 | M4     | Doanh nghiệp và phí MON, khu Quản trị          | Xong          |
-| **M5** | **Sản phẩm, mã QR, tra cứu**                   | **Xong**      |
-| M6     | Phân phối và bán hàng, kích hoạt bảo hành      | Kế tiếp       |
-| M7–M13 | Dịch vụ bảo hành, chuyển quyền, ...            | Theo lộ trình |
+| M5     | Sản phẩm, mã QR, tra cứu                       | Xong          |
+| **M6** | **Phân phối và bán hàng, kích hoạt bảo hành**  | **Xong**      |
+| M7     | Dịch vụ bảo hành (phiếu sửa chữa)              | Kế tiếp       |
+| M8–M13 | Kiểm định, chuyển quyền, thu hồi, ...          | Theo lộ trình |
 
 ## M1 gồm những gì
 
@@ -65,7 +66,19 @@ Nhà sản xuất đã được duyệt đăng ký sản phẩm bằng ví MetaM
 - **Tra cứu công khai** (`/lookup`): gõ mã, quét bằng camera hoặc tải ảnh tem; trang hộ chiếu `/p/<mã>` đọc trực tiếp contract để đối chiếu hash hồ sơ, kèm txHash mở được trên MonadVision.
 - **Contract `ProductPassport`**: `registerProducts` nhận giấy phép EIP-712 của registrar và chỉ cho ví đại diện nhà sản xuất **đã duyệt** (kiểm tra qua `PartyRegistry.authorizedOrganizationOf`). Ví từ chối ký thì hồ sơ thành bản nháp để gửi lại hoặc xoá.
 - **Sửa M4**: bảng mới `organization_applications` giữ **mọi lần nộp đơn** (bản chụp hồ sơ, phí, lý do từ chối, ví ký, từng txHash), không còn mất dấu khi bị từ chối rồi nộp lại; Admin xem đủ hồ sơ (có địa chỉ) và trang chi tiết `/admin/organizations/<id>` với nhật ký on-chain. Migration tự dựng lại lịch sử cho dữ liệu cũ.
-- **363 test tự động** (285 unit và contract, 78 e2e). Test e2e sản phẩm chạy trọn luồng trên Hardhat node: duyệt nhà sản xuất, tạo một sản phẩm, lô CSV, Indexer chốt khi web không báo txHash, tra cứu công khai.
+- **363 test tự động** (285 unit và contract, 78 e2e) lúc giao M5. Test e2e sản phẩm chạy trọn luồng trên Hardhat node: duyệt nhà sản xuất, tạo một sản phẩm, lô CSV, Indexer chốt khi web không báo txHash, tra cứu công khai.
+
+## M6 gồm những gì
+
+Nhà sản xuất gửi hàng, nhà bán lẻ nhận rồi bán cho tài khoản của người mua; bảo hành bắt đầu ngay trong giao dịch bán. Chi tiết quyết định D38–D46, luồng, gas và cách cập nhật từ M5: [docs/m6-distribution.md](docs/m6-distribution.md).
+
+- **DST-01 Gửi hàng**: trang chi tiết sản phẩm có khung **Phân phối** chọn nhà bán lẻ đã duyệt; gửi nhầm thì **huỷ** được khi bên kia chưa nhận.
+- **DST-02 Nhận hàng** ở trang **Kho hàng** (`/inventory`, chỉ hiện với người đại diện nhà bán lẻ): **Đã nhận hàng** hoặc **Từ chối** (hàng về lại nhà sản xuất). Bên giữ hàng chỉ đổi khi nhà bán lẻ xác nhận.
+- **DST-03 Bán và kích hoạt bảo hành**: nhập email tài khoản người mua (chưa cần ví), xác nhận tên rồi ví cửa hàng ký. Người mua thành chủ sở hữu; bảo hành theo đúng số tháng nhà sản xuất đã khoá on-chain, hạn tính theo lịch Việt Nam.
+- **Đã mua** (`/owned`): người mua xem sản phẩm của mình, bảo hành đến ngày nào, còn bao nhiêu ngày. Hộ chiếu công khai thêm bên đang giữ, bảo hành và hành trình từng bước có txHash, không lộ người mua.
+- **ProductPassport phiên bản 2** (deploy mới) và **WarrantyManager**: mỗi lần chuyển trạng thái phát `ProductStateChanged(trước, sau)`; có sẵn điểm nối qua role cho M7 (tạm dừng bảo hành), M9 (chuyển nhượng), M10 (thu hồi, báo mất) nên các module sau không phải deploy lại ProductPassport.
+- Lệnh `products:reset` dọn sản phẩm test của bản M5, giữ tài khoản, doanh nghiệp và nhật ký.
+- **408 test tự động** (322 unit và contract, 86 e2e). Test e2e phân phối chạy trọn luồng trên Hardhat node: gửi, từ chối, gửi lại, huỷ, nhận, bán cho tài khoản chưa có ví, bảo hành, hành trình 9 bước.
 
 ---
 
@@ -120,8 +133,8 @@ pnpm contracts:test
 #    chép PARTY_REGISTRY_ADDRESS và PARTY_REGISTRY_DEPLOY_BLOCK in ra vào .env
 pnpm --filter @dpp/contracts deploy:monad
 
-# 7b. (M5) Deploy ProductPassport (cần PARTY_REGISTRY_ADDRESS trong .env),
-#     chép PRODUCT_PASSPORT_ADDRESS và PRODUCT_PASSPORT_DEPLOY_BLOCK in ra vào .env
+# 7b. (M5, M6) Deploy ProductPassport và WarrantyManager (cần PARTY_REGISTRY_ADDRESS trong .env),
+#     chép PRODUCT_PASSPORT_ADDRESS, PRODUCT_PASSPORT_DEPLOY_BLOCK, WARRANTY_MANAGER_ADDRESS vào .env
 pnpm --filter @dpp/contracts deploy:products:monad
 
 # 8. Chạy toàn bộ: API (cổng 4000), Worker và Web (cổng 3000)
@@ -141,6 +154,8 @@ Mở trình duyệt:
 - http://localhost:3000/admin — khu Quản trị: duyệt, từ chối, khoá doanh nghiệp, đổi phí; bấm vào từng doanh nghiệp để xem mọi lần nộp đơn kèm txHash. Chỉ tài khoản Admin mới thấy (người khác nhận 404). Tài khoản Admin phải liên kết **đúng ví đã deploy** PartyRegistry.
 - http://localhost:3000/products — (M5) sản phẩm của nhà sản xuất: thêm từng cái hoặc nhập CSV, tải QR, in tem. Chỉ hiện khi tài khoản đại diện nhà sản xuất đã duyệt.
 - http://localhost:3000/lookup — (M5) tra cứu công khai bằng mã, camera hoặc ảnh tem; hộ chiếu ở `/p/<mã>`, không cần đăng nhập.
+- http://localhost:3000/inventory — (M6) kho hàng của nhà bán lẻ: nhận hoặc từ chối hàng, bán và kích hoạt bảo hành.
+- http://localhost:3000/owned — (M6) sản phẩm người mua đang sở hữu và bảo hành.
 - Quét QR bằng điện thoại cùng Wi-Fi: đặt `PUBLIC_WEB_URL` bằng địa chỉ `Network: http://192.168.x.x:3000` mà `pnpm dev` in ra, rồi khởi động lại `pnpm dev`.
 - http://localhost:3000/system/status — trạng thái CSDL, blockchain và Indexer (mở từ khu Quản trị).
 - http://localhost:4000/api/v1/health/ready — báo cáo JSON (trả 503 khi chưa sẵn sàng).
@@ -152,7 +167,7 @@ Mở trình duyệt:
 pnpm --filter @dpp/contracts node
 ```
 
-Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`; tiếp theo `pnpm --filter @dpp/contracts deploy:products:local`, chép `PRODUCT_PASSPORT_ADDRESS` và `PRODUCT_PASSPORT_DEPLOY_BLOCK`; rồi `pnpm dev`.
+Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`; tiếp theo `pnpm --filter @dpp/contracts deploy:products:local`, chép `PRODUCT_PASSPORT_ADDRESS`, `PRODUCT_PASSPORT_DEPLOY_BLOCK` và `WARRANTY_MANAGER_ADDRESS`; rồi `pnpm dev`.
 
 Để thử liên kết ví với mạng cục bộ: trong MetaMask thêm mạng RPC `http://127.0.0.1:8545`, chain ID `31337`, ký hiệu `ETH`; import một tài khoản thử từ danh sách Hardhat node in ra (khoá công khai, **chỉ dùng cục bộ**). Mỗi lần khởi động lại Hardhat node, contract phải deploy lại, CSDL cần làm mới bằng `pnpm --filter @dpp/api db:reset` (mốc quét của Indexer thuộc chain cũ), và MetaMask cần xoá lịch sử giao dịch của tài khoản (Settings → Advanced → Clear activity tab data) để không lệch nonce.
 
@@ -185,21 +200,22 @@ dpp/
 │   │   │       ├── identity/        # M2: ACC-01..04, liên kết ví, projector PartyRegistry; M3: đối soát ví
 │   │   │       ├── chain-sync/      # M2: chốt giao dịch ví gửi; M3: Indexer, indexer_checkpoints
 │   │   │       ├── organizations/   # M4: ORG-01..06, phí, khu Quản trị, projector doanh nghiệp; M5: lịch sử nộp đơn
-│   │   │       ├── products/        # M5: PRD-01..03, bản nháp, giấy phép, hộ chiếu công khai, projector ProductPassport
+│   │   │       ├── products/        # M5: PRD-01..03, mã QR, hộ chiếu công khai; M6: DST-01..03, kho hàng, đã mua, bảo hành
 │   │   │       └── audit/           # ghi audit_logs, anomaly_alerts (màn hình xem ở M12)
 │   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar, cấp quyền Admin
 │   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm
 │   └── web/                         # Next.js 16 + Tailwind 4
 │       └── src/
-│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /products, /lookup, /p/[code], /system/status
+│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /products, /inventory, /owned, /lookup, /p/[code], /system/status
 │           ├── components/          # ui/ (button, badge, field, tabs, step-list, ...), layout/
-│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, lookup, passport, ...
+│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, distribution, warranty, lookup, passport, ...
 │           └── lib/                 # env, format, nhãn trạng thái; wallet/ (MetaMask, gửi giao dịch)
 ├── packages/
 │   ├── contracts/                   # Hardhat 3 + OpenZeppelin 5
-│   │   ├── contracts/shared/        # DppTypes.sol, DppRoles.sol, DppErrors.sol
+│   │   ├── contracts/shared/        # DppTypes.sol, DppRoles.sol, DppErrors.sol, VietnamCalendar.sol
 │   │   ├── contracts/registry/      # M2, M4: PartyRegistry.sol
-│   │   ├── contracts/product/       # M5: ProductPassport.sol
+│   │   ├── contracts/product/       # M5, M6: ProductPassport.sol (phiên bản 2)
+│   │   ├── contracts/warranty/      # M6: WarrantyManager.sol
 │   │   ├── contracts/test/          # contract chỉ dùng trong test
 │   │   ├── ignition/modules/        # module deploy (Hardhat Ignition)
 │   │   ├── scripts/                 # deploy-identity.ts, deploy-products.ts, grant-admin-role.ts, export-abi.ts
@@ -208,7 +224,7 @@ dpp/
 │   └── shared/                      # dùng chung cho API, Web, test contract
 │       └── src/
 │           ├── abi/                 # ABI sinh từ artifact (không sửa tay)
-│           ├── chain/               # thông số mạng, EIP-712 của PartyRegistry và ProductPassport
+│           ├── chain/               # thông số mạng, EIP-712 của PartyRegistry và ProductPassport, hạn bảo hành
 │           ├── domain/              # enum, 4 state machine, role, enum on-chain, hash hồ sơ sản phẩm, mã QR
 │           ├── api/                 # hợp đồng dữ liệu API ↔ Web
 │           └── utils/               # chuẩn hoá địa chỉ, hash, MON
@@ -284,7 +300,7 @@ Mỗi model trong `schema.prisma` ghi rõ loại và các cột [P].
 
 ### Thêm migration mới
 
-Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Migration của M4: `20261029000000_organization_representative` (thêm `organizations.representative_user_id` và `status_reason`). Migration của M5: `20261030000000_organization_applications` (bảng lịch sử nộp đơn, tự dựng lại từ `blockchain_events`) và `20261030010000_product_registration` (serial theo nhà sản xuất, ngày sản xuất, bảo hành). Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`; riêng M4 phải deploy lại PartyRegistry nên làm mới CSDL bằng `db:reset` (xem [docs/m4-organizations.md](docs/m4-organizations.md) mục 5), M5 thì không.
+Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Migration của M4: `20261029000000_organization_representative` (thêm `organizations.representative_user_id` và `status_reason`). Migration của M5: `20261030000000_organization_applications` (bảng lịch sử nộp đơn, tự dựng lại từ `blockchain_events`) và `20261030010000_product_registration` (serial theo nhà sản xuất, ngày sản xuất, bảo hành). M6 không có migration mới. Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`; riêng M4 phải deploy lại PartyRegistry nên làm mới CSDL bằng `db:reset` (xem [docs/m4-organizations.md](docs/m4-organizations.md) mục 5); M6 deploy ProductPassport mới nên chỉ dọn sản phẩm bằng `products:reset` (xem [docs/m6-distribution.md](docs/m6-distribution.md) mục 6).
 
 ```bash
 # 1. Sửa apps/api/prisma/schema.prisma
@@ -308,7 +324,7 @@ pnpm db:migrate
   ```
 
 - Deploy PartyRegistry: `pnpm --filter @dpp/contracts deploy:monad` (hoặc `deploy:local` cho Hardhat node). Script cấp `REGISTRAR_ROLE` cho địa chỉ của `REGISTRAR_SIGNER_PRIVATE_KEY` và in các dòng cần chép vào `.env`. Khoá registrar chỉ ký giấy phép, không cần MON.
-- Deploy ProductPassport (M5): `pnpm --filter @dpp/contracts deploy:products:monad` (hoặc `deploy:products:local`). Contract đọc quyền nhà sản xuất từ PartyRegistry nên phải deploy sau PartyRegistry; script kiểm tra `PARTY_REGISTRY_ADDRESS` có contract rồi in hai dòng `PRODUCT_PASSPORT_*`.
+- Deploy ProductPassport và WarrantyManager (M6): `pnpm --filter @dpp/contracts deploy:products:monad` (hoặc `deploy:products:local`). Hai contract đọc quyền tổ chức từ PartyRegistry nên phải deploy sau PartyRegistry; script kiểm tra `PARTY_REGISTRY_ADDRESS` có contract, ví deploy còn quyền Admin (để cấp `PRODUCT_CONTRACT_ROLE` cho ProductPassport) rồi in ba dòng cần chép vào `.env`.
 - Sau khi sửa contract: `pnpm --filter @dpp/contracts abi:export` để cập nhật ABI trong `@dpp/shared` (test báo đỏ nếu quên).
 - Xác minh mã nguồn: `pnpm --filter @dpp/contracts exec hardhat verify <địa_chỉ> --network monadTestnet`. Sourcify của MonadVision không cần API key; Monadscan cần `ETHERSCAN_API_KEY`.
 - Nếu mạng chặn tải trình biên dịch Solidity, đặt `SOLC_PATH` tới `soljson.js` (gói npm `solc`) hoặc file solc native.
@@ -321,25 +337,26 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 
 ## 7. Lệnh thường dùng
 
-| Lệnh                                                 | Việc làm                                                                |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `pnpm dev`                                           | Chạy API, Worker, Web cùng lúc ở chế độ theo dõi thay đổi               |
-| `pnpm build`                                         | Build toàn bộ theo đúng thứ tự phụ thuộc                                |
-| `pnpm lint` / `pnpm typecheck`                       | Kiểm tra lint (oxlint, ESLint) và kiểu                                  |
-| `pnpm test`                                          | Unit test (shared, api, web) và test contract                           |
-| `pnpm test:e2e`                                      | Test e2e trên CSDL `dpp_test`                                           |
-| `pnpm format` / `pnpm format:check`                  | Định dạng mã bằng Prettier                                              |
-| `pnpm db:up` / `pnpm db:down`                        | Bật / tắt PostgreSQL trong Docker                                       |
-| `pnpm db:migrate` / `pnpm db:deploy`                 | Tạo migration khi phát triển / áp migration có sẵn                      |
-| `pnpm db:studio`                                     | Mở Prisma Studio xem dữ liệu                                            |
-| `pnpm contracts:compile` / `contracts:test`          | Biên dịch / test Smart Contract                                         |
-| `pnpm --filter @dpp/contracts deploy:local`          | Deploy PartyRegistry lên Hardhat node (`deploy:monad` cho testnet)      |
-| `pnpm --filter @dpp/contracts deploy:products:monad` | (M5) Deploy ProductPassport (`deploy:products:local` cho Hardhat node)  |
-| `pnpm --filter @dpp/contracts admin-role:monad`      | Ví deploy cấp quyền Admin PartyRegistry cho ví trong `NEW_ADMIN_WALLET` |
-| `pnpm --filter @dpp/contracts abi:export`            | Sinh lại ABI vào `packages/shared/src/abi`                              |
-| `pnpm --filter @dpp/api secret:new`                  | Sinh `JWT_SECRET`                                                       |
-| `pnpm --filter @dpp/api registrar:new`               | Sinh khoá ký giấy phép `REGISTRAR_SIGNER_PRIVATE_KEY`                   |
-| `pnpm --filter @dpp/api admin:grant <email>`         | Cấp quyền Admin cho tài khoản (`admin:revoke` để thu hồi)               |
+| Lệnh                                                 | Việc làm                                                                           |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `pnpm dev`                                           | Chạy API, Worker, Web cùng lúc ở chế độ theo dõi thay đổi                          |
+| `pnpm build`                                         | Build toàn bộ theo đúng thứ tự phụ thuộc                                           |
+| `pnpm lint` / `pnpm typecheck`                       | Kiểm tra lint (oxlint, ESLint) và kiểu                                             |
+| `pnpm test`                                          | Unit test (shared, api, web) và test contract                                      |
+| `pnpm test:e2e`                                      | Test e2e trên CSDL `dpp_test`                                                      |
+| `pnpm format` / `pnpm format:check`                  | Định dạng mã bằng Prettier                                                         |
+| `pnpm db:up` / `pnpm db:down`                        | Bật / tắt PostgreSQL trong Docker                                                  |
+| `pnpm db:migrate` / `pnpm db:deploy`                 | Tạo migration khi phát triển / áp migration có sẵn                                 |
+| `pnpm db:studio`                                     | Mở Prisma Studio xem dữ liệu                                                       |
+| `pnpm contracts:compile` / `contracts:test`          | Biên dịch / test Smart Contract                                                    |
+| `pnpm --filter @dpp/contracts deploy:local`          | Deploy PartyRegistry lên Hardhat node (`deploy:monad` cho testnet)                 |
+| `pnpm --filter @dpp/contracts deploy:products:monad` | Deploy ProductPassport, WarrantyManager (`deploy:products:local` cho Hardhat node) |
+| `pnpm --filter @dpp/api products:reset [--yes]`      | (M6) Xem rồi xoá sản phẩm và dữ liệu đi kèm, giữ tài khoản và doanh nghiệp         |
+| `pnpm --filter @dpp/contracts admin-role:monad`      | Ví deploy cấp quyền Admin PartyRegistry cho ví trong `NEW_ADMIN_WALLET`            |
+| `pnpm --filter @dpp/contracts abi:export`            | Sinh lại ABI vào `packages/shared/src/abi`                                         |
+| `pnpm --filter @dpp/api secret:new`                  | Sinh `JWT_SECRET`                                                                  |
+| `pnpm --filter @dpp/api registrar:new`               | Sinh khoá ký giấy phép `REGISTRAR_SIGNER_PRIVATE_KEY`                              |
+| `pnpm --filter @dpp/api admin:grant <email>`         | Cấp quyền Admin cho tài khoản (`admin:revoke` để thu hồi)                          |
 
 ## 8. Test chứng minh traceability
 
@@ -358,39 +375,46 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 | `packages/contracts/test/product/product-passport.test.ts`              | (M5) Chỉ nhà sản xuất đã duyệt, lô 1–50, giấy phép sai/hết hạn, trùng productId, đổi ví |
 | `apps/api/test/products/products.e2e-spec.ts`                           | (M5) PRD-01, PRD-02 thật trên Hardhat node, tra cứu công khai đọc lại contract          |
 | `apps/api/test/database/application-backfill.e2e-spec.ts`               | (M5) Migration dựng lại đúng lịch sử nộp đơn từ event cũ                                |
+| `packages/contracts/test/product/product-distribution.test.ts`          | (M6) Gửi, huỷ, từ chối, nhận, bán; mọi điều kiện revert; điểm nối M9, M10               |
+| `packages/contracts/test/warranty/warranty-manager.test.ts`             | (M6) Kích hoạt bảo hành, hết hạn theo thời gian, lịch Việt Nam khớp phía ứng dụng       |
+| `apps/api/test/products/distribution.e2e-spec.ts`                       | (M6) DST-01..03 thật trên Hardhat node, hành trình và hộ chiếu không lộ người mua       |
 
 Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự động mỗi lần chạy CI, nên một bên đổi mà quên bên kia thì test sẽ đỏ.
 
 ## 9. Xử lý sự cố
 
-| Hiện tượng                                                | Cách xử lý                                                                                                                                                                                                                                                                                                                               |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cổng 5433 đã bị chiếm                                     | Đổi `POSTGRES_PORT` và cổng trong `DATABASE_URL`, `TEST_DATABASE_URL`                                                                                                                                                                                                                                                                    |
-| `P1000` khi `pnpm db:deploy`                              | Xem tên user trong lỗi: khác `POSTGRES_USER` nghĩa là Prisma không đọc chuỗi kết nối từ `.env` (biến môi trường Windows `DATABASE_URL` được ưu tiên hơn `.env`) hoặc `.env` ghi sai; user đúng mà vẫn lỗi thì cổng trong `DATABASE_URL` đang trỏ vào PostgreSQL cài sẵn trên máy (`Get-Service *postgres*`), không phải container Docker |
-| Đổi `POSTGRES_*` sau khi đã `db:up`                       | Container chỉ tạo user lúc khởi tạo volume; chạy `docker compose down -v` rồi `pnpm db:up`                                                                                                                                                                                                                                               |
-| Thiếu CSDL `dpp_test`                                     | Script tạo CSDL chỉ chạy lần đầu; chạy `docker compose down -v` rồi `pnpm db:up`                                                                                                                                                                                                                                                         |
-| API dừng với `ChainMismatchError`                         | `RPC_URL` trỏ sai mạng so với `CHAIN_ID`; sửa cho khớp                                                                                                                                                                                                                                                                                   |
-| API báo `Cấu hình môi trường không hợp lệ`                | Thông báo liệt kê đúng biến sai; đối chiếu với `.env.example`                                                                                                                                                                                                                                                                            |
-| Trang trạng thái báo không kết nối được API               | Chạy `pnpm dev`, kiểm tra `API_INTERNAL_URL`                                                                                                                                                                                                                                                                                             |
-| `prisma generate` lỗi tải engine                          | Máy cần truy cập `binaries.prisma.sh` ở lần cài đầu; thử lại khi có mạng                                                                                                                                                                                                                                                                 |
-| API báo thiếu `JWT_SECRET`                                | Chạy `pnpm --filter @dpp/api secret:new`, chép dòng in ra vào `.env`                                                                                                                                                                                                                                                                     |
-| Trang Tài khoản báo chưa cấu hình PartyRegistry           | Thiếu `REGISTRAR_SIGNER_PRIVATE_KEY` hoặc `PARTY_REGISTRY_ADDRESS`; xem bước 3b và 7 ở mục 2                                                                                                                                                                                                                                             |
-| MetaMask báo lỗi nonce sau khi khởi động lại Hardhat node | MetaMask → Settings → Advanced → Clear activity tab data, rồi deploy lại contract                                                                                                                                                                                                                                                        |
-| Header hiện sai tên mạng                                  | Web đọc `CHAIN_ID` trong `.env`; sửa rồi khởi động lại `pnpm dev`                                                                                                                                                                                                                                                                        |
-| Trạng thái hệ thống báo Indexer chưa quét hoặc chậm       | Worker chưa chạy (`pnpm dev` chạy cả Worker) hoặc đang bắt kịp từ block deploy; xem log Worker. Chậm lâu thì kiểm tra `PARTY_REGISTRY_DEPLOY_BLOCK` và RPC                                                                                                                                                                               |
-| Worker báo block finalized thấp hơn mốc đã quét           | Thường do vừa khởi động lại Hardhat node: chạy `pnpm --filter @dpp/api db:reset` rồi deploy lại contract                                                                                                                                                                                                                                 |
-| Khu Quản trị báo ví đang liên kết không có quyền Admin    | Ví MetaMask của tài khoản Admin khác ví deploy. Cấp quyền bằng ví deploy: `$env:NEW_ADMIN_WALLET="0x..."` rồi `pnpm --filter @dpp/contracts admin-role:monad`, sau đó tải lại trang                                                                                                                                                      |
-| Mở `/admin` ra trang 404                                  | Tài khoản chưa có quyền Admin: chạy `pnpm --filter @dpp/api admin:grant <email>` rồi tải lại trang                                                                                                                                                                                                                                       |
-| Nộp đơn báo "Phí đăng ký vừa được thay đổi"               | Admin vừa đổi phí sau khi bạn mở trang; tải lại trang Doanh nghiệp rồi nộp lại                                                                                                                                                                                                                                                           |
-| Deploy báo `HHE10120 ... reconciliation errors`           | Ignition đã có bản deploy cũ với tham số khác. Tăng `PARTY_REGISTRY_VERSION` trong `packages/contracts/scripts/deploy-identity.ts` khi contract đổi mà cần deploy mới                                                                                                                                                                    |
-| Trang Sản phẩm báo chưa cấu hình ProductPassport          | Thiếu `PRODUCT_PASSPORT_ADDRESS`: chạy `pnpm --filter @dpp/contracts deploy:products:monad`, chép hai dòng in ra vào `.env`, khởi động lại `pnpm dev`                                                                                                                                                                                    |
-| Không thấy mục Sản phẩm trên menu                         | Tài khoản không đại diện doanh nghiệp loại Nhà sản xuất (nhà bán lẻ, trung tâm bảo hành dùng ở M6, M7). Đơn chưa duyệt thì mục vẫn hiện nhưng chưa đăng ký được sản phẩm                                                                                                                                                                 |
-| MetaMask báo `NotAuthorizedManufacturer`                  | Ví đang chọn trong MetaMask không phải ví đã liên kết của người đại diện, hoặc doanh nghiệp đã bị khoá                                                                                                                                                                                                                                   |
-| Điện thoại quét QR không mở được trang                    | QR đang chứa `localhost`. Đặt `PUBLIC_WEB_URL=http://<địa chỉ Network>:3000`, khởi động lại `pnpm dev`, cho phép Node.js qua tường lửa Windows (mạng Private), điện thoại cùng Wi-Fi                                                                                                                                                     |
-| Nút "Quét bằng camera" báo cần HTTPS                      | Trình duyệt chỉ mở camera trên HTTPS hoặc `localhost`; trên điện thoại dùng ứng dụng camera có sẵn quét tem, hoặc tải ảnh tem lên                                                                                                                                                                                                        |
-| Nhập CSV báo thiếu cột                                    | Dùng nút "Tải file mẫu"; dòng đầu là tiêu đề, Excel lưu dạng "CSV UTF-8" để giữ dấu tiếng Việt                                                                                                                                                                                                                                           |
-| Test e2e báo "Chưa biên dịch contract"                    | Chạy `pnpm contracts:compile` (hoặc `pnpm test`) trước `pnpm test:e2e`                                                                                                                                                                                                                                                                   |
-| Windows: lệnh `cp` không có                               | Dùng `Copy-Item .env.example .env` (PowerShell) hoặc `copy .env.example .env` (cmd)                                                                                                                                                                                                                                                      |
+| Hiện tượng                                                   | Cách xử lý                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cổng 5433 đã bị chiếm                                        | Đổi `POSTGRES_PORT` và cổng trong `DATABASE_URL`, `TEST_DATABASE_URL`                                                                                                                                                                                                                                                                    |
+| `P1000` khi `pnpm db:deploy`                                 | Xem tên user trong lỗi: khác `POSTGRES_USER` nghĩa là Prisma không đọc chuỗi kết nối từ `.env` (biến môi trường Windows `DATABASE_URL` được ưu tiên hơn `.env`) hoặc `.env` ghi sai; user đúng mà vẫn lỗi thì cổng trong `DATABASE_URL` đang trỏ vào PostgreSQL cài sẵn trên máy (`Get-Service *postgres*`), không phải container Docker |
+| Đổi `POSTGRES_*` sau khi đã `db:up`                          | Container chỉ tạo user lúc khởi tạo volume; chạy `docker compose down -v` rồi `pnpm db:up`                                                                                                                                                                                                                                               |
+| Thiếu CSDL `dpp_test`                                        | Script tạo CSDL chỉ chạy lần đầu; chạy `docker compose down -v` rồi `pnpm db:up`                                                                                                                                                                                                                                                         |
+| API dừng với `ChainMismatchError`                            | `RPC_URL` trỏ sai mạng so với `CHAIN_ID`; sửa cho khớp                                                                                                                                                                                                                                                                                   |
+| API báo `Cấu hình môi trường không hợp lệ`                   | Thông báo liệt kê đúng biến sai; đối chiếu với `.env.example`                                                                                                                                                                                                                                                                            |
+| Trang trạng thái báo không kết nối được API                  | Chạy `pnpm dev`, kiểm tra `API_INTERNAL_URL`                                                                                                                                                                                                                                                                                             |
+| `prisma generate` lỗi tải engine                             | Máy cần truy cập `binaries.prisma.sh` ở lần cài đầu; thử lại khi có mạng                                                                                                                                                                                                                                                                 |
+| API báo thiếu `JWT_SECRET`                                   | Chạy `pnpm --filter @dpp/api secret:new`, chép dòng in ra vào `.env`                                                                                                                                                                                                                                                                     |
+| Trang Tài khoản báo chưa cấu hình PartyRegistry              | Thiếu `REGISTRAR_SIGNER_PRIVATE_KEY` hoặc `PARTY_REGISTRY_ADDRESS`; xem bước 3b và 7 ở mục 2                                                                                                                                                                                                                                             |
+| MetaMask báo lỗi nonce sau khi khởi động lại Hardhat node    | MetaMask → Settings → Advanced → Clear activity tab data, rồi deploy lại contract                                                                                                                                                                                                                                                        |
+| Header hiện sai tên mạng                                     | Web đọc `CHAIN_ID` trong `.env`; sửa rồi khởi động lại `pnpm dev`                                                                                                                                                                                                                                                                        |
+| Trạng thái hệ thống báo Indexer chưa quét hoặc chậm          | Worker chưa chạy (`pnpm dev` chạy cả Worker) hoặc đang bắt kịp từ block deploy; xem log Worker. Chậm lâu thì kiểm tra `PARTY_REGISTRY_DEPLOY_BLOCK` và RPC                                                                                                                                                                               |
+| Worker báo block finalized thấp hơn mốc đã quét              | Thường do vừa khởi động lại Hardhat node: chạy `pnpm --filter @dpp/api db:reset` rồi deploy lại contract                                                                                                                                                                                                                                 |
+| Khu Quản trị báo ví đang liên kết không có quyền Admin       | Ví MetaMask của tài khoản Admin khác ví deploy. Cấp quyền bằng ví deploy: `$env:NEW_ADMIN_WALLET="0x..."` rồi `pnpm --filter @dpp/contracts admin-role:monad`, sau đó tải lại trang                                                                                                                                                      |
+| Mở `/admin` ra trang 404                                     | Tài khoản chưa có quyền Admin: chạy `pnpm --filter @dpp/api admin:grant <email>` rồi tải lại trang                                                                                                                                                                                                                                       |
+| Nộp đơn báo "Phí đăng ký vừa được thay đổi"                  | Admin vừa đổi phí sau khi bạn mở trang; tải lại trang Doanh nghiệp rồi nộp lại                                                                                                                                                                                                                                                           |
+| Deploy báo `HHE10120 ... reconciliation errors`              | Ignition đã có bản deploy cũ với tham số khác. Tăng `PARTY_REGISTRY_VERSION` trong `packages/contracts/scripts/deploy-identity.ts` khi contract đổi mà cần deploy mới                                                                                                                                                                    |
+| Trang Sản phẩm báo chưa cấu hình ProductPassport             | Thiếu `PRODUCT_PASSPORT_ADDRESS`: chạy `pnpm --filter @dpp/contracts deploy:products:monad`, chép hai dòng in ra vào `.env`, khởi động lại `pnpm dev`                                                                                                                                                                                    |
+| Không thấy mục Sản phẩm / Kho hàng trên menu                 | Sản phẩm chỉ hiện với người đại diện Nhà sản xuất, Kho hàng chỉ hiện với người đại diện Nhà bán lẻ. Đơn chưa duyệt thì mục vẫn hiện nhưng chưa thao tác được                                                                                                                                                                             |
+| Deploy sản phẩm báo ví deploy không có quyền Admin           | Ví trong keystore không phải ví đã deploy PartyRegistry, hoặc đã bị thu quyền. Dùng đúng ví đã deploy PartyRegistry                                                                                                                                                                                                                      |
+| Khung Phân phối báo chưa có nhà bán lẻ                       | Chưa có doanh nghiệp loại Nhà bán lẻ nào được Admin duyệt                                                                                                                                                                                                                                                                                |
+| Bán hàng báo không có tài khoản với email này                | Người mua tạo tài khoản ở trang Đăng ký trước (không cần liên kết ví), rồi nhập đúng email đó                                                                                                                                                                                                                                            |
+| Sản phẩm cũ (M5) vẫn hiện sau khi deploy ProductPassport mới | Chạy `pnpm --filter @dpp/api products:reset --yes` rồi nhập lại sản phẩm                                                                                                                                                                                                                                                                 |
+| MetaMask báo `NotAuthorizedManufacturer`                     | Ví đang chọn trong MetaMask không phải ví đã liên kết của người đại diện, hoặc doanh nghiệp đã bị khoá                                                                                                                                                                                                                                   |
+| Điện thoại quét QR không mở được trang                       | QR đang chứa `localhost`. Đặt `PUBLIC_WEB_URL=http://<địa chỉ Network>:3000`, khởi động lại `pnpm dev`, cho phép Node.js qua tường lửa Windows (mạng Private), điện thoại cùng Wi-Fi                                                                                                                                                     |
+| Nút "Quét bằng camera" báo cần HTTPS                         | Trình duyệt chỉ mở camera trên HTTPS hoặc `localhost`; trên điện thoại dùng ứng dụng camera có sẵn quét tem, hoặc tải ảnh tem lên                                                                                                                                                                                                        |
+| Nhập CSV báo thiếu cột                                       | Dùng nút "Tải file mẫu"; dòng đầu là tiêu đề, Excel lưu dạng "CSV UTF-8" để giữ dấu tiếng Việt                                                                                                                                                                                                                                           |
+| Test e2e báo "Chưa biên dịch contract"                       | Chạy `pnpm contracts:compile` (hoặc `pnpm test`) trước `pnpm test:e2e`                                                                                                                                                                                                                                                                   |
+| Windows: lệnh `cp` không có                                  | Dùng `Copy-Item .env.example .env` (PowerShell) hoặc `copy .env.example .env` (cmd)                                                                                                                                                                                                                                                      |
 
 ## 10. Đưa lên GitHub
 

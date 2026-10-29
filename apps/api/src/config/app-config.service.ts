@@ -117,6 +117,11 @@ export class AppConfigService {
     return block === undefined ? null : BigInt(block);
   }
 
+  /** WarrantyManager (M6), deploy cùng ProductPassport nên dùng chung block bắt đầu quét. */
+  get warrantyManagerAddress(): string | null {
+    return this.config.get('WARRANTY_MANAGER_ADDRESS', { infer: true }) ?? null;
+  }
+
   /** ProductPassport cùng khoá registrar ký giấy phép đăng ký sản phẩm; `null` khi thiếu một trong hai. */
   get productChain(): ProductChainConfig | null {
     const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });

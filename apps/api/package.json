@@ -25,7 +25,8 @@
     "secret:new": "node scripts/generate-secret.mjs jwt",
     "registrar:new": "node scripts/generate-secret.mjs registrar",
     "admin:grant": "node scripts/grant-admin.mjs grant",
-    "admin:revoke": "node scripts/grant-admin.mjs revoke"
+    "admin:revoke": "node scripts/grant-admin.mjs revoke",
+    "products:reset": "node scripts/reset-products.mjs"
   },
   "dependencies": {
     "@dpp/shared": "workspace:*",

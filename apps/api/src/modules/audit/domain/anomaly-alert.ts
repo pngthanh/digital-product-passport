@@ -6,6 +6,10 @@ export const AnomalyRule = {
   PRODUCT_NOT_IN_DATABASE: 'PRODUCT_NOT_IN_DATABASE',
   /** Hash hồ sơ hoặc nhà phát hành on-chain khác bản nháp trong CSDL. */
   PRODUCT_METADATA_MISMATCH: 'PRODUCT_METADATA_MISMATCH',
+  /** (M6) Trạng thái sau một bước giao nhận/bán trong CSDL khác ProductStateChanged on-chain. */
+  PRODUCT_STATE_MISMATCH: 'PRODUCT_STATE_MISMATCH',
+  /** (M6) Event nhắc tới một Party (bên nhận, người mua) mà CSDL không có. */
+  PRODUCT_PARTY_UNKNOWN: 'PRODUCT_PARTY_UNKNOWN',
 } as const;
 
 export type AnomalyRule = (typeof AnomalyRule)[keyof typeof AnomalyRule];

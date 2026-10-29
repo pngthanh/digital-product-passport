@@ -1,145 +1,34 @@
 import {
   MANUFACTURER_ROLE,
-  ORGANIZATION_APPLICATION_TYPES,
   PRODUCT_BATCH_MAX_SIZE,
-  PRODUCT_REGISTRATION_TYPES,
   type ProductRegistration,
   partyIdFromUuid,
   partyRegistryDomain,
-  productIdOf,
-  productPassportDomain,
   productRegistrationDigest,
-  RETAILER_ROLE,
   statusReasonHash,
   WALLET_BINDING_TYPES,
 } from '@dpp/shared';
 import { expect } from 'chai';
-import { type BaseWallet, id, type Signer, Wallet, ZeroAddress, ZeroHash } from 'ethers';
+import { id, Wallet, ZeroAddress, ZeroHash } from 'ethers';
 import { network } from 'hardhat';
+import {
+  ALICE_PARTY,
+  CAROL_PARTY,
+  MAKER,
+  passportFixture,
+  products,
+  SHOP,
+  STATE,
+  TTL_SECONDS,
+} from '../support/passport-fixture.js';
 
-const { ethers, networkHelpers } = await network.create();
-
-const PRODUCT_STATE_CREATED = 1n;
-const ALICE_PARTY = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-000000000001');
-const BOB_PARTY = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-000000000002');
-const CAROL_PARTY = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-000000000003');
-const MAKER = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-0000000000a1');
-const SHOP = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-0000000000a2');
-const TTL_SECONDS = 15 * 60;
+const connection = await network.create();
+const { ethers, networkHelpers } = connection;
+const deployFixture = passportFixture(connection);
+const PRODUCT_STATE_CREATED = STATE.CREATED;
 
 async function deadline() {
   return BigInt((await networkHelpers.time.latest()) + TTL_SECONDS);
-}
-
-function products(count: number, issuer = MAKER, prefix = 'ABC-2026-') {
-  const productIds = Array.from({ length: count }, (_, index) =>
-    productIdOf(issuer, `${prefix}${String(index + 1).padStart(6, '0')}`),
-  );
-  const metadataHashes = productIds.map((productId) => id(`ho so ${productId}`));
-  return { productIds, metadataHashes };
-}
-
-/** PartyRegistry có nhà sản xuất MAKER (Alice đại diện, đã duyệt) và nhà bán lẻ SHOP (Bob đại diện). */
-async function deployFixture() {
-  const [admin, alice, bob, carol, dave] = await ethers.getSigners();
-  const registrar = Wallet.createRandom();
-  const registry = await ethers.deployContract('PartyRegistry', [
-    admin!.address,
-    registrar.address,
-    admin!.address,
-    0n,
-  ]);
-  const passport = await ethers.deployContract('ProductPassport', [await registry.getAddress()]);
-  const { chainId } = await ethers.provider.getNetwork();
-  const registryDomain = partyRegistryDomain(Number(chainId), await registry.getAddress());
-  const passportDomain = productPassportDomain(Number(chainId), await passport.getAddress());
-
-  async function registerUser(wallet: Signer & { address: string }, partyId: string) {
-    const binding = { partyId, wallet: wallet.address, previousWallet: ZeroAddress };
-    const value = { ...binding, deadline: await deadline() };
-    const signature = await registrar.signTypedData(registryDomain, WALLET_BINDING_TYPES, value);
-    await registry.connect(wallet).registerUser(partyId, value.deadline, signature);
-  }
-
-  async function organization(
-    representative: Signer & { address: string },
-    representativeId: string,
-    partyId: string,
-    role: string,
-    approve: boolean,
-  ) {
-    const application = {
-      partyId,
-      representativeId,
-      role,
-      profileHash: id(`ho so ${partyId}`),
-      deadline: await deadline(),
-    };
-    const signature = await registrar.signTypedData(
-      registryDomain,
-      ORGANIZATION_APPLICATION_TYPES,
-      application,
-    );
-    await registry
-      .connect(representative)
-      .applyOrganization(partyId, role, application.profileHash, application.deadline, signature);
-    if (approve) {
-      await registry.connect(admin!).approveOrganization(partyId);
-    }
-  }
-
-  /** Giấy phép registrar cấp cho lô sản phẩm; `signer` khác registrar để thử chữ ký sai. */
-  async function authorize(
-    overrides: Partial<ProductRegistration> = {},
-    signer: BaseWallet = registrar,
-  ): Promise<ProductRegistration & { signature: string }> {
-    const registration: ProductRegistration = {
-      issuerId: MAKER,
-      ...products(1),
-      deadline: await deadline(),
-      ...overrides,
-    };
-    const signature = await signer.signTypedData(
-      passportDomain,
-      PRODUCT_REGISTRATION_TYPES,
-      registration,
-    );
-    return { ...registration, signature };
-  }
-
-  function register(wallet: Signer, registration: ProductRegistration & { signature: string }) {
-    return passport
-      .connect(wallet)
-      .registerProducts(
-        registration.issuerId,
-        registration.productIds,
-        registration.metadataHashes,
-        registration.deadline,
-        registration.signature,
-      );
-  }
-
-  await registerUser(alice!, ALICE_PARTY);
-  await registerUser(bob!, BOB_PARTY);
-  await registerUser(carol!, CAROL_PARTY);
-  await organization(alice!, ALICE_PARTY, MAKER, MANUFACTURER_ROLE, true);
-  await organization(bob!, BOB_PARTY, SHOP, RETAILER_ROLE, true);
-
-  return {
-    registry,
-    passport,
-    registrar,
-    authorize,
-    register,
-    registerUser,
-    organization,
-    chainId: Number(chainId),
-    admin: admin!,
-    alice: alice!,
-    bob: bob!,
-    carol: carol!,
-    dave: dave!,
-  };
 }
 
 describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
@@ -152,12 +41,15 @@ describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
 
     await expect(register(alice, registration))
       .to.emit(passport, 'ProductRegistered')
-      .withArgs(productId, MAKER, metadataHash);
+      .withArgs(productId, MAKER, metadataHash, 24);
 
     const stored = await passport.product(productId!);
     expect(stored.issuerId).to.equal(MAKER);
     expect(stored.metadataHash).to.equal(metadataHash);
     expect(stored.state).to.equal(PRODUCT_STATE_CREATED);
+    expect(stored.warrantyMonths).to.equal(24n);
+    expect(stored.custodianId).to.equal(MAKER);
+    expect(stored.ownerId).to.equal(ZeroHash);
     expect(await passport.stateOf(productId!)).to.equal(PRODUCT_STATE_CREATED);
     expect(await passport.custodianOf(productId!)).to.equal(MAKER);
   });
@@ -176,7 +68,7 @@ describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
     }
   });
 
-  it('lô rỗng hoặc vượt giới hạn, hai mảng lệch độ dài thì revert', async () => {
+  it('lô rỗng hoặc vượt giới hạn, các mảng lệch độ dài thì revert', async () => {
     const { passport, authorize, register, alice } =
       await networkHelpers.loadFixture(deployFixture);
 
@@ -186,12 +78,39 @@ describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
     await expect(register(alice, await authorize(products(PRODUCT_BATCH_MAX_SIZE + 1))))
       .to.be.revertedWithCustomError(passport, 'InvalidBatchSize')
       .withArgs(BigInt(PRODUCT_BATCH_MAX_SIZE + 1));
-    const { productIds, metadataHashes } = products(2);
+    const { productIds, metadataHashes, warrantyMonths } = products(2);
     await expect(
-      register(alice, await authorize({ productIds, metadataHashes: [metadataHashes[0]!] })),
+      register(
+        alice,
+        await authorize({ productIds, metadataHashes: [metadataHashes[0]!], warrantyMonths }),
+      ),
     )
       .to.be.revertedWithCustomError(passport, 'LengthMismatch')
-      .withArgs(2n, 1n);
+      .withArgs(2n, 1n, 2n);
+    await expect(
+      register(
+        alice,
+        await authorize({ productIds, metadataHashes, warrantyMonths: [warrantyMonths[0]!] }),
+      ),
+    )
+      .to.be.revertedWithCustomError(passport, 'LengthMismatch')
+      .withArgs(2n, 2n, 1n);
+  });
+
+  it('số tháng bảo hành khoá on-chain theo giấy phép, tối đa 120 tháng', async () => {
+    const { passport, authorize, register, alice } =
+      await networkHelpers.loadFixture(deployFixture);
+
+    await expect(register(alice, await authorize(products(1, MAKER, 'W-', 121))))
+      .to.be.revertedWithCustomError(passport, 'WarrantyTooLong')
+      .withArgs(121n);
+
+    const genuine = await authorize(products(1, MAKER, 'W-', 12));
+    await expect(
+      register(alice, { ...genuine, warrantyMonths: [36] }),
+    ).to.be.revertedWithCustomError(passport, 'InvalidAuthorization');
+    await register(alice, genuine);
+    expect((await passport.product(genuine.productIds[0]!)).warrantyMonths).to.equal(12n);
   });
 
   it('chỉ người đại diện của nhà sản xuất đã duyệt mới đăng ký được', async () => {
@@ -262,7 +181,12 @@ describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
     const first = await authorize();
     await register(alice, first);
 
-    await expect(register(alice, await authorize({ productIds: first.productIds })))
+    await expect(
+      register(
+        alice,
+        await authorize({ productIds: first.productIds, metadataHashes: first.metadataHashes }),
+      ),
+    )
       .to.be.revertedWithCustomError(passport, 'ProductAlreadyRegistered')
       .withArgs(first.productIds[0]);
 
@@ -273,6 +197,7 @@ describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
         await authorize({
           productIds: [productIds[0]!, productIds[0]!],
           metadataHashes: [metadataHashes[0]!, metadataHashes[0]!],
+          warrantyMonths: [24, 24],
         }),
       ),
     ).to.be.revertedWithCustomError(passport, 'ProductAlreadyRegistered');
@@ -325,16 +250,21 @@ describe('ProductPassport – PRD-01, PRD-02 đăng ký sản phẩm', () => {
         registration.issuerId,
         registration.productIds,
         registration.metadataHashes,
+        registration.warrantyMonths,
         registration.deadline,
       ),
     ).to.equal(productRegistrationDigest(chainId, await passport.getAddress(), registration));
   });
 
-  it('không deploy với địa chỉ PartyRegistry rỗng', async () => {
+  it('không deploy với địa chỉ PartyRegistry hoặc WarrantyManager rỗng', async () => {
+    const { registry, warranty } = await networkHelpers.loadFixture(deployFixture);
     const passport = await ethers.getContractFactory('ProductPassport');
 
     await expect(
-      ethers.deployContract('ProductPassport', [ZeroAddress]),
+      ethers.deployContract('ProductPassport', [ZeroAddress, await warranty.getAddress()]),
+    ).to.be.revertedWithCustomError(passport, 'ZeroAddress');
+    await expect(
+      ethers.deployContract('ProductPassport', [await registry.getAddress(), ZeroAddress]),
     ).to.be.revertedWithCustomError(passport, 'ZeroAddress');
   });
 });

@@ -48,13 +48,13 @@ export function Button({
   return <button type={type} className={buttonClasses({ variant, size, className })} {...props} />;
 }
 
-export function ButtonLink({
+export function ButtonLink<T extends string>({
   href,
   children,
   variant,
   size,
   className,
-}: ButtonStyleProps & { href: Route; children: ReactNode }) {
+}: ButtonStyleProps & { href: Route<T>; children: ReactNode }) {
   return (
     <Link href={href} className={buttonClasses({ variant, size, className })}>
       {children}

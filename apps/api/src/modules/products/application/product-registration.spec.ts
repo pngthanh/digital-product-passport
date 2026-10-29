@@ -14,7 +14,9 @@ import { InMemoryOrganizations } from '../../../../test/support/organization-fak
 import {
   FakeProductChain,
   InMemoryProducts,
+  onchainProduct,
   SequenceCodes,
+  TEST_PRODUCT_PASSPORT,
 } from '../../../../test/support/product-fakes.js';
 import { TEST_REGISTRAR_KEY, TestClock } from '../../../../test/support/test-config.js';
 import {
@@ -33,7 +35,8 @@ import {
   SerialTakenError,
 } from '../domain/products.errors.js';
 import { DeleteProductDraft } from './delete-product-draft.use-case.js';
-import { ManufacturerAccess } from './manufacturer-access.service.js';
+import { ManufacturerAccess } from './organization-access.service.js';
+import { PartyLabels } from './party-labels.js';
 import { ProductAuthorizer } from './product-authorizer.service.js';
 import { GetMyProduct, ListMyProducts } from './product-queries.js';
 import { ProductViews } from './product-views.js';
@@ -59,9 +62,16 @@ async function setup(options: { codes?: string[] } = {}) {
   const chain = new FakeProductChain();
   const { audit, writer } = recordingAudit();
   const identity = new IdentityDirectory(store, store);
-  const access = new ManufacturerAccess(new OrganizationDirectory(organizations), identity);
+  const directory = new OrganizationDirectory(organizations);
+  const access = new ManufacturerAccess(directory, identity);
   const authorizer = new ProductAuthorizer(chain, new TestClock());
-  const views = new ProductViews(chain, inMemoryChainHistory());
+  const views = new ProductViews(
+    chain,
+    products,
+    new TestClock(),
+    inMemoryChainHistory(undefined, [TEST_PRODUCT_PASSPORT]),
+    new PartyLabels(directory),
+  );
 
   async function representative(
     email: string,
@@ -112,7 +122,7 @@ async function setup(options: { codes?: string[] } = {}) {
     ),
     retry: new RetryProductRegistration(products, chain, access, authorizer, audit),
     remove: new DeleteProductDraft(products, chain, access, audit),
-    list: new ListMyProducts(products, chain, access),
+    list: new ListMyProducts(products, chain, access, views),
     detail: new GetMyProduct(products, access, views),
   };
 }
@@ -272,11 +282,10 @@ describe('Bản nháp chưa ghi lên blockchain', () => {
     const { register, retry, remove, products, chain, maker } = await setup();
     await register.execute(maker.user, [LAPTOP], client);
     const draft = products.only();
-    chain.onchain.set(draft.chainProductId, {
-      issuerId: partyIdFromUuid(maker.organizationId),
-      metadataHash: draft.metadataHash,
-      state: 1,
-    });
+    chain.onchain.set(
+      draft.chainProductId,
+      onchainProduct(partyIdFromUuid(maker.organizationId), draft.metadataHash),
+    );
 
     await expect(retry.execute(maker.user, [draft.id], client)).rejects.toBeInstanceOf(
       ProductAlreadyOnChainError,
@@ -317,11 +326,10 @@ describe('Bản nháp chưa ghi lên blockchain', () => {
       txHash: '0x' + '02'.repeat(32),
       at: new Date(),
     });
-    chain.onchain.set(draft.chainProductId, {
-      issuerId: partyIdFromUuid(maker.organizationId),
-      metadataHash: draft.metadataHash,
-      state: 1,
-    });
+    chain.onchain.set(
+      draft.chainProductId,
+      onchainProduct(partyIdFromUuid(maker.organizationId), draft.metadataHash),
+    );
 
     const view = await detail.execute(maker.user, draft.id);
 

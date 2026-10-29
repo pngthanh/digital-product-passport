@@ -3,7 +3,9 @@ import { Injectable } from '@nestjs/common';
 import {
   PRODUCT_PASSPORT_ABI,
   PRODUCT_REGISTRATION_TYPES,
+  PRODUCT_SALE_TYPES,
   type ProductRegistration,
+  type ProductSale,
   productPassportDomain,
   PUBLIC_CODE_ALPHABET,
   PUBLIC_CODE_LENGTH,
@@ -46,6 +48,17 @@ export class EthersProductChain implements ProductChain {
     );
   }
 
+  signSale(sale: ProductSale): Promise<string> {
+    if (!this.signer || !this.contractAddress) {
+      throw new ProductChainNotConfiguredError();
+    }
+    return this.signer.signTypedData(
+      productPassportDomain(this.chainId, this.contractAddress),
+      PRODUCT_SALE_TYPES,
+      sale,
+    );
+  }
+
   async readProduct(chainProductId: string): Promise<OnchainProduct | null> {
     const address = this.contractAddress;
     if (!address) {
@@ -60,16 +73,35 @@ export class EthersProductChain implements ProductChain {
   }
 }
 
-/** `product()` trả về struct (issuerId, metadataHash, state); state 0 (NONE) là chưa đăng ký. */
+function isBytes32(value: unknown): value is string {
+  return typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value);
+}
+
+/**
+ * `product()` trả về struct (issuerId, metadataHash, custodianId, pendingCustodianId, ownerId,
+ * state, warrantyMonths); state 0 (NONE) là chưa đăng ký.
+ */
 function parseProduct(value: unknown): OnchainProduct | null {
   if (!Array.isArray(value)) {
     throw new Error('ProductPassport.product() trả về giá trị không hợp lệ');
   }
-  const [issuerId, metadataHash, state]: unknown[] = value;
+  const [
+    issuerId,
+    metadataHash,
+    custodianId,
+    pendingCustodianId,
+    ownerId,
+    state,
+    months,
+  ]: unknown[] = value;
   if (
-    typeof issuerId !== 'string' ||
-    typeof metadataHash !== 'string' ||
-    typeof state !== 'bigint'
+    !isBytes32(issuerId) ||
+    !isBytes32(metadataHash) ||
+    !isBytes32(custodianId) ||
+    !isBytes32(pendingCustodianId) ||
+    !isBytes32(ownerId) ||
+    typeof state !== 'bigint' ||
+    typeof months !== 'bigint'
   ) {
     throw new Error('ProductPassport.product() trả về giá trị không hợp lệ');
   }
@@ -78,7 +110,11 @@ function parseProduct(value: unknown): OnchainProduct | null {
     : {
         issuerId: issuerId.toLowerCase(),
         metadataHash: metadataHash.toLowerCase(),
+        custodianId: custodianId.toLowerCase(),
+        pendingCustodianId: pendingCustodianId.toLowerCase(),
+        ownerId: ownerId.toLowerCase(),
         state: Number(state),
+        warrantyMonths: Number(months),
       };
 }
 

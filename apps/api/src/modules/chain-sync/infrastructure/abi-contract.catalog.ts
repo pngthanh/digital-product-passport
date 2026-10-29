@@ -4,6 +4,8 @@ import {
   PARTY_REGISTRY_CONTRACT_NAME,
   PRODUCT_PASSPORT_ABI,
   PRODUCT_PASSPORT_CONTRACT_NAME,
+  WARRANTY_MANAGER_ABI,
+  WARRANTY_MANAGER_CONTRACT_NAME,
 } from '@dpp/shared';
 import { type InterfaceAbi, Interface, type ParamType } from 'ethers';
 import { AppConfigService } from '../../../config/app-config.service.js';
@@ -54,6 +56,14 @@ export class AbiContractCatalog implements ContractCatalog {
         name: PRODUCT_PASSPORT_CONTRACT_NAME,
         address: config.productPassportAddress,
         abi: PRODUCT_PASSPORT_ABI,
+        correlationArg: 'productId',
+        productArg: 'productId',
+        startBlock: config.productPassportDeployBlock,
+      },
+      {
+        name: WARRANTY_MANAGER_CONTRACT_NAME,
+        address: config.warrantyManagerAddress,
+        abi: WARRANTY_MANAGER_ABI,
         correlationArg: 'productId',
         productArg: 'productId',
         startBlock: config.productPassportDeployBlock,

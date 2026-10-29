@@ -1,16 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  type ContractInfo,
   type MyProductList,
   type ProductDetail,
   type ProductListFilter,
   type PublicPassportView,
+  type RetailerOption,
   toChecksumAddress,
 } from '@dpp/shared';
 import type { AuthenticatedUser } from '../../identity/index.js';
 import { OrganizationDirectory } from '../../organizations/index.js';
 import { isDraft } from '../domain/product.js';
 import { ProductNotFoundError } from '../domain/products.errors.js';
-import { ManufacturerAccess } from './manufacturer-access.service.js';
+import { ManufacturerAccess } from './organization-access.service.js';
+import { organizationLabel } from './party-labels.js';
 import { PRODUCT_CHAIN, type ProductChain } from './ports/product-chain.port.js';
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
 import { presentProduct, ProductViews } from './product-views.js';
@@ -24,6 +27,13 @@ export interface MyProductListQuery {
   pageSize: number;
 }
 
+/** Thông tin contract ProductPassport đang dùng; `null` khi chưa cấu hình. */
+export function contractInfoOf(chain: ProductChain): ContractInfo | null {
+  return chain.contractAddress
+    ? { chainId: chain.chainId, address: toChecksumAddress(chain.contractAddress) }
+    : null;
+}
+
 /** Danh sách sản phẩm của nhà sản xuất mà người dùng đại diện, mới nhất trước. */
 @Injectable()
 export class ListMyProducts {
@@ -31,14 +41,16 @@ export class ListMyProducts {
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
     @Inject(PRODUCT_CHAIN) private readonly chain: ProductChain,
     private readonly access: ManufacturerAccess,
+    private readonly views: ProductViews,
   ) {}
 
   async execute(user: AuthenticatedUser, query: MyProductListQuery): Promise<MyProductList> {
     const organization = await this.access.find(user);
-    const contract = this.chain.contractAddress
-      ? { chainId: this.chain.chainId, address: toChecksumAddress(this.chain.contractAddress) }
-      : null;
-    const base = { contract, page: query.page, pageSize: query.pageSize };
+    const base = {
+      contract: contractInfoOf(this.chain),
+      page: query.page,
+      pageSize: query.pageSize,
+    };
     if (!organization) {
       return { ...base, manufacturer: null, items: [], total: 0, counts: EMPTY_COUNTS };
     }
@@ -46,6 +58,7 @@ export class ListMyProducts {
       this.products.list(organization.id, query),
       this.products.counts(organization.id),
     ]);
+    const labels = await this.views.labels(items);
     return {
       ...base,
       manufacturer: {
@@ -55,14 +68,14 @@ export class ListMyProducts {
         authStatus: organization.authStatus,
         orgType: organization.orgType,
       },
-      items: items.map(presentProduct),
+      items: items.map((item) => presentProduct(item, labels)),
       total,
       counts,
     };
   }
 }
 
-/** Chi tiết một sản phẩm của nhà sản xuất: hồ sơ, bằng chứng on-chain, lịch sử event. */
+/** Chi tiết một sản phẩm của nhà sản xuất: hồ sơ, bằng chứng on-chain, hành trình, lịch sử event. */
 @Injectable()
 export class GetMyProduct {
   constructor(
@@ -79,27 +92,46 @@ export class GetMyProduct {
     if (!organization || !product) {
       throw new ProductNotFoundError();
     }
-    const [proof, history] = await Promise.all([
-      this.views.proof(product, organization),
-      this.views.history(product),
+    const [proof, timeline] = await Promise.all([
+      this.views.proof(product, organization.partyId),
+      this.views.timeline(product, null),
     ]);
     return {
-      ...presentProduct(product),
+      ...presentProduct(product, timeline.labels),
       description: product.description,
-      issuer: {
-        organizationId: organization.id,
-        name: organization.name,
-        partyId: organization.partyId,
-      },
+      issuer: organizationLabel(organization),
       proof,
-      history,
+      warranty: timeline.warranty,
+      journey: timeline.journey,
+      history: timeline.history,
     };
+  }
+}
+
+/** DST-01: nhà bán lẻ đã được duyệt để nhà sản xuất chọn khi gửi hàng. */
+@Injectable()
+export class ListRetailers {
+  constructor(
+    private readonly organizations: OrganizationDirectory,
+    private readonly access: ManufacturerAccess,
+  ) {}
+
+  async execute(user: AuthenticatedUser): Promise<RetailerOption[]> {
+    await this.access.require(user);
+    const retailers = await this.organizations.authorizedOfType('RETAILER');
+    return retailers.map((retailer) => ({
+      organizationId: retailer.id,
+      name: retailer.name,
+      taxCode: retailer.taxCode,
+      address: retailer.address,
+      partyId: retailer.partyId,
+    }));
   }
 }
 
 /**
  * Tra cứu công khai bằng mã QR (không cần đăng nhập). Chỉ sản phẩm đã ghi lên blockchain mới có
- * hộ chiếu; bản nháp coi như không tồn tại.
+ * hộ chiếu; bản nháp coi như không tồn tại. Không trả thông tin của người mua.
  */
 @Injectable()
 export class GetPublicPassport {
@@ -114,23 +146,20 @@ export class GetPublicPassport {
     if (!product || isDraft(product) || !product.productState) {
       throw new ProductNotFoundError();
     }
-    const custodianId = product.currentCustodianPartyId;
-    const directory = await this.organizations.describe(
-      custodianId ? [product.issuerOrgId, custodianId] : [product.issuerOrgId],
+    const issuer = (await this.organizations.describe([product.issuerOrgId])).get(
+      product.issuerOrgId,
     );
-    const issuer = directory.get(product.issuerOrgId);
     if (!issuer) {
       throw new ProductNotFoundError();
     }
-    const [proof, history] = await Promise.all([
-      this.views.proof(product, issuer),
-      this.views.history(product),
+    const [proof, timeline] = await Promise.all([
+      this.views.proof(product, issuer.partyId),
+      this.views.timeline(product, null),
     ]);
     if (!proof) {
       throw new ProductNotFoundError();
     }
-    // Party của tổ chức dùng chung UUID với organizations; bên giữ là cá nhân thì không hiện tên.
-    const custodian = custodianId ? directory.get(custodianId) : undefined;
+    const pendingRetailer = timeline.labels.organization(product.pendingCustodianPartyId);
     return {
       publicCode: product.publicCode,
       serialNumber: product.serialNumber,
@@ -146,9 +175,13 @@ export class GetPublicPassport {
         authStatus: issuer.authStatus,
         partyId: issuer.partyId,
       },
-      custodian: custodian ? { name: custodian.name } : null,
+      holder: timeline.labels.party(product.currentCustodianPartyId),
+      pendingRetailer: pendingRetailer ? { name: pendingRetailer.name } : null,
+      hasOwner: product.currentOwnerPartyId !== null,
+      warranty: timeline.warranty,
       proof,
-      history,
+      journey: timeline.journey,
+      history: timeline.history,
     };
   }
 }

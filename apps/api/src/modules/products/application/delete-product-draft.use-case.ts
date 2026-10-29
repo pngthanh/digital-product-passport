@@ -4,7 +4,7 @@ import { AuditAction, AuditTrail } from '../../audit/index.js';
 import type { AuthenticatedUser } from '../../identity/index.js';
 import { isDraft } from '../domain/product.js';
 import { ProductAlreadyOnChainError, ProductNotFoundError } from '../domain/products.errors.js';
-import { ManufacturerAccess } from './manufacturer-access.service.js';
+import { ManufacturerAccess } from './organization-access.service.js';
 import { PRODUCT_CHAIN, type ProductChain } from './ports/product-chain.port.js';
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
 import { draftsAlreadyOnChain } from './retry-product-registration.use-case.js';

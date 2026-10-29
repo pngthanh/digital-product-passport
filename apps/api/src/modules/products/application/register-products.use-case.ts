@@ -15,7 +15,7 @@ import {
   ProductChainNotConfiguredError,
   SerialTakenError,
 } from '../domain/products.errors.js';
-import { ManufacturerAccess } from './manufacturer-access.service.js';
+import { ManufacturerAccess } from './organization-access.service.js';
 import {
   PRODUCT_CHAIN,
   PUBLIC_CODE_GENERATOR,

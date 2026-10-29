@@ -21,7 +21,10 @@ export interface ProductRecord {
   metadataHash: string;
   issuerOrgId: string;
   productState: ProductState | null;
+  /** UUID dòng parties; tổ chức dùng chung UUID với organizations (D25). */
   currentCustodianPartyId: string | null;
+  pendingCustodianPartyId: string | null;
+  currentOwnerPartyId: string | null;
   createdTxHash: string | null;
   syncStatus: SyncStatus;
   onchainCreatedAt: Date | null;

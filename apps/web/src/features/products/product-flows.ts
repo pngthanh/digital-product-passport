@@ -32,6 +32,7 @@ async function sendAndConfirm(
       authorization.issuerId,
       authorization.productIds,
       authorization.metadataHashes,
+      authorization.warrantyMonths,
       BigInt(authorization.deadline),
       authorization.signature,
     ],

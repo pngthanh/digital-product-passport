@@ -2,10 +2,21 @@ import { formatPublicCode, type PublicPassportView } from '@dpp/shared';
 import { BadgeCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
-import { ORG_TYPE_LABELS, PRODUCT_STATE_LABELS } from '@/lib/state-labels';
+import { ORG_TYPE_LABELS, PRODUCT_STATE_LABELS, WARRANTY_STATE_LABELS } from '@/lib/state-labels';
 import { buildProductMrz } from '../passport-specimen/mrz';
-import { warrantyLabel } from '../products/product-status';
+import { partyText, warrantyLabel } from '../products/product-status';
 import { PassportHistory } from './passport-history';
+
+/** Bảo hành trên hộ chiếu: chưa bán thì nói rõ tính từ ngày bán; đã bán thì trạng thái và hạn. */
+function warrantyText(passport: PublicPassportView): string {
+  if (passport.warranty) {
+    const state = WARRANTY_STATE_LABELS[passport.warranty.state].label;
+    return `${state} · ${warrantyLabel(passport.warranty.months)}, đến ${formatDate(passport.warranty.expiresAt)}`;
+  }
+  return passport.warrantyMonths === 0
+    ? 'Không bảo hành'
+    : `${warrantyLabel(passport.warrantyMonths)}, tính từ ngày bán`;
+}
 
 /** Trang dữ liệu của hộ chiếu số thật, cùng bố cục với hồ sơ mẫu ở trang chủ (kèm dải MRZ). */
 export function PassportCard({ passport }: { passport: PublicPassportView }) {
@@ -53,22 +64,21 @@ export function PassportCard({ passport }: { passport: PublicPassportView }) {
         <dt className="text-muted">Ngày sản xuất</dt>
         <dd>{formatDate(`${passport.manufacturedOn}T00:00:00Z`)}</dd>
         <dt className="text-muted">Bảo hành</dt>
-        <dd>
-          {passport.warrantyMonths === 0
-            ? 'Không bảo hành'
-            : `${warrantyLabel(passport.warrantyMonths)}, tính từ ngày bán`}
-        </dd>
+        <dd>{warrantyText(passport)}</dd>
         <dt className="text-muted">Bên đang giữ</dt>
-        <dd>{passport.custodian?.name ?? 'Người dùng cá nhân'}</dd>
+        <dd>
+          {partyText(passport.holder)}
+          {passport.pendingRetailer ? (
+            <span className="block text-muted">Đang gửi tới {passport.pendingRetailer.name}</span>
+          ) : null}
+        </dd>
+        <dt className="text-muted">Chủ sở hữu</dt>
+        <dd>{passport.hasOwner ? 'Đã có chủ (người dùng cá nhân)' : 'Chưa bán'}</dd>
         <dt className="text-muted">Mã tra cứu</dt>
         <dd className="font-mono tracking-wider">{formatPublicCode(passport.publicCode)}</dd>
       </dl>
 
-      <PassportHistory
-        events={passport.history}
-        chainId={passport.proof.chainId}
-        issuerName={passport.issuer.name}
-      />
+      <PassportHistory steps={passport.journey} chainId={passport.proof.chainId} />
 
       <footer className="overflow-x-auto bg-tint px-6 py-3" aria-label="Dải đọc máy (MRZ)">
         {mrz.map((line) => (

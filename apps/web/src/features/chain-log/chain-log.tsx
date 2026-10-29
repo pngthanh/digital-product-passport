@@ -1,6 +1,7 @@
-import { type ChainEventView, formatMon } from '@dpp/shared';
+import { type ChainEventView, decodeChainEnum, formatMon } from '@dpp/shared';
 import { ChainLink } from '@/components/ui/chain-link';
 import { formatDate, formatTime } from '@/lib/format';
+import { PRODUCT_STATE_LABELS } from '@/lib/state-labels';
 
 const EVENT_LABELS: Record<string, string> = {
   PartyRegistered: 'Tạo danh tính on-chain',
@@ -13,7 +14,29 @@ const EVENT_LABELS: Record<string, string> = {
   FeeSettled: 'Phí chuyển về Treasury',
   OrganizationDisabled: 'Khoá doanh nghiệp',
   ProductRegistered: 'Đăng ký sản phẩm',
+  ProductStateChanged: 'Chuyển trạng thái',
+  CustodyHandoverInitiated: 'Gửi hàng',
+  CustodyHandoverCancelled: 'Huỷ gửi hàng',
+  CustodyHandoverRejected: 'Từ chối nhận hàng',
+  CustodyTransferred: 'Đổi bên giữ hàng',
+  OwnershipTransferred: 'Đổi chủ sở hữu',
+  WarrantyActivated: 'Kích hoạt bảo hành',
+  WarrantySuspended: 'Tạm dừng bảo hành',
+  WarrantyResumed: 'Tiếp tục bảo hành',
 };
+
+function stateName(value: string | number | boolean | undefined): string {
+  const state = typeof value === 'number' ? decodeChainEnum('ProductState', value) : null;
+  return state ? PRODUCT_STATE_LABELS[state].label : 'Chưa có';
+}
+
+/** Chi tiết thêm của event: số MON, hoặc trạng thái trước → sau (state machine sản phẩm). */
+function detailOf(event: ChainEventView): string | null {
+  if (event.eventName === 'ProductStateChanged') {
+    return `${stateName(event.args.previousState)} → ${stateName(event.args.newState)}`;
+  }
+  return amountOf(event);
+}
 
 export function chainEventLabel(eventName: string): string {
   return EVENT_LABELS[eventName] ?? eventName;
@@ -35,7 +58,7 @@ export function ChainLog({ events, chainId }: { events: ChainEventView[]; chainI
   return (
     <ol className="divide-y divide-line">
       {events.map((event) => {
-        const amount = amountOf(event);
+        const amount = detailOf(event);
         return (
           <li
             key={`${event.txHash}-${event.logIndex}`}
@@ -47,7 +70,9 @@ export function ChainLog({ events, chainId }: { events: ChainEventView[]; chainI
             <div className="min-w-0">
               <p className="font-medium">
                 {chainEventLabel(event.eventName)}
-                {amount ? <span className="ml-2 font-normal tabular-nums">{amount}</span> : null}
+                {amount ? (
+                  <span className="ml-2 font-normal text-muted tabular-nums">{amount}</span>
+                ) : null}
               </p>
               {event.actorAddress ? (
                 <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-muted">

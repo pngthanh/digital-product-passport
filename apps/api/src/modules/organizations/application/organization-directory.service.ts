@@ -13,6 +13,7 @@ export interface OrganizationRef {
   taxCode: string;
   orgType: OrgType;
   authStatus: AuthStatus;
+  address: string | null;
   /** partyId (bytes32) on-chain; Party tổ chức dùng chung UUID với dòng organizations (D25). */
   partyId: string;
 }
@@ -24,6 +25,7 @@ function toRef(record: OrganizationRecord): OrganizationRef {
     taxCode: record.taxCode,
     orgType: record.orgType,
     authStatus: record.authStatus,
+    address: record.address ?? null,
     partyId: partyIdFromUuid(record.id),
   };
 }
@@ -39,6 +41,15 @@ export class OrganizationDirectory {
   async representedBy(userId: string): Promise<OrganizationRef | null> {
     const record = await this.organizations.findByRepresentative(userId);
     return record && toRef(record);
+  }
+
+  /** Tổ chức đã được duyệt thuộc loại `orgType`, sắp theo tên (ví dụ nhà bán lẻ để gửi hàng). */
+  async authorizedOfType(orgType: OrgType): Promise<OrganizationRef[]> {
+    const records = await this.organizations.list(['AUTHORIZED']);
+    return records
+      .filter((record) => record.orgType === orgType)
+      .map(toRef)
+      .toSorted((left, right) => left.name.localeCompare(right.name, 'vi'));
   }
 
   async describe(ids: readonly string[]): Promise<Map<string, OrganizationRef>> {

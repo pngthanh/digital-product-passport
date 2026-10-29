@@ -100,3 +100,16 @@ export const productListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).catch(20),
 });
 export type ProductListQueryInput = z.infer<typeof productListQuerySchema>;
+
+export const inventoryListQuerySchema = z.object({
+  filter: z.enum(['INCOMING', 'IN_STOCK', 'SOLD']).catch('IN_STOCK'),
+  page: z.coerce.number().int().min(1).max(10_000).catch(1),
+  pageSize: z.coerce.number().int().min(1).max(100).catch(20),
+});
+export type InventoryListQueryInput = z.infer<typeof inventoryListQuerySchema>;
+
+/** DST-03: email tài khoản của người mua. */
+export const saleAuthorizationSchema = z.object({
+  buyerEmail: z.string('Nhập email người mua').trim().pipe(z.email('Email không hợp lệ').max(254)),
+});
+export type SaleAuthorizationBody = z.infer<typeof saleAuthorizationSchema>;

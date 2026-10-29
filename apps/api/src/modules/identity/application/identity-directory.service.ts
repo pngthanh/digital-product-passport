@@ -1,8 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { TransactionScope } from '../../../common/persistence/transaction-scope.js';
+import { normalizeEmail } from '../domain/email.js';
 import {
   PARTY_DIRECTORY_REPOSITORY,
   type PartyDirectoryRepository,
+  type PartySummary,
+  type PersonSummary,
   type UserSummary,
 } from './ports/party-directory.repository.js';
 import {
@@ -51,9 +54,20 @@ export class IdentityDirectory {
     return new Map(users.map((user) => [user.userId, user]));
   }
 
+  /** Tài khoản cá nhân theo email (không phân biệt hoa thường). */
+  findPersonByEmail(email: string): Promise<PersonSummary | null> {
+    return this.directory.findPersonByEmail(normalizeEmail(email));
+  }
+
+  /** Loại của các Party (UUID); Party không tồn tại thì không có trong kết quả. */
+  async describeParties(partyIds: readonly string[]): Promise<Map<string, PartySummary>> {
+    const parties = await this.directory.describeParties([...new Set(partyIds)]);
+    return new Map(parties.map((party) => [party.partyId, party]));
+  }
+
   createOrganizationParty(organizationId: string, scope: TransactionScope): Promise<void> {
     return this.directory.createOrganizationParty(organizationId, scope);
   }
 }
 
-export type { UserSummary };
+export type { PartySummary, PersonSummary, UserSummary };

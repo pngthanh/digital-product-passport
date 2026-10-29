@@ -13,6 +13,11 @@ const EXPORTS = [
     constant: 'PRODUCT_PASSPORT_ABI',
     file: 'product-passport.abi.ts',
   },
+  {
+    contract: 'WarrantyManager',
+    constant: 'WARRANTY_MANAGER_ABI',
+    file: 'warranty-manager.abi.ts',
+  },
 ] as const;
 
 const OUTPUT_DIR = new URL('../../shared/src/abi/', import.meta.url);

@@ -157,3 +157,7 @@ Gửi theo lô rẻ hơn khoảng 38% mỗi sản phẩm so với gửi lẻ, v�
 - Mỗi giao dịch tối đa 50 sản phẩm; file lớn hơn thì chia nhiều file.
 - Tra cứu công khai chưa giới hạn số lần gọi và chưa có timeline đầy đủ (phân phối, bảo hành, chuyển quyền): làm ở M11 khi các module đó có dữ liệu.
 - Quét camera trên trình duyệt cần HTTPS hoặc `localhost` (quy định của trình duyệt).
+
+## 12. Cập nhật ở M6
+
+M6 deploy **ProductPassport phiên bản 2** (thêm gửi hàng, nhận hàng, bán) cùng WarrantyManager; `registerProducts` nhận thêm mảng số tháng bảo hành để khoá on-chain, phiên bản EIP-712 thành `"2"`. Bản ở mục này vẫn nằm trên chain (thư mục Ignition `chain-10143-products-v1`), sản phẩm test của nó được dọn bằng `products:reset`. Chi tiết: [m6-distribution.md](m6-distribution.md).

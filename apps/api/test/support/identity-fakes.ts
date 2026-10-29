@@ -10,6 +10,8 @@ import type {
 import type { PasswordHasher } from '../../src/modules/identity/application/ports/password-hasher.port.js';
 import type {
   PartyDirectoryRepository,
+  PartySummary,
+  PersonSummary,
   UserSummary,
 } from '../../src/modules/identity/application/ports/party-directory.repository.js';
 import type { PartyRegistryReader } from '../../src/modules/identity/application/ports/party-registry-reader.port.js';
@@ -121,6 +123,32 @@ export class InMemoryIdentityStore
     return userIds.flatMap((userId) => {
       const account = this.accounts.get(userId);
       return account ? [{ userId, fullName: account.fullName, email: account.email }] : [];
+    });
+  }
+
+  async findPersonByEmail(email: string): Promise<PersonSummary | null> {
+    const account = [...this.accounts.values()].find((candidate) => candidate.email === email);
+    if (!account) {
+      return null;
+    }
+    const party = this.partyOfUser(account.id);
+    return {
+      userId: account.id,
+      fullName: account.fullName,
+      email: account.email,
+      partyId: party.id,
+    };
+  }
+
+  async describeParties(partyIds: readonly string[]): Promise<PartySummary[]> {
+    return partyIds.flatMap((partyId): PartySummary[] => {
+      const party = this.parties.get(partyId);
+      if (party) {
+        return [{ partyId, kind: 'USER', userId: party.userId }];
+      }
+      return this.organizationParties.has(partyId)
+        ? [{ partyId, kind: 'ORGANIZATION', userId: null }]
+        : [];
     });
   }
 

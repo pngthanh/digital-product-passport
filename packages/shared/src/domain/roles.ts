@@ -15,6 +15,10 @@ export const SERVICE_CENTER_ROLE = id('SERVICE_CENTER_ROLE');
 export const INSPECTOR_ROLE = id('INSPECTOR_ROLE');
 export const PRODUCT_CONTRACT_ROLE = id('PRODUCT_CONTRACT_ROLE');
 export const TRANSFER_CONTRACT_ROLE = id('TRANSFER_CONTRACT_ROLE');
+/** Contract phiếu dịch vụ (M7) tạm dừng, tiếp tục bảo hành trên WarrantyManager. */
+export const SERVICE_CONTRACT_ROLE = id('SERVICE_CONTRACT_ROLE');
+/** Contract vòng đời (M10) thu hồi, báo mất, ngừng sử dụng trên ProductPassport. */
+export const LIFECYCLE_CONTRACT_ROLE = id('LIFECYCLE_CONTRACT_ROLE');
 
 /** Role nghiệp vụ tương ứng với từng loại tổ chức. */
 export const ORG_TYPE_ROLE: Readonly<Record<OrgType, string>> = {

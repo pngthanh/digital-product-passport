@@ -7,11 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
 import { ChainLog } from '@/features/chain-log/chain-log';
+import { DispatchPanel } from '@/features/distribution/dispatch-panel';
+import { PassportHistory } from '@/features/passport/passport-history';
 import { ProofList } from '@/features/passport/proof-list';
 import { DraftActions } from '@/features/products/draft-actions';
-import { productDetailSchema } from '@/features/products/product.schema';
+import { productDetailSchema, retailerOptionsSchema } from '@/features/products/product.schema';
 import { ProductQr } from '@/features/products/product-qr';
-import { productStatusLabel, warrantyLabel } from '@/features/products/product-status';
+import {
+  locationText,
+  productStatusLabel,
+  warrantyLabel,
+} from '@/features/products/product-status';
+import { WarrantySummary } from '@/features/warranty/warranty-summary';
 import { serverChainId } from '@/lib/env';
 import { formatDate } from '@/lib/format';
 import { publicWebUrl } from '@/lib/public-url';
@@ -47,6 +54,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const chainId = serverChainId();
   const status = productStatusLabel(product);
   const registered = product.syncStatus === 'CONFIRMED';
+  const wallet = identity.wallets.find((candidate) => candidate.status === 'ACTIVE')?.address;
+  const canHandOver =
+    registered &&
+    !!product.proof &&
+    !!wallet &&
+    (product.productState === 'CREATED' || product.productState === 'IN_DISTRIBUTION');
+  const retailers =
+    canHandOver && product.productState === 'CREATED'
+      ? ((await serverGet('/me/retailers', retailerOptionsSchema)) ?? [])
+      : [];
+  const location = locationText(product);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -63,6 +81,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         </Badge>
       </div>
       <p className="mt-1 font-mono text-sm break-all text-muted">{product.serialNumber}</p>
+      {location ? <p className="mt-1 text-sm">{location}</p> : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid min-w-0 content-start gap-6">
@@ -89,6 +108,41 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             </dl>
           </Panel>
 
+          {canHandOver && product.proof && wallet && product.productState ? (
+            <Panel className="px-5 py-5" aria-labelledby="phan-phoi">
+              <h2 id="phan-phoi" className="mb-4 font-semibold">
+                Phân phối
+              </h2>
+              <DispatchPanel
+                target={{
+                  chainId,
+                  contractAddress: product.proof.contractAddress,
+                  wallet,
+                  productId: product.id,
+                  chainProductId: product.chainProductId,
+                }}
+                state={product.productState}
+                pendingRetailer={product.pendingRetailer}
+                retailers={retailers}
+              />
+            </Panel>
+          ) : null}
+
+          {registered ? (
+            <Panel className="py-1" aria-labelledby="hanh-trinh">
+              <h2 id="hanh-trinh" className="sr-only">
+                Hành trình
+              </h2>
+              <PassportHistory
+                steps={product.journey}
+                chainId={chainId}
+                className="px-5 py-4"
+                heading="Hành trình của sản phẩm"
+                headingClassName="font-semibold"
+              />
+            </Panel>
+          ) : null}
+
           {product.proof ? (
             <Panel className="px-5 py-5" aria-labelledby="doi-chieu">
               <h2 id="doi-chieu" className="mb-4 font-semibold">
@@ -104,7 +158,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 Lịch sử on-chain
               </h2>
               <p className="mt-1 mb-4 text-sm text-muted">
-                Event đã chốt của sản phẩm trên ProductPassport.
+                Event đã chốt của sản phẩm trên ProductPassport và WarrantyManager.
               </p>
               <ChainLog events={product.history} chainId={chainId} />
             </Panel>
@@ -125,6 +179,18 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               registered={registered}
             />
           </Panel>
+          {registered ? (
+            <Panel className="px-5 py-5" aria-labelledby="bao-hanh">
+              <h2 id="bao-hanh" className="mb-4 font-semibold">
+                Bảo hành
+              </h2>
+              <WarrantySummary
+                warranty={product.warranty}
+                warrantyMonths={product.warrantyMonths}
+                chainId={chainId}
+              />
+            </Panel>
+          ) : null}
           {product.syncStatus === 'PENDING' ? (
             <Panel className="px-5 py-5" aria-labelledby="ban-nhap">
               <h2 id="ban-nhap" className="mb-3 font-semibold">

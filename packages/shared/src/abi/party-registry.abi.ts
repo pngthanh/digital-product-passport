@@ -1,1345 +1,1345 @@
 // Sinh tự động từ artifact PartyRegistry bằng `pnpm --filter @dpp/contracts abi:export`. Không sửa tay.
 export const PARTY_REGISTRY_ABI = [
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "admin",
-        "type": "address"
+        internalType: 'address',
+        name: 'admin',
+        type: 'address',
       },
       {
-        "internalType": "address",
-        "name": "registrar",
-        "type": "address"
+        internalType: 'address',
+        name: 'registrar',
+        type: 'address',
       },
       {
-        "internalType": "address",
-        "name": "initialTreasury",
-        "type": "address"
+        internalType: 'address',
+        name: 'initialTreasury',
+        type: 'address',
       },
       {
-        "internalType": "uint256",
-        "name": "registrationFee",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'registrationFee',
+        type: 'uint256',
+      },
     ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    stateMutability: 'nonpayable',
+    type: 'constructor',
   },
   {
-    "inputs": [],
-    "name": "AccessControlBadConfirmation",
-    "type": "error"
+    inputs: [],
+    name: 'AccessControlBadConfirmation',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
       },
       {
-        "internalType": "bytes32",
-        "name": "neededRole",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'neededRole',
+        type: 'bytes32',
+      },
     ],
-    "name": "AccessControlUnauthorizedAccount",
-    "type": "error"
+    name: 'AccessControlUnauthorizedAccount',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "uint256",
-        "name": "deadline",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256',
+      },
     ],
-    "name": "AuthorizationExpired",
-    "type": "error"
+    name: 'AuthorizationExpired',
+    type: 'error',
   },
   {
-    "inputs": [],
-    "name": "FailedCall",
-    "type": "error"
+    inputs: [],
+    name: 'FailedCall',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "uint256",
-        "name": "expected",
-        "type": "uint256"
+        internalType: 'uint256',
+        name: 'expected',
+        type: 'uint256',
       },
       {
-        "internalType": "uint256",
-        "name": "received",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'received',
+        type: 'uint256',
+      },
     ],
-    "name": "IncorrectFeeAmount",
-    "type": "error"
+    name: 'IncorrectFeeAmount',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "uint256",
-        "name": "balance",
-        "type": "uint256"
+        internalType: 'uint256',
+        name: 'balance',
+        type: 'uint256',
       },
       {
-        "internalType": "uint256",
-        "name": "needed",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'needed',
+        type: 'uint256',
+      },
     ],
-    "name": "InsufficientBalance",
-    "type": "error"
+    name: 'InsufficientBalance',
+    type: 'error',
   },
   {
-    "inputs": [],
-    "name": "InvalidAuthorization",
-    "type": "error"
+    inputs: [],
+    name: 'InvalidAuthorization',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "enum OrganizationStatus",
-        "name": "status",
-        "type": "uint8"
-      }
+        internalType: 'enum OrganizationStatus',
+        name: 'status',
+        type: 'uint8',
+      },
     ],
-    "name": "InvalidOrganizationStatus",
-    "type": "error"
+    name: 'InvalidOrganizationStatus',
+    type: 'error',
   },
   {
-    "inputs": [],
-    "name": "InvalidShortString",
-    "type": "error"
+    inputs: [],
+    name: 'InvalidShortString',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
+      },
     ],
-    "name": "NotRepresentative",
-    "type": "error"
+    name: 'NotRepresentative',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "NotUserParty",
-    "type": "error"
+    name: 'NotUserParty',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "NothingToRefund",
-    "type": "error"
+    name: 'NothingToRefund',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "PartyAlreadyRegistered",
-    "type": "error"
+    name: 'PartyAlreadyRegistered',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "PartyNotRegistered",
-    "type": "error"
+    name: 'PartyNotRegistered',
+    type: 'error',
   },
   {
-    "inputs": [],
-    "name": "ReentrancyGuardReentrantCall",
-    "type": "error"
+    inputs: [],
+    name: 'ReentrancyGuardReentrantCall',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "representativeId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'representativeId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "organizationId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'organizationId',
+        type: 'bytes32',
+      },
     ],
-    "name": "RepresentativeHasOrganization",
-    "type": "error"
+    name: 'RepresentativeHasOrganization',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "currentWallet",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'currentWallet',
+        type: 'address',
+      },
     ],
-    "name": "StalePreviousWallet",
-    "type": "error"
+    name: 'StalePreviousWallet',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "string",
-        "name": "str",
-        "type": "string"
-      }
+        internalType: 'string',
+        name: 'str',
+        type: 'string',
+      },
     ],
-    "name": "StringTooLong",
-    "type": "error"
+    name: 'StringTooLong',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "action",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'action',
+        type: 'bytes32',
+      },
     ],
-    "name": "UnknownFeeAction",
-    "type": "error"
+    name: 'UnknownFeeAction',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
+      },
     ],
-    "name": "UnknownOrganizationRole",
-    "type": "error"
+    name: 'UnknownOrganizationRole',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
+      },
     ],
-    "name": "WalletAlreadyUsed",
-    "type": "error"
+    name: 'WalletAlreadyUsed',
+    type: 'error',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
+      },
     ],
-    "name": "WalletNotLinked",
-    "type": "error"
+    name: 'WalletNotLinked',
+    type: 'error',
   },
   {
-    "inputs": [],
-    "name": "ZeroAddress",
-    "type": "error"
+    inputs: [],
+    name: 'ZeroAddress',
+    type: 'error',
   },
   {
-    "inputs": [],
-    "name": "ZeroBytes32",
-    "type": "error"
+    inputs: [],
+    name: 'ZeroBytes32',
+    type: 'error',
   },
   {
-    "anonymous": false,
-    "inputs": [],
-    "name": "EIP712DomainChanged",
-    "type": "event"
+    anonymous: false,
+    inputs: [],
+    name: 'EIP712DomainChanged',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "action",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'action',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "payer",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'payer',
+        type: 'address',
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
     ],
-    "name": "FeePaid",
-    "type": "event"
+    name: 'FeePaid',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'recipient',
+        type: 'address',
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
     ],
-    "name": "FeeRefunded",
-    "type": "event"
+    name: 'FeeRefunded',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "treasury",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'treasury',
+        type: 'address',
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
     ],
-    "name": "FeeSettled",
-    "type": "event"
+    name: 'FeeSettled',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "action",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'action',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
       },
       {
-        "indexed": false,
-        "internalType": "address",
-        "name": "treasury",
-        "type": "address"
-      }
+        indexed: false,
+        internalType: 'address',
+        name: 'treasury',
+        type: 'address',
+      },
     ],
-    "name": "FeeUpdated",
-    "type": "event"
+    name: 'FeeUpdated',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "representativeId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'representativeId',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "profileHash",
-        "type": "bytes32"
-      }
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'profileHash',
+        type: 'bytes32',
+      },
     ],
-    "name": "OrganizationApplied",
-    "type": "event"
+    name: 'OrganizationApplied',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      }
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
+      },
     ],
-    "name": "OrganizationApproved",
-    "type": "event"
+    name: 'OrganizationApproved',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "reasonHash",
-        "type": "bytes32"
-      }
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'reasonHash',
+        type: 'bytes32',
+      },
     ],
-    "name": "OrganizationDisabled",
-    "type": "event"
+    name: 'OrganizationDisabled',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "reasonHash",
-        "type": "bytes32"
-      }
+        indexed: false,
+        internalType: 'bytes32',
+        name: 'reasonHash',
+        type: 'bytes32',
+      },
     ],
-    "name": "OrganizationRejected",
-    "type": "event"
+    name: 'OrganizationRejected',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": false,
-        "internalType": "enum PartyKind",
-        "name": "kind",
-        "type": "uint8"
+        indexed: false,
+        internalType: 'enum PartyKind',
+        name: 'kind',
+        type: 'uint8',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
+      },
     ],
-    "name": "PartyRegistered",
-    "type": "event"
+    name: 'PartyRegistered',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "previousAdminRole",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'previousAdminRole',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "newAdminRole",
-        "type": "bytes32"
-      }
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'newAdminRole',
+        type: 'bytes32',
+      },
     ],
-    "name": "RoleAdminChanged",
-    "type": "event"
+    name: 'RoleAdminChanged',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
     ],
-    "name": "RoleGranted",
-    "type": "event"
+    name: 'RoleGranted',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
     ],
-    "name": "RoleRevoked",
-    "type": "event"
+    name: 'RoleRevoked',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousTreasury",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'previousTreasury',
+        type: 'address',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newTreasury",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: 'address',
+        name: 'newTreasury',
+        type: 'address',
+      },
     ],
-    "name": "TreasuryUpdated",
-    "type": "event"
+    name: 'TreasuryUpdated',
+    type: 'event',
   },
   {
-    "anonymous": false,
-    "inputs": [
+    anonymous: false,
+    inputs: [
       {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "previousWallet",
-        "type": "address"
+        indexed: true,
+        internalType: 'address',
+        name: 'previousWallet',
+        type: 'address',
       },
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newWallet",
-        "type": "address"
-      }
+        indexed: true,
+        internalType: 'address',
+        name: 'newWallet',
+        type: 'address',
+      },
     ],
-    "name": "WalletRotated",
-    "type": "event"
+    name: 'WalletRotated',
+    type: 'event',
   },
   {
-    "inputs": [],
-    "name": "DEFAULT_ADMIN_ROLE",
-    "outputs": [
+    inputs: [],
+    name: 'DEFAULT_ADMIN_ROLE',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [],
-    "name": "ORGANIZATION_APPLICATION_TYPEHASH",
-    "outputs": [
+    inputs: [],
+    name: 'ORGANIZATION_APPLICATION_TYPEHASH',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [],
-    "name": "ORG_REGISTRATION",
-    "outputs": [
+    inputs: [],
+    name: 'ORG_REGISTRATION',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [],
-    "name": "WALLET_BINDING_TYPEHASH",
-    "outputs": [
+    inputs: [],
+    name: 'WALLET_BINDING_TYPEHASH',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "profileHash",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'profileHash',
+        type: 'bytes32',
       },
       {
-        "internalType": "uint256",
-        "name": "deadline",
-        "type": "uint256"
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256',
       },
       {
-        "internalType": "bytes",
-        "name": "authorization",
-        "type": "bytes"
-      }
+        internalType: 'bytes',
+        name: 'authorization',
+        type: 'bytes',
+      },
     ],
-    "name": "applyOrganization",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
+    name: 'applyOrganization',
+    outputs: [],
+    stateMutability: 'payable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "approveOrganization",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'approveOrganization',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
       },
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
+      },
     ],
-    "name": "authorizedOrganizationOf",
-    "outputs": [
+    name: 'authorizedOrganizationOf',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "reasonHash",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'reasonHash',
+        type: 'bytes32',
+      },
     ],
-    "name": "disableOrganization",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'disableOrganization',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [],
-    "name": "eip712Domain",
-    "outputs": [
+    inputs: [],
+    name: 'eip712Domain',
+    outputs: [
       {
-        "internalType": "bytes1",
-        "name": "fields",
-        "type": "bytes1"
+        internalType: 'bytes1',
+        name: 'fields',
+        type: 'bytes1',
       },
       {
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
+        internalType: 'string',
+        name: 'name',
+        type: 'string',
       },
       {
-        "internalType": "string",
-        "name": "version",
-        "type": "string"
+        internalType: 'string',
+        name: 'version',
+        type: 'string',
       },
       {
-        "internalType": "uint256",
-        "name": "chainId",
-        "type": "uint256"
+        internalType: 'uint256',
+        name: 'chainId',
+        type: 'uint256',
       },
       {
-        "internalType": "address",
-        "name": "verifyingContract",
-        "type": "address"
+        internalType: 'address',
+        name: 'verifyingContract',
+        type: 'address',
       },
       {
-        "internalType": "bytes32",
-        "name": "salt",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'salt',
+        type: 'bytes32',
       },
       {
-        "internalType": "uint256[]",
-        "name": "extensions",
-        "type": "uint256[]"
-      }
+        internalType: 'uint256[]',
+        name: 'extensions',
+        type: 'uint256[]',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "escrowedFeeOf",
-    "outputs": [
+    name: 'escrowedFeeOf',
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "action",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'action',
+        type: 'bytes32',
+      },
     ],
-    "name": "feeOf",
-    "outputs": [
+    name: 'feeOf',
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
+      },
     ],
-    "name": "getRoleAdmin",
-    "outputs": [
+    name: 'getRoleAdmin',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
     ],
-    "name": "grantRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'grantRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
+      },
     ],
-    "name": "hasPartyRole",
-    "outputs": [
+    name: 'hasPartyRole',
+    outputs: [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
     ],
-    "name": "hasRole",
-    "outputs": [
+    name: 'hasRole',
+    outputs: [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
+      },
     ],
-    "name": "isWalletUsed",
-    "outputs": [
+    name: 'isWalletUsed',
+    outputs: [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "kindOf",
-    "outputs": [
+    name: 'kindOf',
+    outputs: [
       {
-        "internalType": "enum PartyKind",
-        "name": "",
-        "type": "uint8"
-      }
+        internalType: 'enum PartyKind',
+        name: '',
+        type: 'uint8',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "organization",
-    "outputs": [
+    name: 'organization',
+    outputs: [
       {
-        "components": [
+        components: [
           {
-            "internalType": "bytes32",
-            "name": "representativeId",
-            "type": "bytes32"
+            internalType: 'bytes32',
+            name: 'representativeId',
+            type: 'bytes32',
           },
           {
-            "internalType": "enum OrganizationStatus",
-            "name": "status",
-            "type": "uint8"
+            internalType: 'enum OrganizationStatus',
+            name: 'status',
+            type: 'uint8',
           },
           {
-            "internalType": "bytes32",
-            "name": "role",
-            "type": "bytes32"
+            internalType: 'bytes32',
+            name: 'role',
+            type: 'bytes32',
           },
           {
-            "internalType": "bytes32",
-            "name": "profileHash",
-            "type": "bytes32"
-          }
+            internalType: 'bytes32',
+            name: 'profileHash',
+            type: 'bytes32',
+          },
         ],
-        "internalType": "struct PartyRegistry.Organization",
-        "name": "",
-        "type": "tuple"
-      }
+        internalType: 'struct PartyRegistry.Organization',
+        name: '',
+        type: 'tuple',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "representativeId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'representativeId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "profileHash",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'profileHash',
+        type: 'bytes32',
       },
       {
-        "internalType": "uint256",
-        "name": "deadline",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256',
+      },
     ],
-    "name": "organizationApplicationDigest",
-    "outputs": [
+    name: 'organizationApplicationDigest',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "representativeId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'representativeId',
+        type: 'bytes32',
+      },
     ],
-    "name": "organizationOf",
-    "outputs": [
+    name: 'organizationOf',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
+      },
     ],
-    "name": "partyOf",
-    "outputs": [
+    name: 'partyOf',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "refundableFeeOf",
-    "outputs": [
+    name: 'refundableFeeOf',
+    outputs: [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "uint256",
-        "name": "deadline",
-        "type": "uint256"
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256',
       },
       {
-        "internalType": "bytes",
-        "name": "authorization",
-        "type": "bytes"
-      }
+        internalType: 'bytes',
+        name: 'authorization',
+        type: 'bytes',
+      },
     ],
-    "name": "registerUser",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'registerUser',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "bytes32",
-        "name": "reasonHash",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'reasonHash',
+        type: 'bytes32',
+      },
     ],
-    "name": "rejectOrganization",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'rejectOrganization',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "callerConfirmation",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'callerConfirmation',
+        type: 'address',
+      },
     ],
-    "name": "renounceRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'renounceRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'role',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
     ],
-    "name": "revokeRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'revokeRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "previousWallet",
-        "type": "address"
+        internalType: 'address',
+        name: 'previousWallet',
+        type: 'address',
       },
       {
-        "internalType": "uint256",
-        "name": "deadline",
-        "type": "uint256"
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256',
       },
       {
-        "internalType": "bytes",
-        "name": "authorization",
-        "type": "bytes"
-      }
+        internalType: 'bytes',
+        name: 'authorization',
+        type: 'bytes',
+      },
     ],
-    "name": "rotateWallet",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'rotateWallet',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "action",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'action',
+        type: 'bytes32',
       },
       {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
     ],
-    "name": "setFee",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'setFee',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "address",
-        "name": "newTreasury",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: 'newTreasury',
+        type: 'address',
+      },
     ],
-    "name": "setTreasury",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    name: 'setTreasury',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes4",
-        "name": "interfaceId",
-        "type": "bytes4"
-      }
+        internalType: 'bytes4',
+        name: 'interfaceId',
+        type: 'bytes4',
+      },
     ],
-    "name": "supportsInterface",
-    "outputs": [
+    name: 'supportsInterface',
+    outputs: [
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [],
-    "name": "treasury",
-    "outputs": [
+    inputs: [],
+    name: 'treasury',
+    outputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
       },
       {
-        "internalType": "address",
-        "name": "wallet",
-        "type": "address"
+        internalType: 'address',
+        name: 'wallet',
+        type: 'address',
       },
       {
-        "internalType": "address",
-        "name": "previousWallet",
-        "type": "address"
+        internalType: 'address',
+        name: 'previousWallet',
+        type: 'address',
       },
       {
-        "internalType": "uint256",
-        "name": "deadline",
-        "type": "uint256"
-      }
+        internalType: 'uint256',
+        name: 'deadline',
+        type: 'uint256',
+      },
     ],
-    "name": "walletBindingDigest",
-    "outputs": [
+    name: 'walletBindingDigest',
+    outputs: [
       {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "walletOf",
-    "outputs": [
+    name: 'walletOf',
+    outputs: [
       {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
     ],
-    "stateMutability": "view",
-    "type": "function"
+    stateMutability: 'view',
+    type: 'function',
   },
   {
-    "inputs": [
+    inputs: [
       {
-        "internalType": "bytes32",
-        "name": "partyId",
-        "type": "bytes32"
-      }
+        internalType: 'bytes32',
+        name: 'partyId',
+        type: 'bytes32',
+      },
     ],
-    "name": "withdrawRefund",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
+    name: 'withdrawRefund',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
 ] as const;

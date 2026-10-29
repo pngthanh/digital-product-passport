@@ -9,7 +9,7 @@ import {
   ProductChainReadFailedError,
   ProductNotFoundError,
 } from '../domain/products.errors.js';
-import { ManufacturerAccess } from './manufacturer-access.service.js';
+import { ManufacturerAccess } from './organization-access.service.js';
 import { PRODUCT_CHAIN, type ProductChain } from './ports/product-chain.port.js';
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
 import { ProductAuthorizer } from './product-authorizer.service.js';

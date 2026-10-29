@@ -80,3 +80,34 @@ export class ProductChainReadFailedError extends DomainError {
     super('Không đọc được ProductPassport qua RPC. Thử lại sau ít phút.');
   }
 }
+
+export class RetailerRequiredError extends DomainError {
+  readonly code = 'RETAILER_REQUIRED';
+  readonly kind = 'forbidden';
+
+  constructor() {
+    super('Chỉ người đại diện của nhà bán lẻ đã được duyệt mới nhận và bán hàng được.');
+  }
+}
+
+export class ProductNotInStockError extends DomainError {
+  readonly code = 'PRODUCT_NOT_IN_STOCK';
+  readonly kind = 'conflict';
+
+  constructor() {
+    super(
+      'Sản phẩm không còn ở cửa hàng của bạn (chưa nhận hàng, đã bán hoặc hệ thống đang đồng bộ). Tải lại trang.',
+    );
+  }
+}
+
+export class BuyerNotFoundError extends DomainError {
+  readonly code = 'BUYER_NOT_FOUND';
+  readonly kind = 'not_found';
+
+  constructor() {
+    super(
+      'Không có tài khoản với email này. Người mua tạo tài khoản ở trang Đăng ký (chưa cần ví MetaMask) rồi thử lại.',
+    );
+  }
+}

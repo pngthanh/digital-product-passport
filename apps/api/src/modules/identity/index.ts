@@ -6,6 +6,8 @@ export { AdminGuard } from './presentation/admin.guard.js';
 export {
   IdentityDirectory,
   type PartyActor,
+  type PartySummary,
+  type PersonSummary,
   type UserSummary,
 } from './application/identity-directory.service.js';
 export type { AuthenticatedUser } from './domain/user-account.js';

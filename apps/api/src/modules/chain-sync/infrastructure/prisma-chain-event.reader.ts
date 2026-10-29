@@ -55,10 +55,16 @@ export class PrismaChainEventReader implements ChainEventReader {
 
   async byProduct(
     chainId: number,
+    contractAddresses: readonly string[],
     chainProductIds: readonly string[],
   ): Promise<RecordedChainEvent[]> {
     const rows = await this.prisma.blockchainEvent.findMany({
-      where: { chainId, chainProductId: { in: [...chainProductIds] }, finalityStatus: 'FINALIZED' },
+      where: {
+        chainId,
+        contractAddress: { in: [...contractAddresses] },
+        chainProductId: { in: [...chainProductIds] },
+        finalityStatus: 'FINALIZED',
+      },
       orderBy: ORDER,
     });
     return rows.map(toRecorded);

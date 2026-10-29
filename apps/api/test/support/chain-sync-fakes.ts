@@ -329,11 +329,16 @@ export class InMemoryChainEventReader implements ChainEventReader {
       .map(toRecorded);
   }
 
-  async byProduct(chainId: number, chainProductIds: readonly string[]) {
+  async byProduct(
+    chainId: number,
+    contractAddresses: readonly string[],
+    chainProductIds: readonly string[],
+  ) {
     return this.events
       .filter(
         (event) =>
           event.chainId === chainId &&
+          contractAddresses.includes(event.contractAddress) &&
           !!event.chainProductId &&
           chainProductIds.includes(event.chainProductId),
       )
@@ -353,7 +358,24 @@ function toRecorded(event: ChainEvent): RecordedChainEvent {
   };
 }
 
-/** ChainEventHistory thật trên dữ liệu trong bộ nhớ. */
-export function inMemoryChainHistory(reader = new InMemoryChainEventReader()): ChainEventHistory {
-  return new ChainEventHistory(reader, new FakeCatalog(), new FakeChain());
+/** FakeCatalog có thêm các contract sản phẩm (ProductPassport, WarrantyManager) trong test. */
+class HistoryCatalog extends FakeCatalog {
+  constructor(private readonly extra: readonly string[]) {
+    super();
+  }
+
+  override indexedContracts(): IndexedContract[] {
+    return [
+      ...super.indexedContracts(),
+      ...this.extra.map((address) => ({ name: 'Product', address, startBlock: 1n })),
+    ];
+  }
+}
+
+/** ChainEventHistory thật trên dữ liệu trong bộ nhớ; `contracts` là địa chỉ contract sản phẩm đang dùng. */
+export function inMemoryChainHistory(
+  reader = new InMemoryChainEventReader(),
+  contracts: readonly string[] = [],
+): ChainEventHistory {
+  return new ChainEventHistory(reader, new HistoryCatalog(contracts), new FakeChain());
 }

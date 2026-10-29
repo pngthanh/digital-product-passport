@@ -1,11 +1,13 @@
 import {
   CHAIN_ENUM_ORDER,
   INSPECTOR_ROLE,
+  LIFECYCLE_CONTRACT_ROLE,
   MANUFACTURER_ROLE,
   PRODUCT_CONTRACT_ROLE,
   REGISTRAR_ROLE,
   RETAILER_ROLE,
   SERVICE_CENTER_ROLE,
+  SERVICE_CONTRACT_ROLE,
   TRANSFER_CONTRACT_ROLE,
 } from '@dpp/shared';
 import { expect } from 'chai';
@@ -69,6 +71,8 @@ describe('DppTypes.sol và DppRoles.sol khớp @dpp/shared', () => {
       INSPECTOR_ROLE,
       PRODUCT_CONTRACT_ROLE,
       TRANSFER_CONTRACT_ROLE,
+      SERVICE_CONTRACT_ROLE,
+      LIFECYCLE_CONTRACT_ROLE,
     ]);
   });
 });

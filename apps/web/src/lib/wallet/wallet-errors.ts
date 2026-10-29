@@ -36,6 +36,16 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
     'Có sản phẩm đã được ghi lên blockchain trước đó, hệ thống đang đồng bộ. Tải lại trang sau ít giây.',
   InvalidBatchSize: 'Mỗi giao dịch ghi từ 1 đến 50 sản phẩm.',
   LengthMismatch: 'Giấy phép không hợp lệ. Bắt đầu lại để nhận giấy phép mới.',
+  WarrantyTooLong: 'Số tháng bảo hành tối đa 120.',
+  ProductNotFound: 'Sản phẩm chưa có trên ProductPassport đang dùng. Tải lại trang.',
+  InvalidStateTransition:
+    'Trạng thái sản phẩm vừa thay đổi (đã gửi, đã nhận hoặc đã bán). Tải lại trang để xem trạng thái mới.',
+  NotCustodian: 'Doanh nghiệp của bạn không còn giữ sản phẩm này. Tải lại trang.',
+  NotPendingCustodian: 'Sản phẩm này không được gửi cho cửa hàng của bạn.',
+  RecipientNotRetailer: 'Bên nhận không phải nhà bán lẻ đã được duyệt (có thể vừa bị khoá).',
+  NotAuthorizedRetailer:
+    'Ví đang chọn không đại diện nhà bán lẻ đã được duyệt. Kiểm tra ví MetaMask và trạng thái doanh nghiệp.',
+  InvalidBuyer: 'Không bán được cho tài khoản này. Kiểm tra lại email người mua.',
 };
 
 /** Mã lỗi EIP-1193 thường gặp từ MetaMask. */

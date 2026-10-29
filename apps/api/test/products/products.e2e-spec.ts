@@ -65,7 +65,7 @@ describe('PRD-01, PRD-02: đăng ký sản phẩm và tra cứu bằng mã QR (e
       await indexer.runOnce();
       const checkpoints = await prisma.indexerCheckpoint.findMany();
       if (
-        checkpoints.length === 2 &&
+        checkpoints.length === 3 &&
         checkpoints.every((checkpoint) => checkpoint.lastFinalizedBlock >= head)
       ) {
         return;
@@ -94,6 +94,7 @@ describe('PRD-01, PRD-02: đăng ký sản phẩm và tra cứu bằng mã QR (e
       authorization.issuerId,
       authorization.productIds,
       authorization.metadataHashes,
+      authorization.warrantyMonths,
       BigInt(authorization.deadline),
       authorization.signature,
     );
@@ -120,7 +121,8 @@ describe('PRD-01, PRD-02: đăng ký sản phẩm và tra cứu bằng mã QR (e
         registrationFee: 0n,
       },
     );
-    const passportAddress = await chain.deployProductPassport(registryAddress);
+    const { productPassport: passportAddress, warrantyManager } =
+      await chain.deployProductContracts(registryAddress);
     registry = new Contract(registryAddress, PARTY_REGISTRY_ABI, chain.provider);
     passport = new Contract(passportAddress, PRODUCT_PASSPORT_ABI, chain.provider);
     const deployBlock = String(await chain.provider.getBlockNumber());
@@ -134,6 +136,7 @@ describe('PRD-01, PRD-02: đăng ký sản phẩm và tra cứu bằng mã QR (e
       PARTY_REGISTRY_DEPLOY_BLOCK: deployBlock,
       PRODUCT_PASSPORT_ADDRESS: passportAddress,
       PRODUCT_PASSPORT_DEPLOY_BLOCK: deployBlock,
+      WARRANTY_MANAGER_ADDRESS: warrantyManager,
     });
     api = await createApiApp({ config });
     worker = await createWorkerContext(config);
@@ -264,10 +267,16 @@ describe('PRD-01, PRD-02: đăng ký sản phẩm và tra cứu bằng mã QR (e
         name: 'Công ty Cổ phần Thiết bị Thông minh Lam Sơn Việt',
         authStatus: 'AUTHORIZED',
       },
-      custodian: { name: 'Công ty Cổ phần Thiết bị Thông minh Lam Sơn Việt' },
+      holder: {
+        kind: 'ORGANIZATION',
+        organization: { name: 'Công ty Cổ phần Thiết bị Thông minh Lam Sơn Việt' },
+      },
+      hasOwner: false,
+      warranty: null,
       proof: { metadataMatchesHash: true, onchainMatches: true, productId: product.chainProductId },
     });
     expect(view.history.map((event) => event.eventName)).toEqual(['ProductRegistered']);
+    expect(view.journey).toMatchObject([{ kind: 'REGISTERED', from: null }]);
 
     // Mã gõ tay có gạch nối, chữ thường, hoặc cả đường dẫn quét được đều nhận.
     const grouped = product.publicCode.match(/.{4}/g)?.join('-').toLowerCase() ?? '';

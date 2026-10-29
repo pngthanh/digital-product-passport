@@ -7,7 +7,7 @@ import {
 import { CLOCK, type Clock } from '../../../common/time/clock.js';
 import type { ProductRecord } from '../domain/product.js';
 import { ProductChainNotConfiguredError } from '../domain/products.errors.js';
-import type { ManufacturerActor } from './manufacturer-access.service.js';
+import type { OrganizationActor } from './organization-access.service.js';
 import { PRODUCT_CHAIN, type ProductChain } from './ports/product-chain.port.js';
 
 /** Giấy phép đăng ký có hiệu lực 15 phút: đủ để kiểm tra số dư và xác nhận trong MetaMask. */
@@ -22,7 +22,7 @@ export class ProductAuthorizer {
   ) {}
 
   async authorize(
-    actor: ManufacturerActor,
+    actor: OrganizationActor,
     drafts: readonly ProductRecord[],
   ): Promise<ProductRegistrationAuthorization> {
     const contractAddress = this.chain.contractAddress;
@@ -34,6 +34,7 @@ export class ProductAuthorizer {
       issuerId: actor.organization.partyId,
       productIds: drafts.map((draft) => draft.chainProductId),
       metadataHashes: drafts.map((draft) => draft.metadataHash),
+      warrantyMonths: drafts.map((draft) => draft.warrantyMonths),
       deadline: BigInt(nowSeconds + PRODUCT_AUTHORIZATION_TTL_SECONDS),
     };
     const signature = await this.chain.signRegistration(registration);
@@ -45,6 +46,7 @@ export class ProductAuthorizer {
       issuerId: registration.issuerId,
       productIds: registration.productIds,
       metadataHashes: registration.metadataHashes,
+      warrantyMonths: registration.warrantyMonths,
       deadline: registration.deadline.toString(),
       signature,
       products: drafts.map((draft) => ({
