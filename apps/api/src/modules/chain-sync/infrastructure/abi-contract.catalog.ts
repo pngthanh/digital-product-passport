@@ -5,6 +5,7 @@ import { AppConfigService } from '../../../config/app-config.service.js';
 import type { ChainLog } from '../application/chain-reader.port.js';
 import type { ContractCatalog, DecodedLog } from '../application/contract-catalog.port.js';
 import type { ChainEventArg } from '../domain/chain-event.js';
+import type { IndexedContract } from '../domain/indexer-checkpoint.js';
 
 interface CatalogEntry {
   name: string;
@@ -12,6 +13,15 @@ interface CatalogEntry {
   abi: Interface;
   /** Tham số event dùng làm correlation_key. */
   correlationArg: string | null;
+  startBlock: bigint | null;
+}
+
+interface ContractDefinition {
+  name: string;
+  address: string | null;
+  abi: InterfaceAbi;
+  correlationArg: string | null;
+  startBlock: bigint | null;
 }
 
 /** Số nguyên tới 48 bit giữ dạng number (enum, chỉ số); lớn hơn thì dạng chuỗi để không mất chính xác. */
@@ -23,14 +33,22 @@ export class AbiContractCatalog implements ContractCatalog {
   private readonly entries: CatalogEntry[];
 
   constructor(config: AppConfigService) {
-    const definitions: Array<[string, string | null, InterfaceAbi, string | null]> = [
-      [PARTY_REGISTRY_CONTRACT_NAME, config.partyRegistryAddress, PARTY_REGISTRY_ABI, 'partyId'],
+    const definitions: ContractDefinition[] = [
+      {
+        name: PARTY_REGISTRY_CONTRACT_NAME,
+        address: config.partyRegistryAddress,
+        abi: PARTY_REGISTRY_ABI,
+        correlationArg: 'partyId',
+        startBlock: config.partyRegistryDeployBlock,
+      },
     ];
-    this.entries = definitions.flatMap(([name, address, abi, correlationArg]) =>
-      address
-        ? [{ name, address: address.toLowerCase(), abi: new Interface(abi), correlationArg }]
-        : [],
+    this.entries = definitions.flatMap(({ address, abi, ...rest }) =>
+      address ? [{ ...rest, address: address.toLowerCase(), abi: new Interface(abi) }] : [],
     );
+  }
+
+  indexedContracts(): readonly IndexedContract[] {
+    return this.entries.map(({ name, address, startBlock }) => ({ name, address, startBlock }));
   }
 
   addressOf(contractName: string): string | null {

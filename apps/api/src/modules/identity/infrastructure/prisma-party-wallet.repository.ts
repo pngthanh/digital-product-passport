@@ -9,6 +9,7 @@ import type {
   PartyWalletRepository,
   PendingWalletInput,
   ProjectionResult,
+  RegisteredParty,
   RegistrationProjection,
   RotationProjection,
   WalletRecord,
@@ -112,6 +113,40 @@ export class PrismaPartyWalletRepository implements PartyWalletRepository {
 
   async deletePending(walletId: string): Promise<void> {
     await this.prisma.partyWallet.deleteMany({ where: { id: walletId, status: 'PENDING' } });
+  }
+
+  async listRegisteredParties(
+    afterPartyId: string | null,
+    limit: number,
+  ): Promise<RegisteredParty[]> {
+    const parties = await this.prisma.party.findMany({
+      where: {
+        partyType: 'USER',
+        chainPartyId: { not: null },
+        ...(afterPartyId ? { id: { gt: afterPartyId } } : {}),
+      },
+      orderBy: { id: 'asc' },
+      take: limit,
+      select: {
+        id: true,
+        chainPartyId: true,
+        wallets: {
+          where: { status: 'ACTIVE', walletRole: 'PERSONAL' },
+          select: { address: true },
+        },
+      },
+    });
+    return parties.flatMap((party) =>
+      party.chainPartyId
+        ? [
+            {
+              partyId: party.id,
+              chainPartyId: party.chainPartyId,
+              activeWallet: party.wallets[0]?.address ?? null,
+            },
+          ]
+        : [],
+    );
   }
 
   async applyRegistration(

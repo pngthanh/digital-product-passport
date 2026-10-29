@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/button';
 import { getIdentity } from '@/features/auth/get-identity';
 import { SignOutButton } from '@/features/auth/sign-out-button';
-import { publicEnv } from '@/lib/env';
+import { serverChainId } from '@/lib/env';
 import { BrandMark } from './brand-mark';
-import { MainNav } from './main-nav';
 
 export async function SiteHeader() {
-  const network = getNetwork(publicEnv.NEXT_PUBLIC_CHAIN_ID);
+  const chainId = serverChainId();
+  const network = getNetwork(chainId);
   const identity = await getIdentity();
 
   return (
@@ -19,11 +19,10 @@ export async function SiteHeader() {
           <BrandMark className="size-6" />
           <span className="hidden sm:inline">Hộ chiếu số</span>
         </Link>
-        <MainNav />
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <span className="hidden items-center gap-2 text-sm text-muted lg:inline-flex">
             <span aria-hidden className="size-1.5 rounded-full bg-focus" />
-            {network?.name ?? `Chain ${publicEnv.NEXT_PUBLIC_CHAIN_ID}`}
+            {network?.name ?? `Chain ${chainId}`}
           </span>
           {identity ? (
             <>

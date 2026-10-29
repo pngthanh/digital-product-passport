@@ -1,9 +1,10 @@
-import { MONAD_TESTNET, shortenHex } from '@dpp/shared';
+import { MONAD_TESTNET } from '@dpp/shared';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/format';
 import { PRODUCT_STATE_LABELS, WARRANTY_STATE_LABELS } from '@/lib/state-labels';
 import { buildProductMrz } from './mrz';
 import { SPECIMEN_PASSPORT as passport } from './specimen-data';
+import { SpecimenHistory } from './specimen-history';
 
 /** Trang dữ liệu của một hộ chiếu số, dựng theo bố cục hộ chiếu thật kèm dải MRZ. */
 export function SpecimenPassport() {
@@ -44,29 +45,7 @@ export function SpecimenPassport() {
         <dd>{passport.ownerVisibility}</dd>
       </dl>
 
-      <section className="px-6 py-4">
-        <h3 className="text-sm font-medium">Lịch sử đã ghi nhận</h3>
-        <ol className="mt-3 space-y-3 border-l border-line pl-4">
-          {passport.events.map((event) => (
-            <li key={event.txHash} className="relative">
-              <span
-                aria-hidden
-                className="absolute top-1.5 -left-[21px] size-2.5 rounded-full border-2 border-surface bg-primary"
-              />
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <p className="text-sm font-medium">{event.title}</p>
-                <time dateTime={event.date} className="text-xs text-muted tabular-nums">
-                  {formatDate(event.date)}
-                </time>
-              </div>
-              <p className="text-sm text-muted">{event.actor}</p>
-              <p className="font-mono text-xs text-muted" title={event.txHash}>
-                tx {shortenHex(event.txHash, 6, 4)}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <SpecimenHistory events={passport.events} />
 
       <footer className="overflow-x-auto bg-tint px-6 py-3" aria-label="Dải đọc máy (MRZ)">
         {mrz.map((line) => (

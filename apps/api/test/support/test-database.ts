@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { randomBytes, randomInt } from 'node:crypto';
 import { PrismaClient } from '../../src/infrastructure/database/generated/client.js';
+import { UTC_SESSION_OPTIONS } from '../../src/infrastructure/database/prisma.service.js';
 
 /** Thứ tự không quan trọng vì dùng TRUNCATE … CASCADE. */
 const ALL_TABLES = [
@@ -8,7 +9,6 @@ const ALL_TABLES = [
   'organizations',
   'parties',
   'party_wallets',
-  'custodial_keys',
   'fee_policies',
   'fee_payments',
   'products',
@@ -32,7 +32,10 @@ export const SAMPLE_ARGON2ID_HASH = '$argon2id$v=19$m=65536,t=3,p=4$c2FsdHNhbHQ$
 
 export function createTestPrisma(): PrismaClient {
   return new PrismaClient({
-    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+    adapter: new PrismaPg({
+      connectionString: process.env.DATABASE_URL,
+      options: UTC_SESSION_OPTIONS,
+    }),
   });
 }
 

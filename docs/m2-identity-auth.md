@@ -17,11 +17,11 @@ Các quyết định dưới đây bổ sung cho bảng D1–D13 của tài li�
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | D14 | **Hybrid**: đăng ký chỉ tạo `users` + `parties` (off-chain). Party chỉ được đăng ký on-chain khi người dùng liên kết MetaMask; **ví người dùng tự ký và tự trả gas**, hệ thống không có ví gửi thay. | Theo yêu cầu của nhóm. Người dùng chỉ cần MON khi thật sự giao dịch.                                                                                                                           |
 | D15 | Backend **cấp giấy phép EIP-712** (`WalletBinding`) bằng khoá có `REGISTRAR_ROLE`; contract chỉ nhận `registerUser`/`rotateWallet` kèm giấy phép hợp lệ, và ví được gắn luôn là `msg.sender`.        | Nếu không có giấy phép, bất kỳ ai cũng tự gọi contract để chiếm một `partyId` của người khác. Khoá registrar chỉ ký, không gửi giao dịch, không cần MON; admin thu hồi được bằng `revokeRole`. |
-| D16 | Đăng xuất bằng cột **`users.session_version`**: JWT mang giá trị tại lúc cấp; đăng xuất hoặc khoá tài khoản tăng giá trị này nên mọi token cũ hết hiệu lực ngay (mọi thiết bị).                      | Không thêm bảng, vẫn giữ 22 bảng của thiết kế.                                                                                                                                                 |
+| D16 | Đăng xuất bằng cột **`users.session_version`**: JWT mang giá trị tại lúc cấp; đăng xuất hoặc khoá tài khoản tăng giá trị này nên mọi token cũ hết hiệu lực ngay (mọi thiết bị).                      | Không thêm bảng mới.                                                                                                                                                                           |
 | D17 | **Mỗi địa chỉ ví chỉ được gắn một lần** trong toàn hệ thống, kể cả sau khi đã bị xoay đi.                                                                                                            | Khớp `UNIQUE(address)` của `party_wallets` với `_usedWallets` trên contract, CSDL và chain không thể lệch nhau.                                                                                |
 | D18 | Đổi ví (ACC-04) chỉ cần **ví mới** ký; quyền đổi đến từ việc nhập lại mật khẩu.                                                                                                                      | Ví cũ có thể đã mất, đó chính là lý do phải đổi ví.                                                                                                                                            |
 
-**Cần nhóm quyết định:** bảng `custodial_keys` không còn được dùng vì mô hình Hybrid không tạo ví custodial. M2 giữ nguyên bảng (không đổi schema). Nếu nhóm đồng ý bỏ, M3 sẽ thêm migration xoá bảng và cập nhật tài liệu thành 21 bảng.
+Bảng `custodial_keys` không còn được dùng vì mô hình Hybrid không tạo ví custodial. Nhóm đã quyết định bỏ bảng ở M3 (migration `20261028120000_drop_custodial_keys`), CSDL còn 21 bảng; xem [M3](m3-indexer.md).
 
 ## 2. Luồng liên kết ví (ACC-03, ACC-04)
 
@@ -99,7 +99,6 @@ Kiểu dữ liệu nằm ở `packages/shared/src/api/identity.ts`. Lỗi nghi�
 | `AUTH_RATE_LIMIT_PER_MINUTE`   | Không (10)    | Giới hạn thử đăng nhập/đăng ký                                 |
 | `REGISTRAR_SIGNER_PRIVATE_KEY` | Cho ACC-03/04 | Khoá ký giấy phép. Tạo: `pnpm --filter @dpp/api registrar:new` |
 | `PARTY_REGISTRY_ADDRESS`       | Cho ACC-03/04 | In ra sau `pnpm --filter @dpp/contracts deploy:monad`          |
-| `NEXT_PUBLIC_CHAIN_ID`         | Có            | Phải trùng `CHAIN_ID`, MetaMask được chuyển sang mạng này      |
 
 Thiếu hai biến của ACC-03/04 thì API vẫn chạy, trang Tài khoản báo "chưa cấu hình PartyRegistry".
 
@@ -116,5 +115,5 @@ Monad tính phí theo **gas limit**, nên giao diện đặt gas limit bằng ư
 
 ## 8. Giới hạn để lại cho M3
 
-- Worker chỉ chốt các giao dịch mà web đã báo `txHash`. Nếu người dùng đóng trang ngay sau khi MetaMask gửi, ví vẫn được gắn on-chain; Indexer quét log của M3 sẽ chiếu event đó. Yêu cầu PENDING trong trường hợp này không bị job dọn dẹp xoá, vì job kiểm tra `isWalletUsed` trên chain trước.
+- ~~Worker chỉ chốt các giao dịch mà web đã báo `txHash`.~~ Đã xử lý ở M3: Indexer quét log nên event vẫn được chiếu khi người dùng đóng trang ngay sau khi MetaMask gửi. Yêu cầu PENDING trong trường hợp này không bị job dọn dẹp xoá, vì job kiểm tra `isWalletUsed` trên chain trước.
 - Chưa hỗ trợ ví hợp đồng thông minh (EIP-1271), chỉ ví EOA như MetaMask.

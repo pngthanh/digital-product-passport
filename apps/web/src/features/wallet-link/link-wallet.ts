@@ -5,7 +5,6 @@ import {
 } from '@dpp/shared';
 import { BrowserProvider, Contract, type JsonRpcSigner } from 'ethers';
 import { apiRequest } from '@/lib/api-client';
-import { publicEnv } from '@/lib/env';
 import {
   identitySnapshotSchema,
   walletLinkAuthorizationSchema,
@@ -23,6 +22,8 @@ const CONFIRM_POLL_MS = 1500;
 const CONFIRM_TIMEOUT_MS = 120_000;
 
 export interface LinkWalletOptions {
+  /** Chain hệ thống đang chạy (CHAIN_ID phía server). */
+  chainId: number;
   purpose: WalletLinkPurpose;
   /** Bắt buộc khi xoay ví. */
   password?: string;
@@ -34,11 +35,16 @@ export interface LinkWalletOptions {
  * EIP-712, rồi chính ví đó gửi registerUser/rotateWallet và tự trả gas. Hoàn tất khi API báo
  * ví đã ACTIVE (Worker thấy event đã finalized).
  */
-export async function linkWallet({ purpose, password, onStep }: LinkWalletOptions): Promise<void> {
+export async function linkWallet({
+  chainId,
+  purpose,
+  password,
+  onStep,
+}: LinkWalletOptions): Promise<void> {
   const ethereum = requireInjectedProvider();
   onStep('connect');
   const account = await requestAccount(ethereum);
-  await ensureChain(ethereum, publicEnv.NEXT_PUBLIC_CHAIN_ID);
+  await ensureChain(ethereum, chainId);
   const provider = new BrowserProvider(ethereum);
   const signer = await provider.getSigner(account);
 
@@ -58,6 +64,13 @@ export async function linkWallet({ purpose, password, onStep }: LinkWalletOption
   );
 
   onStep('send');
+  // Giấy phép chỉ hợp lệ trên chain của contract; kiểm tra lại vì người dùng có thể đổi mạng giữa chừng.
+  const { chainId: walletChainId } = await provider.getNetwork();
+  if (Number(walletChainId) !== authorization.chainId) {
+    throw new WalletFlowError(
+      'MetaMask đã chuyển sang mạng khác trong lúc liên kết. Chọn lại đúng mạng rồi thử lại.',
+    );
+  }
   const txHash = await sendBindingTransaction(provider, signer, authorization);
 
   onStep('confirm');

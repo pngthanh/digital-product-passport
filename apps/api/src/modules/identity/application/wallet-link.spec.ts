@@ -19,6 +19,7 @@ import {
   TEST_REGISTRAR_KEY,
   TestClock,
 } from '../../../../test/support/test-config.js';
+import { TransactionScope } from '../../../common/persistence/transaction-scope.js';
 import {
   BlockchainUnavailableError,
   ChainOutOfSyncError,
@@ -293,6 +294,35 @@ describe('ACC-03 Liên kết ví MetaMask', () => {
     await expect(signAndAuthorize(context, otherMetamask, 'LINK')).rejects.toBeInstanceOf(
       WalletLinkInProgressError,
     );
+  });
+
+  it('Indexer kích hoạt ví trước khi web kịp báo txHash: vẫn nhận và theo dõi giao dịch', async () => {
+    const context = await setup();
+    const authorization = await signAndAuthorize(context, metamask, 'LINK');
+    const txHash = `0x${'ab'.repeat(32)}`;
+    await context.store.applyRegistration(
+      {
+        partyId: context.store.partyOfUser(context.user.id).id,
+        chainPartyId: context.chainPartyId,
+        address: lower(metamask),
+        txHash,
+        activatedAt: new Date(),
+      },
+      new TransactionScope({}),
+    );
+
+    const wallet = await context.record.execute(
+      context.user,
+      authorization.walletId,
+      txHash,
+      client,
+    );
+
+    expect(wallet).toMatchObject({ status: 'ACTIVE', linkTxHash: txHash });
+    expect(context.tracker.tracked[0]?.expectedMethods).toEqual(['registerUser']);
+    await expect(
+      context.record.execute(context.user, authorization.walletId, `0x${'cd'.repeat(32)}`, client),
+    ).rejects.toBeInstanceOf(WalletLinkNotFoundError);
   });
 
   it('báo không tìm thấy khi walletId không phải yêu cầu đang chờ của mình', async () => {

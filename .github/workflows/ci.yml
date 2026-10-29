@@ -35,7 +35,6 @@ jobs:
       TEST_DATABASE_URL: postgresql://dpp:dpp_ci_password@localhost:5432/dpp_test
       CHAIN_ID: '31337'
       RPC_URL: http://127.0.0.1:8545
-      NEXT_PUBLIC_CHAIN_ID: '31337'
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else
       NEXT_TELEMETRY_DISABLED: '1'
 

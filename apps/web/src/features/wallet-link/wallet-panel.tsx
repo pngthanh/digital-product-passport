@@ -63,6 +63,7 @@ export function WalletPanel({ wallets, chainId }: { wallets: WalletSummary[]; ch
     setActivity({ kind: 'running', purpose, step: 'connect' });
     try {
       await linkWallet({
+        chainId,
         purpose,
         password,
         onStep: (step) => setActivity({ kind: 'running', purpose, step }),

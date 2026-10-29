@@ -6,6 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 loadEnv({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
 
+// Hardhat ưu tiên biến môi trường hơn keystore, kể cả khi biến rỗng.
+// Dòng để trống trong .env vì vậy không được che khoá đã lưu bằng `hardhat keystore set`.
+for (const name of ['DEPLOYER_PRIVATE_KEY', 'ETHERSCAN_API_KEY']) {
+  if (process.env[name]?.trim() === '') {
+    delete process.env[name];
+  }
+}
+
 const SOLIDITY_VERSION = '0.8.34';
 
 /** Monad hỗ trợ opcode tới bản Fusaka (Osaka). */

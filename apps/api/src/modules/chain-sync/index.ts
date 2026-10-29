@@ -8,5 +8,11 @@ export {
 } from './application/transaction-tracker.service.js';
 export { EventProjectorRegistry, type EventProjector } from './application/event-projector.js';
 export { ConfirmTransactions } from './application/confirm-transactions.use-case.js';
+export {
+  IndexChainEvents,
+  type IndexingSummary,
+} from './application/index-chain-events.use-case.js';
+export { IndexerProgress, type ContractProgress } from './application/indexer-progress.query.js';
+export { IndexedChainState } from './application/indexed-chain-state.query.js';
 export type { ChainEvent, ChainEventArg } from './domain/chain-event.js';
 export type { TrackedTxStatus } from './domain/transaction-confirmation.js';

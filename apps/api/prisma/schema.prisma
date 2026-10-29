@@ -320,8 +320,7 @@ model PartyWallet {
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  party        Party         @relation(fields: [partyId], references: [id], onDelete: Restrict)
-  custodialKey CustodialKey?
+  party Party @relation(fields: [partyId], references: [id], onDelete: Restrict)
 
   @@unique([partyId], map: "ux_wallet_one_active_owner", where: { walletRole: "OWNER", status: "ACTIVE" })
   @@unique([partyId], map: "ux_wallet_one_active_personal", where: { walletRole: "PERSONAL", status: "ACTIVE" })
@@ -329,20 +328,6 @@ model PartyWallet {
   @@unique([partyId], map: "ux_wallet_one_pending_personal", where: { walletRole: "PERSONAL", status: "PENDING" })
   @@index([partyId, status])
   @@map("party_wallets")
-}
-
-/// [A] Khoá riêng của ví custodial, mã hoá AES-256-GCM; khoá gốc nằm ngoài CSDL.
-model CustodialKey {
-  walletId   String   @id @map("wallet_id") @db.Uuid
-  ciphertext Bytes
-  iv         Bytes
-  authTag    Bytes    @map("auth_tag")
-  keyVersion Int      @default(1) @map("key_version")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  wallet PartyWallet @relation(fields: [walletId], references: [id], onDelete: Restrict)
-
-  @@map("custodial_keys")
 }
 
 // -----------------------------------------------------------------------------

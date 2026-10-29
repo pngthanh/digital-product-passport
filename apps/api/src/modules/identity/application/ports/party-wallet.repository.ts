@@ -53,6 +53,14 @@ export interface RotationProjection {
   rotatedAt: Date;
 }
 
+/** Party người dùng đã đăng ký on-chain, kèm ví PERSONAL đang ACTIVE theo CSDL. */
+export interface RegisteredParty {
+  partyId: string;
+  chainPartyId: string;
+  /** Chữ thường; `null` nếu CSDL không có ví ACTIVE. */
+  activeWallet: string | null;
+}
+
 /** Kết quả chiếu event, dùng để ghi audit; `null` nếu không tìm thấy Party trong CSDL. */
 export interface ProjectionResult {
   userId: string | null;
@@ -71,6 +79,8 @@ export interface PartyWalletRepository {
   attachLinkTransaction(walletId: string, txHash: string): Promise<WalletRecord>;
   listStalePending(updatedBefore: Date): Promise<WalletRecord[]>;
   deletePending(walletId: string): Promise<void>;
+  /** Phân trang theo id tăng dần, bắt đầu sau `afterPartyId`. */
+  listRegisteredParties(afterPartyId: string | null, limit: number): Promise<RegisteredParty[]>;
   applyRegistration(
     projection: RegistrationProjection,
     scope: TransactionScope,

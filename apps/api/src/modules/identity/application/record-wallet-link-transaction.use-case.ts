@@ -22,6 +22,7 @@ export class RecordWalletLinkTransaction {
   /**
    * ACC-03/04 bước 3: web báo txHash sau khi MetaMask gửi giao dịch. Kiểm tra giao dịch gửi từ
    * đúng ví, tới đúng PartyRegistry, gọi đúng hàm; Worker sẽ kích hoạt ví khi block finalized.
+   * Indexer có thể đã kích hoạt ví trước khi web kịp báo: khi đó chỉ ghi nhận giao dịch.
    */
   async execute(
     user: AuthenticatedUser,
@@ -33,24 +34,29 @@ export class RecordWalletLinkTransaction {
     if (!identity) {
       throw new SessionRequiredError();
     }
+    const normalizedHash = normalizeBytes32(txHash);
     const personal = identity.wallets.filter((wallet) => wallet.walletRole === 'PERSONAL');
-    const pending = personal.find(
-      (wallet) => wallet.id === walletId && wallet.status === 'PENDING',
-    );
-    if (!pending) {
+    const target = personal.find((wallet) => wallet.id === walletId);
+    const activatedBySameTx = target?.status === 'ACTIVE' && target.linkTxHash === normalizedHash;
+    if (!target || (target.status !== 'PENDING' && !activatedBySameTx)) {
       throw new WalletLinkNotFoundError();
     }
-    const rotating = personal.some((wallet) => wallet.status === 'ACTIVE');
+    // Party đã có ví khác từng ACTIVE (đang dùng hoặc đã xoay) thì giao dịch này là rotateWallet.
+    const rotating = personal.some(
+      (wallet) =>
+        wallet.id !== target.id && (wallet.status === 'ACTIVE' || wallet.status === 'ROTATED'),
+    );
 
-    const normalizedHash = normalizeBytes32(txHash);
     await this.tracker.track({
       txHash: normalizedHash,
       contractName: PARTY_REGISTRY_CONTRACT_NAME,
-      expectedFrom: pending.address,
+      expectedFrom: target.address,
       expectedMethods: [rotating ? 'rotateWallet' : 'registerUser'],
       initiatedByUserId: user.id,
     });
-    const wallet = await this.wallets.attachLinkTransaction(pending.id, normalizedHash);
+    const wallet = activatedBySameTx
+      ? target
+      : await this.wallets.attachLinkTransaction(target.id, normalizedHash);
     await this.audit.record({
       action: AuditAction.WALLET_LINK_SUBMITTED,
       actorUserId: user.id,

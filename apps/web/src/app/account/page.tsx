@@ -7,7 +7,7 @@ import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
 import { WalletHistory } from '@/features/wallet-link/wallet-history';
 import { WalletPanel } from '@/features/wallet-link/wallet-panel';
-import { publicEnv } from '@/lib/env';
+import { serverChainId } from '@/lib/env';
 import { formatDate } from '@/lib/format';
 
 export const metadata: Metadata = { title: 'Tài khoản' };
@@ -29,7 +29,7 @@ export default async function AccountPage() {
     redirect('/login');
   }
   const { account, party, wallets } = identity;
-  const chainId = publicEnv.NEXT_PUBLIC_CHAIN_ID;
+  const chainId = serverChainId();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">

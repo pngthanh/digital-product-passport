@@ -14,6 +14,7 @@ import type {
   PartyWalletRepository,
   PendingWalletInput,
   ProjectionResult,
+  RegisteredParty,
   RegistrationProjection,
   RotationProjection,
   WalletRecord,
@@ -197,6 +198,24 @@ export class InMemoryIdentityStore implements AccountRepository, PartyWalletRepo
     this.wallets.delete(walletId);
   }
 
+  async listRegisteredParties(
+    afterPartyId: string | null,
+    limit: number,
+  ): Promise<RegisteredParty[]> {
+    return [...this.parties.values()]
+      .filter((party) => party.chainPartyId !== null && (!afterPartyId || party.id > afterPartyId))
+      .toSorted((a, b) => (a.id < b.id ? -1 : 1))
+      .slice(0, limit)
+      .map((party) => ({
+        partyId: party.id,
+        chainPartyId: party.chainPartyId ?? '',
+        activeWallet:
+          [...this.wallets.values()].find(
+            (wallet) => wallet.partyId === party.id && wallet.status === 'ACTIVE',
+          )?.address ?? null,
+      }));
+  }
+
   async applyRegistration(
     projection: RegistrationProjection,
     _scope: TransactionScope,
@@ -302,6 +321,8 @@ export class FakeTransactionTracker {
 export class FakePartyRegistryReader implements PartyRegistryReader {
   readonly usedWallets = new Set<string>();
   readonly walletByParty = new Map<string, string>();
+  /** Block được truyền vào mỗi lần gọi walletOf. */
+  readonly walletOfBlocks: Array<bigint | undefined> = [];
   failing = false;
 
   async isWalletUsed(address: string): Promise<boolean> {
@@ -309,8 +330,9 @@ export class FakePartyRegistryReader implements PartyRegistryReader {
     return this.usedWallets.has(address);
   }
 
-  async walletOf(chainPartyId: string): Promise<string | null> {
+  async walletOf(chainPartyId: string, atBlock?: bigint): Promise<string | null> {
     this.throwIfFailing();
+    this.walletOfBlocks.push(atBlock);
     return this.walletByParty.get(chainPartyId) ?? null;
   }
 

@@ -23,12 +23,12 @@ export class EthersPartyRegistryReader implements PartyRegistryReader {
     return result === true;
   }
 
-  async walletOf(chainPartyId: string): Promise<string | null> {
-    const result = await this.call('walletOf', [chainPartyId]);
+  async walletOf(chainPartyId: string, atBlock?: bigint): Promise<string | null> {
+    const result = await this.call('walletOf', [chainPartyId], atBlock);
     return typeof result === 'string' && result !== ZeroAddress ? result.toLowerCase() : null;
   }
 
-  private async call(method: string, args: readonly unknown[]): Promise<unknown> {
+  private async call(method: string, args: readonly unknown[], atBlock?: bigint): Promise<unknown> {
     const address = this.address;
     if (!address) {
       throw new IdentityChainNotConfiguredError();
@@ -36,7 +36,8 @@ export class EthersPartyRegistryReader implements PartyRegistryReader {
     const { result } = await this.chain.withFailover(async (provider) => {
       const registry = new Contract(address, PARTY_REGISTRY_ABI, provider);
       const fn = registry.getFunction(method);
-      const value: unknown = await fn.staticCall(...args);
+      const overrides = atBlock === undefined ? [] : [{ blockTag: atBlock }];
+      const value: unknown = await fn.staticCall(...args, ...overrides);
       return value;
     });
     return result;

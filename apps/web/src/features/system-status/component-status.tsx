@@ -5,7 +5,7 @@ import type { Tone } from '@/lib/state-labels';
 
 export const HEALTH_STATUS_LABELS: Record<HealthStatus, { label: string; tone: Tone }> = {
   up: { label: 'Hoạt động', tone: 'ok' },
-  degraded: { label: 'Chạy dự phòng', tone: 'warn' },
+  degraded: { label: 'Hoạt động hạn chế', tone: 'warn' },
   down: { label: 'Không hoạt động', tone: 'bad' },
 };
 

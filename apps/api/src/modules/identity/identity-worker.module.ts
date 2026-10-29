@@ -5,19 +5,23 @@ import { AuditModule } from '../audit/index.js';
 import { ChainSyncWorkerModule, EventProjectorRegistry } from '../chain-sync/index.js';
 import { ExpireWalletLinks } from './application/expire-wallet-links.use-case.js';
 import { PartyRegistryProjector } from './application/party-registry.projector.js';
+import { ReconcilePartyWallets } from './application/reconcile-party-wallets.use-case.js';
 import { IDENTITY_PORT_PROVIDERS } from './identity.providers.js';
+import { PartyWalletReconciliationScheduler } from './presentation/party-wallet-reconciliation.scheduler.js';
 import { WalletLinkExpiryScheduler } from './presentation/wallet-link-expiry.scheduler.js';
 
-/** Phần M2 chạy trong Worker: chiếu event PartyRegistry và dọn yêu cầu liên kết ví quá hạn. */
+/** Phần chạy trong Worker: chiếu event PartyRegistry, dọn yêu cầu liên kết ví quá hạn, đối soát ví. */
 @Module({
   imports: [DatabaseModule, BlockchainModule, AuditModule, ChainSyncWorkerModule],
   providers: [
     ...IDENTITY_PORT_PROVIDERS,
     PartyRegistryProjector,
     ExpireWalletLinks,
+    ReconcilePartyWallets,
     WalletLinkExpiryScheduler,
+    PartyWalletReconciliationScheduler,
   ],
-  exports: [ExpireWalletLinks],
+  exports: [ExpireWalletLinks, ReconcilePartyWallets],
 })
 export class IdentityWorkerModule implements OnModuleInit {
   constructor(

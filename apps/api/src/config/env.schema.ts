@@ -14,6 +14,11 @@ const optionalPrivateKey = z.preprocess(
     .optional(),
 );
 
+const optionalBlockNumber = z.preprocess(
+  emptyAsUndefined,
+  z.coerce.number().int().min(0, 'phải là số block lúc deploy (số nguyên không âm)').optional(),
+);
+
 const optionalAddress = z.preprocess(
   emptyAsUndefined,
   z
@@ -54,6 +59,13 @@ export const envSchema = z.object({
   // Để trống thì API vẫn chạy, chỉ phần liên kết ví (ACC-03/04) báo "chưa cấu hình".
   REGISTRAR_SIGNER_PRIVATE_KEY: optionalPrivateKey,
   PARTY_REGISTRY_ADDRESS: optionalAddress,
+  // Indexer (M3) quét log từ block này; để trống thì bắt đầu từ block finalized lúc Worker chạy lần đầu.
+  PARTY_REGISTRY_DEPLOY_BLOCK: optionalBlockNumber,
+
+  INDEXER_POLL_INTERVAL_MS: z.coerce.number().int().min(200).max(60_000).default(1000),
+  // RPC công khai của Monad Testnet giới hạn eth_getLogs 100 block mỗi lần.
+  INDEXER_BLOCK_RANGE: z.coerce.number().int().min(1).max(10_000).default(100),
+  RECONCILE_INTERVAL_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
 });
 
 export type Env = z.infer<typeof envSchema>;

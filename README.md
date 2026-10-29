@@ -2,19 +2,20 @@
 
 Hệ thống quản lý vòng đời, bảo hành và chuyển quyền sở hữu sản phẩm, ghi nhận các sự kiện quan trọng lên **Monad Testnet** (chain ID `10143`). Token MON chỉ dùng để kiểm thử, không có giá trị thương mại hay pháp lý.
 
-| Module | Nội dung                                           | Trạng thái    |
-| ------ | -------------------------------------------------- | ------------- |
-| M0     | Thiết kế chuẩn hoá và bảng traceability            | Xong          |
-| M1     | Foundation & Core Infrastructure                   | Xong          |
-| **M2** | **Identity & Auth**: tài khoản, ví MetaMask, Party | **Xong**      |
-| M3     | Indexer quét log, đối soát                         | Kế tiếp       |
-| M4–M13 | Tổ chức và phí MON, sản phẩm, bảo hành, ...        | Theo lộ trình |
+| Module | Nội dung                                       | Trạng thái    |
+| ------ | ---------------------------------------------- | ------------- |
+| M0     | Thiết kế chuẩn hoá và bảng traceability        | Xong          |
+| M1     | Foundation & Core Infrastructure               | Xong          |
+| M2     | Identity & Auth: tài khoản, ví MetaMask, Party | Xong          |
+| **M3** | **Indexer quét log, đối soát**                 | **Xong**      |
+| M4     | Tổ chức và phí MON, khu Quản trị               | Kế tiếp       |
+| M5–M13 | Sản phẩm, bảo hành, chuyển quyền, ...          | Theo lộ trình |
 
 ## M1 gồm những gì
 
 - **Monorepo pnpm** với 4 workspace: `apps/api`, `apps/web`, `packages/contracts`, `packages/shared`.
 - **API NestJS 12 chạy 2 tiến trình** từ cùng một codebase: `main.ts` (HTTP) và `worker.ts` (Indexer, Scheduler). Đã có cấu hình kiểm tra bằng zod, logger, định dạng lỗi chung, mã yêu cầu, kết nối PostgreSQL qua Prisma 7, kết nối RPC có dự phòng, kiểm tra chain ID khi khởi động, endpoint `/health` và `/health/ready`.
-- **CSDL 22 bảng** theo thiết kế chuẩn hoá: Prisma schema, migration đầu tiên kèm 69 CHECK constraint, 4 partial unique index (`ux_transfer_one_active`, `ux_service_one_open`, ...) và trigger chỉ-INSERT cho `audit_logs`.
+- **CSDL 22 bảng** (M3 bỏ `custodial_keys`, còn 21) theo thiết kế chuẩn hoá: Prisma schema, migration đầu tiên kèm 69 CHECK constraint, 4 partial unique index (`ux_transfer_one_active`, `ux_service_one_open`, ...) và trigger chỉ-INSERT cho `audit_logs`.
 - **Hardhat 3 + OpenZeppelin 5** cấu hình sẵn Monad Testnet (deploy, verify qua Sourcify của MonadVision hoặc Monadscan) cùng kiểu dữ liệu, role, lỗi dùng chung cho 4 contract sẽ viết ở các module sau.
 - **Next.js 16 (App Router) + Tailwind 4**: bộ giao diện dùng chung, trang tổng quan, trang trạng thái hệ thống đọc dữ liệu thật từ API.
 - **102 test tự động** (lúc giao M1), trong đó 28 test e2e chạy trên PostgreSQL thật để chứng minh từng ràng buộc CSDL hoạt động đúng.
@@ -28,7 +29,18 @@ Mô hình Hybrid: tài khoản là Web2 (email, mật khẩu), ví MetaMask củ
 - **ACC-03 Liên kết MetaMask**: ví ký thông điệp EIP-4361, backend cấp giấy phép EIP-712, rồi chính ví đó gọi `PartyRegistry.registerUser` và tự trả gas.
 - **ACC-04 Xoay ví cá nhân**: nhập lại mật khẩu, ví mới ký EIP-4361 và tự gọi `rotateWallet`. Ví cũ thành ROTATED; mỗi địa chỉ ví chỉ dùng một lần.
 - **Contract `PartyRegistry`** (phần người dùng) và **Worker chốt giao dịch**: chờ block finalized, ghi `blockchain_events`, chiếu event sang `parties`/`party_wallets`.
-- **232 test tự động** (188 unit và contract, 44 e2e). Test e2e liên kết ví tự chạy một Hardhat node, deploy PartyRegistry rồi đi trọn luồng UC → API → contract → event → CSDL.
+- **232 test tự động** (188 unit và contract, 44 e2e) lúc giao M2. Test e2e liên kết ví tự chạy một Hardhat node, deploy PartyRegistry rồi đi trọn luồng UC → API → contract → event → CSDL.
+
+## M3 gồm những gì
+
+Chi tiết quyết định, luồng và cấu hình: [docs/m3-indexer.md](docs/m3-indexer.md).
+
+- **Indexer** trong Worker: quét log PartyRegistry từ block deploy, ghi `blockchain_events` PENDING rồi FINALIZED (hoặc ORPHANED nếu block bị thay), lưu mốc ở `indexer_checkpoints`, chiếu event sang module sở hữu. Event vẫn được chiếu khi web không kịp báo `txHash`.
+- **Chiếu đúng một lần**: Indexer và luồng chốt giao dịch của M2 dùng chung một hàm chốt event trong cùng giao dịch CSDL với projector.
+- **Đối soát** định kỳ ví trong CSDL với `PartyRegistry.walletOf`; lệch thì tạo `anomaly_alerts` mức HIGH, không tạo trùng.
+- `/health/ready` và trang Trạng thái hệ thống có thêm mục **Indexer** (đã chốt tới block nào, chậm bao nhiêu block).
+- **CSDL còn 21 bảng** (bỏ `custodial_keys`). Giao diện bỏ trang Bộ giao diện, footer và hai mục giới thiệu; lịch sử hồ sơ mẫu chia tab Phân phối, Bảo hành, Chuyển nhượng.
+- **250 test tự động** (200 unit và contract, 50 e2e). Test e2e của Indexer chạy trên Hardhat node: giao dịch web không báo vẫn được chiếu, báo sau không chiếu lần hai, sửa tay CSDL thì đối soát phát hiện.
 
 ---
 
@@ -79,7 +91,8 @@ pnpm --filter @dpp/api db:deploy:test
 pnpm contracts:compile
 pnpm contracts:test
 
-# 7. (M2) Deploy PartyRegistry lên Monad Testnet (ví deploy cần MON), chép địa chỉ in ra vào .env
+# 7. (M2) Deploy PartyRegistry lên Monad Testnet (ví deploy cần MON),
+#    chép PARTY_REGISTRY_ADDRESS và PARTY_REGISTRY_DEPLOY_BLOCK in ra vào .env
 pnpm --filter @dpp/contracts deploy:monad
 
 # 8. Chạy toàn bộ: API (cổng 4000), Worker và Web (cổng 3000)
@@ -90,7 +103,7 @@ Mở trình duyệt:
 
 - http://localhost:3000 — trang tổng quan.
 - http://localhost:3000/register — tạo tài khoản, sau đó vào **Tài khoản** để liên kết MetaMask.
-- http://localhost:3000/system/status — trạng thái CSDL và blockchain, dữ liệu thật từ API.
+- http://localhost:3000/system/status — trạng thái CSDL, blockchain và Indexer (không có trên thanh menu; sẽ nằm trong khu Quản trị ở M4).
 - http://localhost:4000/api/v1/health/ready — báo cáo JSON (trả 503 khi chưa sẵn sàng).
 
 ### Chạy với blockchain cục bộ (không cần Internet)
@@ -100,9 +113,9 @@ Mở trình duyệt:
 pnpm --filter @dpp/contracts node
 ```
 
-Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống), `NEXT_PUBLIC_CHAIN_ID=31337`. Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` vào `.env`, rồi `pnpm dev`.
+Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`, rồi `pnpm dev`.
 
-Để thử liên kết ví với mạng cục bộ: trong MetaMask thêm mạng RPC `http://127.0.0.1:8545`, chain ID `31337`, ký hiệu `ETH`; import một tài khoản thử từ danh sách Hardhat node in ra (khoá công khai, **chỉ dùng cục bộ**). Mỗi lần khởi động lại Hardhat node, contract phải deploy lại và MetaMask cần xoá lịch sử giao dịch của tài khoản (Settings → Advanced → Clear activity tab data) để không lệch nonce.
+Để thử liên kết ví với mạng cục bộ: trong MetaMask thêm mạng RPC `http://127.0.0.1:8545`, chain ID `31337`, ký hiệu `ETH`; import một tài khoản thử từ danh sách Hardhat node in ra (khoá công khai, **chỉ dùng cục bộ**). Mỗi lần khởi động lại Hardhat node, contract phải deploy lại, CSDL cần làm mới bằng `pnpm --filter @dpp/api db:reset` (mốc quét của Indexer thuộc chain cũ), và MetaMask cần xoá lịch sử giao dịch của tài khoản (Settings → Advanced → Clear activity tab data) để không lệch nonce.
 
 ## 3. Cấu trúc thư mục
 
@@ -111,11 +124,11 @@ dpp/
 ├── apps/
 │   ├── api/                         # NestJS – Modular Monolith
 │   │   ├── prisma/
-│   │   │   ├── schema.prisma        # 22 bảng, enum, partial unique index
+│   │   │   ├── schema.prisma        # 21 bảng, enum, partial unique index
 │   │   │   └── migrations/          # SQL migration (kèm CHECK, trigger)
 │   │   ├── src/
 │   │   │   ├── main.ts              # tiến trình HTTP API
-│   │   │   ├── worker.ts            # tiến trình Worker (Indexer M3, Scheduler M9)
+│   │   │   ├── worker.ts            # tiến trình Worker (Indexer, đối soát, Scheduler)
 │   │   │   ├── app.module.ts        # module gốc của API
 │   │   │   ├── worker.module.ts     # module gốc của Worker
 │   │   │   ├── config/              # nạp .env, kiểm tra bằng zod, AppConfigService
@@ -130,15 +143,15 @@ dpp/
 │   │   │       │   ├── domain/          # quy tắc nghiệp vụ thuần
 │   │   │       │   ├── infrastructure/  # hiện thực port (DB, RPC)
 │   │   │       │   └── index.ts         # public API duy nhất của module
-│   │   │       ├── identity/        # M2: ACC-01..04, phiên JWT, liên kết ví, projector PartyRegistry
-│   │   │       ├── chain-sync/      # M2: theo dõi giao dịch ví gửi, chốt khi finalized, ghi event
-│   │   │       └── audit/           # M2: ghi audit_logs (màn hình xem ở M12)
+│   │   │       ├── identity/        # M2: ACC-01..04, liên kết ví, projector PartyRegistry; M3: đối soát ví
+│   │   │       ├── chain-sync/      # M2: chốt giao dịch ví gửi; M3: Indexer, indexer_checkpoints
+│   │   │       └── audit/           # ghi audit_logs, anomaly_alerts (màn hình xem ở M12)
 │   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar
-│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví
+│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer
 │   └── web/                         # Next.js 16 + Tailwind 4
 │       └── src/
-│           ├── app/                 # route: /, /login, /register, /account, /system/status, /ui-kit
-│           ├── components/          # ui/ (button, badge, field, ...), layout/
+│           ├── app/                 # route: /, /login, /register, /account, /system/status
+│           ├── components/          # ui/ (button, badge, field, tabs, ...), layout/
 │           ├── features/            # theo tính năng: auth, wallet-link, system-status, ...
 │           └── lib/                 # env, format, nhãn trạng thái tiếng Việt
 ├── packages/
@@ -221,7 +234,7 @@ Mỗi model trong `schema.prisma` ghi rõ loại và các cột [P].
 
 ### Thêm migration mới
 
-Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Máy đã chạy M1 chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`.
+Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`.
 
 ```bash
 # 1. Sửa apps/api/prisma/schema.prisma
@@ -252,7 +265,7 @@ pnpm db:migrate
 Ba điểm khác Ethereum cần nhớ khi code các module sau:
 
 1. Phí gas tính theo **gas limit**, không phải gas đã dùng, nên Backend phải đặt gas limit sát ước lượng.
-2. Block finalized sau 2 block và không thể reorg; Indexer chỉ chiếu event sang bảng [P] khi block đã finalized.
+2. Block finalized sau 2 block và không thể reorg; Indexer chỉ chiếu event sang bảng [P] khi block đã finalized. RPC công khai giới hạn `eth_getLogs` 100 block mỗi lần.
 3. Ví có số dư dưới 10 MON (reserve balance) có thể bị revert giao dịch chuyển MON; nạp cho ví tổ chức từ 20 MON trở lên trước khi demo nộp phí 8 MON.
 
 ## 7. Lệnh thường dùng
@@ -276,16 +289,16 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 
 ## 8. Test chứng minh traceability
 
-| Test                                                         | Chứng minh                                                   |
-| ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `apps/api/src/infrastructure/database/prisma-enums.spec.ts`  | Enum PostgreSQL trùng tên và thứ tự với `@dpp/shared`        |
-| `packages/contracts/test/shared/dpp-types.test.ts`           | Enum và role trong Solidity trùng với `@dpp/shared`          |
-| `apps/web/src/features/lifecycle/lifecycle-machines.spec.ts` | Giao diện chỉ vẽ bước chuyển mà state machine cho phép       |
-| `apps/api/test/database/schema-constraints.e2e-spec.ts`      | Từng ràng buộc CSDL chặn đúng dữ liệu sai                    |
-| `packages/contracts/test/registry/party-registry.test.ts`    | ACC-03/04 on-chain: mỗi điều kiện revert có một ca           |
-| `packages/contracts/test/shared/abi-export.test.ts`          | ABI dùng ở API/Web trùng contract đã biên dịch               |
-| `apps/api/test/identity/auth.e2e-spec.ts`                    | ACC-01/02: Argon2id, cookie, session_version, CSRF           |
-| `apps/api/test/identity/wallet-link.e2e-spec.ts`             | ACC-03/04 thật trên Hardhat node: UC → DB → contract → event |
+| Test                                                        | Chứng minh                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------ |
+| `apps/api/src/infrastructure/database/prisma-enums.spec.ts` | Enum PostgreSQL trùng tên và thứ tự với `@dpp/shared`        |
+| `packages/contracts/test/shared/dpp-types.test.ts`          | Enum và role trong Solidity trùng với `@dpp/shared`          |
+| `apps/api/test/database/schema-constraints.e2e-spec.ts`     | Từng ràng buộc CSDL chặn đúng dữ liệu sai                    |
+| `packages/contracts/test/registry/party-registry.test.ts`   | ACC-03/04 on-chain: mỗi điều kiện revert có một ca           |
+| `packages/contracts/test/shared/abi-export.test.ts`         | ABI dùng ở API/Web trùng contract đã biên dịch               |
+| `apps/api/test/identity/auth.e2e-spec.ts`                   | ACC-01/02: Argon2id, cookie, session_version, CSRF           |
+| `apps/api/test/identity/wallet-link.e2e-spec.ts`            | ACC-03/04 thật trên Hardhat node: UC → DB → contract → event |
+| `apps/api/test/chain-sync/indexer.e2e-spec.ts`              | (M3) Indexer chiếu event một lần, đối soát tạo cảnh báo      |
 
 Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự động mỗi lần chạy CI, nên một bên đổi mà quên bên kia thì test sẽ đỏ.
 
@@ -304,7 +317,9 @@ Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự đ�
 | API báo thiếu `JWT_SECRET`                                | Chạy `pnpm --filter @dpp/api secret:new`, chép dòng in ra vào `.env`                                                                                                                                                                                                                                                                     |
 | Trang Tài khoản báo chưa cấu hình PartyRegistry           | Thiếu `REGISTRAR_SIGNER_PRIVATE_KEY` hoặc `PARTY_REGISTRY_ADDRESS`; xem bước 3b và 7 ở mục 2                                                                                                                                                                                                                                             |
 | MetaMask báo lỗi nonce sau khi khởi động lại Hardhat node | MetaMask → Settings → Advanced → Clear activity tab data, rồi deploy lại contract                                                                                                                                                                                                                                                        |
-| Header hiện sai tên mạng                                  | `NEXT_PUBLIC_CHAIN_ID` phải trùng `CHAIN_ID`; khởi động lại `pnpm dev` sau khi sửa                                                                                                                                                                                                                                                       |
+| Header hiện sai tên mạng                                  | Web đọc `CHAIN_ID` trong `.env`; sửa rồi khởi động lại `pnpm dev`                                                                                                                                                                                                                                                                        |
+| Trạng thái hệ thống báo Indexer chưa quét hoặc chậm       | Worker chưa chạy (`pnpm dev` chạy cả Worker) hoặc đang bắt kịp từ block deploy; xem log Worker. Chậm lâu thì kiểm tra `PARTY_REGISTRY_DEPLOY_BLOCK` và RPC                                                                                                                                                                               |
+| Worker báo block finalized thấp hơn mốc đã quét           | Thường do vừa khởi động lại Hardhat node: chạy `pnpm --filter @dpp/api db:reset` rồi deploy lại contract                                                                                                                                                                                                                                 |
 | Test e2e báo "Chưa biên dịch contract"                    | Chạy `pnpm contracts:compile` (hoặc `pnpm test`) trước `pnpm test:e2e`                                                                                                                                                                                                                                                                   |
 | Windows: lệnh `cp` không có                               | Dùng `Copy-Item .env.example .env` (PowerShell) hoặc `copy .env.example .env` (cmd)                                                                                                                                                                                                                                                      |
 

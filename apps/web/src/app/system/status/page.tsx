@@ -37,6 +37,17 @@ const CHAIN_FIELDS: readonly DetailField[] = [
   { key: 'finalityLagBlocks', label: 'Chờ finalized', format: formatBlocks },
 ];
 
+const INDEXER_FIELDS: readonly DetailField[] = [
+  { key: 'trackedContracts', label: 'Contract theo dõi' },
+  { key: 'indexedBlock', label: 'Đã chốt tới block' },
+  { key: 'lagBlocks', label: 'Chậm so với chain', format: formatBlocks },
+  {
+    key: 'lastSyncedAt',
+    label: 'Cập nhật lúc',
+    format: (value) => (typeof value === 'string' ? formatTime(value) : 'Chưa quét'),
+  },
+];
+
 export default async function SystemStatusPage() {
   const result = await getReadiness();
 
@@ -74,6 +85,12 @@ export default async function SystemStatusPage() {
             description="Nút RPC dùng để gửi giao dịch và đọc event. Block finalized thì không thể đảo ngược."
             health={result.report.components.chain}
             fields={CHAIN_FIELDS}
+          />
+          <ComponentStatus
+            name="Indexer"
+            description="Worker quét event của contract, chốt khi block finalized rồi cập nhật CSDL."
+            health={result.report.components.indexer}
+            fields={INDEXER_FIELDS}
           />
         </Panel>
       ) : (

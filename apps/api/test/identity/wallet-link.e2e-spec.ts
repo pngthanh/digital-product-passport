@@ -1,4 +1,4 @@
-import { PARTY_REGISTRY_ABI, type WalletLinkAuthorization } from '@dpp/shared';
+import { PARTY_REGISTRY_ABI } from '@dpp/shared';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { TestingModule } from '@nestjs/testing';
 import { Contract, type JsonRpcSigner, Wallet, ZeroHash } from 'ethers';
@@ -10,44 +10,9 @@ import { type LocalChain, startHardhatNode } from '../support/hardhat-chain.js';
 import { createApiApp, createWorkerContext } from '../support/test-app.js';
 import { createTestConfig, TEST_REGISTRAR_KEY } from '../support/test-config.js';
 import { createTestPrisma, resetDatabase } from '../support/test-database.js';
+import { authorize, submit } from '../support/wallet-flow.js';
 
 const PASSWORD = 'mat khau dai';
-
-/** Web: xin challenge, ví ký EIP-4361, xin giấy phép EIP-712. */
-async function authorize(
-  agent: TestAgent,
-  wallet: JsonRpcSigner,
-  purpose: 'LINK' | 'ROTATE',
-  password?: string,
-): Promise<WalletLinkAuthorization> {
-  const challenge = await agent
-    .post('/api/v1/me/wallet-links/challenge')
-    .send({ address: wallet.address, purpose })
-    .expect(201);
-  const signature = await wallet.signMessage(challenge.body.message);
-  const authorization = await agent
-    .post('/api/v1/me/wallet-links/authorize')
-    .send({ challengeToken: challenge.body.challengeToken, signature, password })
-    .expect(201);
-  return authorization.body;
-}
-
-/** MetaMask: ví được gắn tự gửi giao dịch kèm giấy phép và tự trả gas. */
-async function submit(wallet: JsonRpcSigner, authorization: WalletLinkAuthorization) {
-  const registry = new Contract(authorization.contractAddress, PARTY_REGISTRY_ABI, wallet);
-  const args =
-    authorization.method === 'registerUser'
-      ? [authorization.partyId, BigInt(authorization.deadline), authorization.signature]
-      : [
-          authorization.partyId,
-          authorization.previousWallet,
-          BigInt(authorization.deadline),
-          authorization.signature,
-        ];
-  const tx = await registry.getFunction(authorization.method)(...args);
-  await tx.wait();
-  return tx.hash.toLowerCase();
-}
 
 /**
  * Luồng thật từ đầu tới cuối trên Hardhat node: API cấp giấy phép, ví người dùng tự gửi

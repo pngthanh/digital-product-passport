@@ -17,6 +17,13 @@ export interface IdentityChainConfig {
   readonly partyRegistryAddress: string;
 }
 
+export interface IndexerConfig {
+  readonly pollIntervalMs: number;
+  /** Số block tối đa mỗi lần gọi eth_getLogs. */
+  readonly blockRange: number;
+  readonly reconcileIntervalMs: number;
+}
+
 export interface ChainConfig {
   readonly chainId: number;
   readonly network: ChainNetwork;
@@ -86,6 +93,20 @@ export class AppConfigService {
   /** Địa chỉ PartyRegistry đã deploy; `null` nếu chưa khai báo. */
   get partyRegistryAddress(): string | null {
     return this.config.get('PARTY_REGISTRY_ADDRESS', { infer: true }) ?? null;
+  }
+
+  /** Block lúc deploy PartyRegistry; `null` nếu chưa khai báo. */
+  get partyRegistryDeployBlock(): bigint | null {
+    const block = this.config.get('PARTY_REGISTRY_DEPLOY_BLOCK', { infer: true });
+    return block === undefined ? null : BigInt(block);
+  }
+
+  get indexer(): IndexerConfig {
+    return {
+      pollIntervalMs: this.config.get('INDEXER_POLL_INTERVAL_MS', { infer: true }),
+      blockRange: this.config.get('INDEXER_BLOCK_RANGE', { infer: true }),
+      reconcileIntervalMs: this.config.get('RECONCILE_INTERVAL_MINUTES', { infer: true }) * 60_000,
+    };
   }
 
   get identityChain(): IdentityChainConfig | null {
