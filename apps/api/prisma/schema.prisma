@@ -269,15 +269,57 @@ model Organization {
   updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt            DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  representative  User             @relation(fields: [representativeUserId], references: [id], onDelete: Restrict)
+  representative  User                      @relation(fields: [representativeUserId], references: [id], onDelete: Restrict)
   party           Party?
-  issuedProducts  Product[]        @relation("ProductIssuer")
-  serviceRequests ServiceRequest[] @relation("ServiceCenter")
-  inspections     Inspection[]     @relation("Inspector")
-  recalls         Recall[]         @relation("RecallIssuer")
+  applications    OrganizationApplication[]
+  issuedProducts  Product[]                 @relation("ProductIssuer")
+  serviceRequests ServiceRequest[]          @relation("ServiceCenter")
+  inspections     Inspection[]              @relation("Inspector")
+  recalls         Recall[]                  @relation("RecallIssuer")
 
   @@index([orgType, authStatus])
   @@map("organizations")
+}
+
+/// [A+P] Từng lần nộp đơn của tổ chức, giữ lại cả lần bị từ chối để đối chiếu (M5).
+/// Indexer tạo dòng khi chiếu OrganizationApplied. Cột [A]: bản chụp hồ sơ, decisionReason.
+model OrganizationApplication {
+  id                 String     @id @default(uuid(7)) @db.Uuid
+  organizationId     String     @map("organization_id") @db.Uuid
+  /// Lần nộp thứ mấy của tổ chức, bắt đầu từ 1.
+  round              Int
+  /// [A] Bản chụp hồ sơ lúc nộp, băm ra đúng profileHash. NULL ở lần nộp trước M5 không còn bản chụp.
+  name               String?    @db.VarChar(255)
+  taxCode            String?    @map("tax_code") @db.VarChar(32)
+  contactEmail       String?    @map("contact_email") @db.VarChar(255)
+  contactPhone       String?    @map("contact_phone") @db.VarChar(32)
+  address            String?    @db.VarChar(500)
+  orgType            OrgType    @map("org_type")
+  profileHash        String     @map("profile_hash") @db.Char(66)
+  /// Ví cá nhân đã ký applyOrganization.
+  applicantAddress   String     @map("applicant_address") @db.Char(42)
+  appliedTxHash      String     @unique @map("applied_tx_hash") @db.Char(66)
+  appliedAt          DateTime   @map("applied_at") @db.Timestamptz(6)
+  /// Khoản phí nộp cùng giao dịch; NULL khi phí bằng 0.
+  feePaymentId       String?    @unique @map("fee_payment_id") @db.Uuid
+  /// PENDING → AUTHORIZED | REJECTED (không dùng DISABLED: khoá là việc của tổ chức).
+  status             AuthStatus @default(PENDING)
+  /// [A] Lý do từ chối Admin nhập; contract chỉ lưu decisionReasonHash.
+  decisionReason     String?    @map("decision_reason") @db.VarChar(500)
+  decisionReasonHash String?    @map("decision_reason_hash") @db.Char(66)
+  decidedByAddress   String?    @map("decided_by_address") @db.Char(42)
+  decidedTxHash      String?    @map("decided_tx_hash") @db.Char(66)
+  decidedAt          DateTime?  @map("decided_at") @db.Timestamptz(6)
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  feePayment   FeePayment?  @relation(fields: [feePaymentId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, round])
+  @@unique([organizationId], map: "ux_org_application_one_pending", where: { status: "PENDING" })
+  @@index([status])
+  @@map("organization_applications")
 }
 
 /// [A+P] Chủ thể sở hữu/giữ hàng chung cho User và Organization. Cột [P]: chainPartyId.
@@ -369,7 +411,8 @@ model FeePayment {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  party Party @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  party       Party                    @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  application OrganizationApplication?
 
   @@index([partyId, action])
   @@index([feeStatus])
@@ -381,23 +424,30 @@ model FeePayment {
 // -----------------------------------------------------------------------------
 
 /// [A+P] Hồ sơ sản phẩm. Cột [P]: productState, currentCustodianPartyId, pendingCustodianPartyId,
-/// currentOwnerPartyId, createdTxHash, syncStatus, onchainCreatedAt.
+/// currentOwnerPartyId, createdTxHash, syncStatus, onchainCreatedAt. Dòng tạo trước khi ký giao dịch
+/// (bản nháp, productState NULL, syncStatus PENDING); Indexer chốt khi chiếu ProductRegistered.
 model Product {
   id                      String        @id @default(uuid(7)) @db.Uuid
-  /// productId (bytes32) on-chain, Backend tính trước từ serial.
+  /// productId (bytes32) on-chain = keccak256(abi.encode(partyId nhà sản xuất, serial)), Backend tính trước.
   chainProductId          String        @unique @map("chain_product_id") @db.Char(66)
-  serialNumber            String        @unique @map("serial_number") @db.VarChar(100)
+  /// Chữ in hoa; duy nhất trong từng nhà sản xuất (M5).
+  serialNumber            String        @map("serial_number") @db.VarChar(100)
   /// Mã ngẫu nhiên in trên QR, tránh lộ serial và chống dò quét.
   publicCode              String        @unique @map("public_code") @db.VarChar(32)
   modelName               String        @map("model_name") @db.VarChar(255)
   description             String?
+  manufacturedOn          DateTime      @map("manufactured_on") @db.Date
+  /// Thời hạn bảo hành tính bằng tháng; 0 là không bảo hành.
+  warrantyMonths          Int           @map("warranty_months")
+  /// keccak256 của hồ sơ chuẩn hoá (serial, model, mô tả, ngày sản xuất, bảo hành, nhà sản xuất).
   metadataHash            String        @map("metadata_hash") @db.Char(66)
   issuerOrgId             String        @map("issuer_org_id") @db.Uuid
   productState            ProductState? @map("product_state")
   currentCustodianPartyId String?       @map("current_custodian_party_id") @db.Uuid
   pendingCustodianPartyId String?       @map("pending_custodian_party_id") @db.Uuid
   currentOwnerPartyId     String?       @map("current_owner_party_id") @db.Uuid
-  createdTxHash           String?       @unique @map("created_tx_hash") @db.Char(66)
+  /// Một giao dịch đăng ký cả lô (tối đa 50 sản phẩm) nên không UNIQUE.
+  createdTxHash           String?       @map("created_tx_hash") @db.Char(66)
   syncStatus              SyncStatus    @default(PENDING) @map("sync_status")
   onchainCreatedAt        DateTime?     @map("onchain_created_at") @db.Timestamptz(6)
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -418,7 +468,9 @@ model Product {
   events           BlockchainEvent[]
   anomalyAlerts    AnomalyAlert[]
 
+  @@unique([issuerOrgId, serialNumber])
   @@index([issuerOrgId, createdAt])
+  @@index([createdTxHash])
   @@index([productState])
   @@index([currentOwnerPartyId])
   @@index([currentCustodianPartyId])

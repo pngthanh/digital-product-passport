@@ -9,9 +9,10 @@ import type { ChainEvent } from '../domain/chain-event.js';
 export interface EventStore {
   /**
    * Chuyển event sang FINALIZED (tạo mới nếu chưa có, cập nhật block nếu đang PENDING/ORPHANED).
-   * Trả `true` khi lần gọi này là lần chốt đầu tiên: người gọi chạy projector trong cùng giao dịch.
+   * Trả id dòng blockchain_events khi lần gọi này là lần chốt đầu tiên (người gọi chạy projector
+   * trong cùng giao dịch), `null` nếu event đã được chốt trước đó.
    */
-  finalize(event: ChainEvent, scope: TransactionScope): Promise<boolean>;
+  finalize(event: ChainEvent, scope: TransactionScope): Promise<string | null>;
   /** Ghi event PENDING từ block chưa finalized; không đụng tới event đã FINALIZED. */
   recordObserved(event: ChainEvent, scope: TransactionScope): Promise<void>;
   /** Event PENDING còn lại trong đoạn đã chốt không còn trên chain chính: đánh dấu ORPHANED. */

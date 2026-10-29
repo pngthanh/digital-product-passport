@@ -4,6 +4,7 @@ import {
   MANUFACTURER_ROLE,
   type MyOrganizationView,
   type OrganizationApplicationAuthorization,
+  type OrganizationDetailView,
   PARTY_REGISTRY_ABI,
 } from '@dpp/shared';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -284,6 +285,55 @@ describe('ORG-01..04, ORG-06: doanh nghiệp và phí (e2e, Hardhat node)', () =
       stage: 'DISABLED',
       statusReason: 'Vi phạm điều khoản',
     });
+  });
+
+  it('Admin xem đủ hồ sơ, từng lần nộp (kể cả lần bị từ chối) và nhật ký on-chain có mã giao dịch', async () => {
+    const { organization } = await myOrganization();
+    const response = await admin.get(`/api/v1/admin/organizations/${organization?.id}`).expect(200);
+    const detail: OrganizationDetailView = response.body;
+
+    expect(detail.organization).toMatchObject({
+      address: '15 Nguyễn Văn Cừ, Cần Thơ',
+      contactPhone: '02838123456',
+      representative: { email: 'dai.dien@abc.vn' },
+    });
+    const [second, first] = detail.applications;
+    expect(first).toMatchObject({
+      round: 1,
+      status: 'REJECTED',
+      profile: { address: '12 Nguyễn Văn Cừ, Cần Thơ' },
+      profileMatchesChain: true,
+      applicantAddress: representativeWallet.address,
+      decisionReason: 'Địa chỉ chưa khớp giấy phép',
+      reasonMatchesChain: true,
+      decidedByAddress: adminWallet.address,
+      fee: { feeStatus: 'REFUNDED', amountWei: FEE.toString() },
+    });
+    expect(first?.fee?.refundTxHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(second).toMatchObject({
+      round: 2,
+      status: 'AUTHORIZED',
+      profile: { address: '15 Nguyễn Văn Cừ, Cần Thơ' },
+      profileMatchesChain: true,
+      decisionReason: null,
+      fee: { feeStatus: 'SETTLED' },
+    });
+    expect(detail.chainLog.map((event) => event.eventName)).toEqual([
+      'PartyRegistered',
+      'OrganizationApplied',
+      'FeePaid',
+      'OrganizationRejected',
+      'FeeRefunded',
+      'OrganizationApplied',
+      'FeePaid',
+      'OrganizationApproved',
+      'FeeSettled',
+      'OrganizationDisabled',
+    ]);
+    expect(detail.chainLog[3]?.txHash).toBe(first?.decidedTxHash);
+
+    // Người đại diện cũng thấy đúng lịch sử đó.
+    expect((await myOrganization()).history.applications).toHaveLength(2);
   });
 
   it('ORG-06: Admin đổi phí và ví Treasury; Indexer cập nhật fee_policies', async () => {

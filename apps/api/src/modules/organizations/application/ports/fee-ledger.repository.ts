@@ -8,6 +8,7 @@ export interface FeePolicyRecord {
 }
 
 export interface FeePaymentRecord extends Omit<FeePaymentSummary, 'amountWei' | 'paidAt'> {
+  id: string;
   partyId: string;
   amountWei: bigint;
   paidAt: Date;
@@ -27,7 +28,8 @@ export interface FeeLedgerRepository {
   findPolicy(action: FeeAction): Promise<FeePolicyRecord | null>;
   /** Mới nhất trước, theo từng Party. */
   paymentsOf(partyIds: readonly string[]): Promise<Map<string, FeePaymentRecord[]>>;
-  recordPaid(fee: PaidFee, scope: TransactionScope): Promise<void>;
+  /** Trả về id của khoản phí (đã có từ trước thì trả id cũ). */
+  recordPaid(fee: PaidFee, scope: TransactionScope): Promise<string>;
   settle(partyId: string, txHash: string, at: Date, scope: TransactionScope): Promise<void>;
   markRefundable(partyId: string, scope: TransactionScope): Promise<void>;
   markRefunded(partyId: string, txHash: string, at: Date, scope: TransactionScope): Promise<void>;

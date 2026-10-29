@@ -104,8 +104,11 @@ export class ConfirmTransactions {
       }
       for (const event of this.decodeEvents(transaction.txHash, receipt, block.timestamp)) {
         // Indexer có thể đã chốt event này trước; `finalize` bảo đảm chỉ chiếu một lần.
-        if (await this.events.finalize(event, scope)) {
-          await this.projectors.find(event.contractName, event.eventName)?.project(event, scope);
+        const eventId = await this.events.finalize(event, scope);
+        if (eventId) {
+          await this.projectors
+            .find(event.contractName, event.eventName)
+            ?.project({ ...event, eventId }, scope);
         }
       }
     });

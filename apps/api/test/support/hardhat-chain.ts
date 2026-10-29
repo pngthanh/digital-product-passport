@@ -8,6 +8,7 @@ import { ContractFactory, JsonRpcProvider, parseEther } from 'ethers';
 const CONTRACTS_DIR = fileURLToPath(new URL('../../../../packages/contracts/', import.meta.url));
 const HARDHAT_CLI = `${CONTRACTS_DIR}node_modules/hardhat/dist/src/cli.js`;
 const PARTY_REGISTRY_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/registry/PartyRegistry.sol/PartyRegistry.json`;
+const PRODUCT_PASSPORT_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/product/ProductPassport.sol/ProductPassport.json`;
 const STARTUP_TIMEOUT_MS = 60_000;
 
 export interface LocalChain {
@@ -20,8 +21,18 @@ export interface LocalChain {
     registrar: string,
     options?: { treasury?: string; registrationFee?: bigint },
   ): Promise<string>;
+  /** ProductPassport trỏ tới PartyRegistry đã deploy. */
+  deployProductPassport(partyRegistry: string): Promise<string>;
   mine(): Promise<void>;
   stop(): Promise<void>;
+}
+
+async function artifactOf(path: string): Promise<object> {
+  const artifact: unknown = JSON.parse(await readFile(path, 'utf8'));
+  if (typeof artifact !== 'object' || artifact === null || !('abi' in artifact)) {
+    throw new Error(`Artifact không hợp lệ: ${path}`);
+  }
+  return artifact;
 }
 
 async function freePort(): Promise<number> {
@@ -72,18 +83,27 @@ export async function startHardhatNode(): Promise<LocalChain> {
     provider,
     signer: (index) => provider.getSigner(index),
     async deployPartyRegistry(registrar, options = {}) {
-      const artifact: unknown = JSON.parse(await readFile(PARTY_REGISTRY_ARTIFACT, 'utf8'));
-      if (typeof artifact !== 'object' || artifact === null || !('abi' in artifact)) {
-        throw new Error('Artifact PartyRegistry không hợp lệ');
-      }
       const deployer = await provider.getSigner(0);
-      const factory = ContractFactory.fromSolidity(artifact, deployer);
+      const factory = ContractFactory.fromSolidity(
+        await artifactOf(PARTY_REGISTRY_ARTIFACT),
+        deployer,
+      );
       const contract = await factory.deploy(
         deployer.address,
         registrar,
         options.treasury ?? deployer.address,
         options.registrationFee ?? parseEther('8'),
       );
+      await contract.waitForDeployment();
+      return contract.getAddress();
+    },
+    async deployProductPassport(partyRegistry) {
+      const deployer = await provider.getSigner(0);
+      const factory = ContractFactory.fromSolidity(
+        await artifactOf(PRODUCT_PASSPORT_ARTIFACT),
+        deployer,
+      );
+      const contract = await factory.deploy(partyRegistry);
       await contract.waitForDeployment();
       return contract.getAddress();
     },

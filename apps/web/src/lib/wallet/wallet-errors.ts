@@ -9,7 +9,7 @@ export class WalletFlowError extends Error {
   }
 }
 
-/** Thông báo cho custom error của PartyRegistry (khi ước lượng gas hoặc giao dịch bị revert). */
+/** Thông báo cho custom error của PartyRegistry, ProductPassport (khi ước lượng gas hoặc bị revert). */
 const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   WalletAlreadyUsed: 'Ví này đã từng được liên kết trong hệ thống. Hãy chọn ví khác.',
   AuthorizationExpired: 'Giấy phép đã hết hạn. Bấm làm lại để nhận giấy phép mới.',
@@ -28,6 +28,14 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   UnknownOrganizationRole: 'Loại doanh nghiệp không hợp lệ.',
   AccessControlUnauthorizedAccount:
     'Ví đang chọn không có quyền Admin trên PartyRegistry. Dùng đúng ví đã deploy contract.',
+  NotAuthorizedManufacturer:
+    'Ví đang chọn không đại diện nhà sản xuất đã được duyệt. Kiểm tra ví MetaMask và trạng thái doanh nghiệp.',
+  IssuerMismatch:
+    'Giấy phép cấp cho nhà sản xuất khác với ví đang chọn. Tải lại trang rồi thử lại.',
+  ProductAlreadyRegistered:
+    'Có sản phẩm đã được ghi lên blockchain trước đó, hệ thống đang đồng bộ. Tải lại trang sau ít giây.',
+  InvalidBatchSize: 'Mỗi giao dịch ghi từ 1 đến 50 sản phẩm.',
+  LengthMismatch: 'Giấy phép không hợp lệ. Bắt đầu lại để nhận giấy phép mới.',
 };
 
 /** Mã lỗi EIP-1193 thường gặp từ MetaMask. */

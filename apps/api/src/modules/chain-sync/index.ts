@@ -14,5 +14,6 @@ export {
 } from './application/index-chain-events.use-case.js';
 export { IndexerProgress, type ContractProgress } from './application/indexer-progress.query.js';
 export { IndexedChainState } from './application/indexed-chain-state.query.js';
-export type { ChainEvent, ChainEventArg } from './domain/chain-event.js';
+export { ChainEventHistory, presentChainEvent } from './application/chain-event-history.query.js';
+export type { ChainEvent, ChainEventArg, RecordedChainEvent } from './domain/chain-event.js';
 export type { TrackedTxStatus } from './domain/transaction-confirmation.js';

@@ -8,7 +8,7 @@ import {
 } from './ports/organization.repository.js';
 import { OrganizationViews } from './organization-views.js';
 
-/** Doanh nghiệp do người dùng đại diện, kèm phí đăng ký hiện hành. */
+/** Doanh nghiệp do người dùng đại diện, các lần nộp đơn, nhật ký on-chain và phí đăng ký hiện hành. */
 @Injectable()
 export class GetMyOrganization {
   constructor(
@@ -19,12 +19,14 @@ export class GetMyOrganization {
 
   async execute(user: AuthenticatedUser): Promise<MyOrganizationView> {
     const record = await this.organizations.findByRepresentative(user.id);
-    const [summaries, registrationFee] = await Promise.all([
+    const [summaries, history, registrationFee] = await Promise.all([
       record ? this.views.summarize([record]) : Promise.resolve([]),
+      record ? this.views.history(record) : Promise.resolve({ applications: [], chainLog: [] }),
       this.views.registrationFee(),
     ]);
     return {
       organization: summaries[0] ?? null,
+      history,
       registrationFee,
       contract: this.chain.contractAddress
         ? { chainId: this.chain.chainId, address: toChecksumAddress(this.chain.contractAddress) }

@@ -10,7 +10,13 @@ import type { TransactionScope } from '../../../common/persistence/transaction-s
 import { AuditAction, AuditTrail } from '../../audit/index.js';
 import type { ChainEvent, EventProjector } from '../../chain-sync/index.js';
 import type { OrganizationRecord } from '../domain/organization.js';
+import { reasonMatchesChain } from '../domain/organization-application.js';
 import { FEE_LEDGER_REPOSITORY, type FeeLedgerRepository } from './ports/fee-ledger.repository.js';
+import {
+  ORGANIZATION_APPLICATION_REPOSITORY,
+  type OrganizationApplicationRepository,
+  type RoundDecision,
+} from './ports/organization-application.repository.js';
 import {
   ORGANIZATION_REPOSITORY,
   type OrganizationRepository,
@@ -31,7 +37,7 @@ const POLICY_EVENTS = ['FeeUpdated', 'TreasuryUpdated'] as const;
 
 /**
  * Chiếu event finalized về tổ chức và phí của PartyRegistry sang organizations (cột [P]),
- * fee_payments và fee_policies. On-chain là nguồn sự thật.
+ * organization_applications, fee_payments và fee_policies. On-chain là nguồn sự thật.
  */
 @Injectable()
 export class OrganizationRegistryProjector implements EventProjector {
@@ -42,6 +48,8 @@ export class OrganizationRegistryProjector implements EventProjector {
   constructor(
     @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
     @Inject(FEE_LEDGER_REPOSITORY) private readonly ledger: FeeLedgerRepository,
+    @Inject(ORGANIZATION_APPLICATION_REPOSITORY)
+    private readonly applications: OrganizationApplicationRepository,
     private readonly audit: AuditTrail,
   ) {}
 
@@ -63,6 +71,7 @@ export class OrganizationRegistryProjector implements EventProjector {
         await this.projectApplied(organization, event, scope);
         return;
       case 'OrganizationApproved':
+        await this.decideRound(organization, event, { status: 'AUTHORIZED' }, scope);
         await this.projectStatus(
           organization,
           event,
@@ -71,7 +80,12 @@ export class OrganizationRegistryProjector implements EventProjector {
         );
         return;
       case 'OrganizationRejected':
-        this.checkReason(organization, event);
+        await this.decideRound(
+          organization,
+          event,
+          { status: 'REJECTED', reasonHash: stringArg(event, 'reasonHash') },
+          scope,
+        );
         await this.projectStatus(
           organization,
           event,
@@ -81,7 +95,7 @@ export class OrganizationRegistryProjector implements EventProjector {
         await this.ledger.markRefundable(organization.id, scope);
         return;
       case 'OrganizationDisabled':
-        this.checkReason(organization, event);
+        this.checkDisableReason(organization, event);
         await this.projectStatus(
           organization,
           event,
@@ -117,11 +131,34 @@ export class OrganizationRegistryProjector implements EventProjector {
       return;
     }
     const profileHash = stringArg(event, 'profileHash');
-    if (organization.profileHash !== profileHash) {
+    const snapshotMatches = organization.profileHash === profileHash;
+    if (!snapshotMatches) {
       this.logger.warn(
         `Hồ sơ ${organization.id} trong CSDL khác hash đã nộp on-chain (tx ${event.txHash})`,
       );
     }
+    await this.applications.recordApplied(
+      {
+        organizationId: organization.id,
+        orgType,
+        // Chỉ lưu bản chụp khi hồ sơ trong CSDL đúng là hồ sơ đã băm và nộp on-chain.
+        profile: snapshotMatches
+          ? {
+              name: organization.name,
+              taxCode: organization.taxCode,
+              orgType,
+              contactEmail: organization.contactEmail,
+              contactPhone: organization.contactPhone,
+              address: organization.address,
+            }
+          : null,
+        profileHash,
+        applicantAddress: requireActor(event),
+        txHash: event.txHash,
+        appliedAt: event.blockTimestamp,
+      },
+      scope,
+    );
     await this.projectStatus(
       organization,
       event,
@@ -156,7 +193,7 @@ export class OrganizationRegistryProjector implements EventProjector {
       this.logger.warn(`FeePaid với mã thao tác lạ (tx ${event.txHash})`);
       return;
     }
-    await this.ledger.recordPaid(
+    const paymentId = await this.ledger.recordPaid(
       {
         partyId: organization.id,
         action,
@@ -167,6 +204,33 @@ export class OrganizationRegistryProjector implements EventProjector {
       },
       scope,
     );
+    // FeePaid phát cùng giao dịch, ngay sau OrganizationApplied.
+    await this.applications.attachFee(event.txHash, paymentId, scope);
+  }
+
+  private async decideRound(
+    organization: OrganizationRecord,
+    event: ChainEvent,
+    decision:
+      | Pick<Extract<RoundDecision, { status: 'AUTHORIZED' }>, 'status'>
+      | Pick<Extract<RoundDecision, { status: 'REJECTED' }>, 'status' | 'reasonHash'>,
+    scope: TransactionScope,
+  ): Promise<void> {
+    const decided = await this.applications.decide(
+      organization.id,
+      {
+        ...decision,
+        decidedBy: requireActor(event),
+        txHash: event.txHash,
+        at: event.blockTimestamp,
+      },
+      scope,
+    );
+    if (!decided) {
+      this.logger.warn(`${event.eventName} nhưng tổ chức ${organization.id} không có đơn đang chờ`);
+    } else if (decided.status === 'REJECTED' && reasonMatchesChain(decided) !== true) {
+      this.logger.warn(`Lý do từ chối trong CSDL không khớp hash on-chain (tx ${event.txHash})`);
+    }
   }
 
   private async projectFeeUpdated(event: ChainEvent, scope: TransactionScope): Promise<void> {
@@ -209,8 +273,8 @@ export class OrganizationRegistryProjector implements EventProjector {
     return organization;
   }
 
-  /** Lý do lưu ở CSDL phải khớp hash Admin gửi on-chain; lệch thì chỉ cảnh báo, on-chain vẫn là chuẩn. */
-  private checkReason(organization: OrganizationRecord, event: ChainEvent): void {
+  /** Lý do khoá lưu ở CSDL phải khớp hash Admin gửi on-chain; lệch thì chỉ cảnh báo, on-chain vẫn là chuẩn. */
+  private checkDisableReason(organization: OrganizationRecord, event: ChainEvent): void {
     const reasonHash = stringArg(event, 'reasonHash');
     if (!organization.statusReason || statusReasonHash(organization.statusReason) !== reasonHash) {
       this.logger.warn(
@@ -245,6 +309,14 @@ export class OrganizationRegistryProjector implements EventProjector {
       scope,
     );
   }
+}
+
+/** Ví gửi giao dịch; thiếu (RPC chưa trả giao dịch) thì báo lỗi để Indexer chiếu lại ở vòng sau. */
+function requireActor(event: ChainEvent): string {
+  if (!event.actorAddress) {
+    throw new Error(`Chưa đọc được ví gửi giao dịch ${event.txHash}, chiếu lại ở vòng sau`);
+  }
+  return event.actorAddress;
 }
 
 function stringArg(event: ChainEvent, name: string): string {

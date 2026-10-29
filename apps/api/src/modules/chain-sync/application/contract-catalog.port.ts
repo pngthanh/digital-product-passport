@@ -8,6 +8,7 @@ export interface DecodedLog {
   eventName: string;
   args: Record<string, ChainEventArg>;
   correlationKey: string | null;
+  chainProductId: string | null;
 }
 
 /** Danh mục contract hệ thống theo dõi: địa chỉ và ABI để giải mã calldata, log. */

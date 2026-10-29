@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PARTY_REGISTRY_ABI, PARTY_REGISTRY_CONTRACT_NAME } from '@dpp/shared';
+import {
+  PARTY_REGISTRY_ABI,
+  PARTY_REGISTRY_CONTRACT_NAME,
+  PRODUCT_PASSPORT_ABI,
+  PRODUCT_PASSPORT_CONTRACT_NAME,
+} from '@dpp/shared';
 import { type InterfaceAbi, Interface, type ParamType } from 'ethers';
 import { AppConfigService } from '../../../config/app-config.service.js';
 import type { ChainLog } from '../application/chain-reader.port.js';
@@ -13,6 +18,8 @@ interface CatalogEntry {
   abi: Interface;
   /** Tham số event dùng làm correlation_key. */
   correlationArg: string | null;
+  /** Tham số event chứa productId (bytes32), ghi vào blockchain_events.chain_product_id. */
+  productArg: string | null;
   startBlock: bigint | null;
 }
 
@@ -21,6 +28,7 @@ interface ContractDefinition {
   address: string | null;
   abi: InterfaceAbi;
   correlationArg: string | null;
+  productArg: string | null;
   startBlock: bigint | null;
 }
 
@@ -39,7 +47,16 @@ export class AbiContractCatalog implements ContractCatalog {
         address: config.partyRegistryAddress,
         abi: PARTY_REGISTRY_ABI,
         correlationArg: 'partyId',
+        productArg: null,
         startBlock: config.partyRegistryDeployBlock,
+      },
+      {
+        name: PRODUCT_PASSPORT_CONTRACT_NAME,
+        address: config.productPassportAddress,
+        abi: PRODUCT_PASSPORT_ABI,
+        correlationArg: 'productId',
+        productArg: 'productId',
+        startBlock: config.productPassportDeployBlock,
       },
     ];
     this.entries = definitions.flatMap(({ address, abi, ...rest }) =>
@@ -77,12 +94,14 @@ export class AbiContractCatalog implements ContractCatalog {
       ]),
     );
     const correlation = entry.correlationArg ? args[entry.correlationArg] : undefined;
+    const product = entry.productArg ? args[entry.productArg] : undefined;
     return {
       contractName: entry.name,
       contractAddress: entry.address,
       eventName: parsed.name,
       args,
       correlationKey: typeof correlation === 'string' ? correlation : null,
+      chainProductId: typeof product === 'string' ? product : null,
     };
   }
 }

@@ -8,9 +8,10 @@ Hệ thống quản lý vòng đời, bảo hành và chuyển quyền sở hữ
 | M1     | Foundation & Core Infrastructure               | Xong          |
 | M2     | Identity & Auth: tài khoản, ví MetaMask, Party | Xong          |
 | M3     | Indexer quét log, đối soát                     | Xong          |
-| **M4** | **Doanh nghiệp và phí MON, khu Quản trị**      | **Xong**      |
-| M5     | Sản phẩm, mã QR, tra cứu                       | Kế tiếp       |
-| M6–M13 | Bảo hành, chuyển quyền, ...                    | Theo lộ trình |
+| M4     | Doanh nghiệp và phí MON, khu Quản trị          | Xong          |
+| **M5** | **Sản phẩm, mã QR, tra cứu**                   | **Xong**      |
+| M6     | Phân phối và bán hàng, kích hoạt bảo hành      | Kế tiếp       |
+| M7–M13 | Dịch vụ bảo hành, chuyển quyền, ...            | Theo lộ trình |
 
 ## M1 gồm những gì
 
@@ -52,7 +53,19 @@ Doanh nghiệp không có ví riêng: người đại diện dùng chính ví Me
 - **ORG-04 Khoá doanh nghiệp**, **ORG-06 đổi phí và ví Treasury**. ORG-05 (ví vận hành) bỏ theo D25.
 - **PartyRegistry** thêm phần doanh nghiệp: giấy phép EIP-712 `OrganizationApplication`, phí giữ trong contract, hoàn tiền kiểu pull (`withdrawRefund`, `nonReentrant`), hàm `authorizedOrganizationOf` để contract sản phẩm ở M5 kiểm tra quyền.
 - Indexer chiếu event doanh nghiệp sang `organizations`, `fee_payments`, `fee_policies`. Lệnh `admin:grant` cấp quyền Admin cho một tài khoản.
-- **302 test tự động** (243 unit và contract, 59 e2e). Test e2e doanh nghiệp chạy trọn luồng trên Hardhat node: nộp đơn, từ chối, rút phí, nộp lại, duyệt (Treasury nhận đúng 8 MON), khoá, đổi phí.
+- **302 test tự động** (243 unit và contract, 59 e2e) lúc giao M4. Test e2e doanh nghiệp chạy trọn luồng trên Hardhat node: nộp đơn, từ chối, rút phí, nộp lại, duyệt (Treasury nhận đúng 8 MON), khoá, đổi phí.
+
+## M5 gồm những gì
+
+Nhà sản xuất đã được duyệt đăng ký sản phẩm bằng ví MetaMask cá nhân của người đại diện; ai cũng quét mã QR để xem hộ chiếu số và tự kiểm chứng với blockchain. Chi tiết quyết định D31–D37, luồng, file CSV và gas: [docs/m5-products.md](docs/m5-products.md).
+
+- **PRD-01 Tạo sản phẩm** ở trang **Sản phẩm** (`/products`, chỉ hiện với người đại diện nhà sản xuất): serial, model, mô tả, ngày sản xuất, số tháng bảo hành. Serial duy nhất trong từng nhà sản xuất.
+- **PRD-02 Nhập file CSV**: tối đa 50 sản phẩm, xem trước và báo lỗi theo từng dòng, cả lô ghi trong **một** giao dịch. Đọc được file Excel lưu CSV kiểu Việt Nam (dấu `;`, ngày `DD/MM/YYYY`).
+- **PRD-03 Mã QR**: mỗi sản phẩm một mã 12 ký tự, tải QR dạng PNG hoặc SVG, trang in tem A4. QR không lên chain.
+- **Tra cứu công khai** (`/lookup`): gõ mã, quét bằng camera hoặc tải ảnh tem; trang hộ chiếu `/p/<mã>` đọc trực tiếp contract để đối chiếu hash hồ sơ, kèm txHash mở được trên MonadVision.
+- **Contract `ProductPassport`**: `registerProducts` nhận giấy phép EIP-712 của registrar và chỉ cho ví đại diện nhà sản xuất **đã duyệt** (kiểm tra qua `PartyRegistry.authorizedOrganizationOf`). Ví từ chối ký thì hồ sơ thành bản nháp để gửi lại hoặc xoá.
+- **Sửa M4**: bảng mới `organization_applications` giữ **mọi lần nộp đơn** (bản chụp hồ sơ, phí, lý do từ chối, ví ký, từng txHash), không còn mất dấu khi bị từ chối rồi nộp lại; Admin xem đủ hồ sơ (có địa chỉ) và trang chi tiết `/admin/organizations/<id>` với nhật ký on-chain. Migration tự dựng lại lịch sử cho dữ liệu cũ.
+- **363 test tự động** (285 unit và contract, 78 e2e). Test e2e sản phẩm chạy trọn luồng trên Hardhat node: duyệt nhà sản xuất, tạo một sản phẩm, lô CSV, Indexer chốt khi web không báo txHash, tra cứu công khai.
 
 ---
 
@@ -107,6 +120,10 @@ pnpm contracts:test
 #    chép PARTY_REGISTRY_ADDRESS và PARTY_REGISTRY_DEPLOY_BLOCK in ra vào .env
 pnpm --filter @dpp/contracts deploy:monad
 
+# 7b. (M5) Deploy ProductPassport (cần PARTY_REGISTRY_ADDRESS trong .env),
+#     chép PRODUCT_PASSPORT_ADDRESS và PRODUCT_PASSPORT_DEPLOY_BLOCK in ra vào .env
+pnpm --filter @dpp/contracts deploy:products:monad
+
 # 8. Chạy toàn bộ: API (cổng 4000), Worker và Web (cổng 3000)
 pnpm dev
 
@@ -114,12 +131,17 @@ pnpm dev
 pnpm --filter @dpp/api admin:grant <email-admin>
 ```
 
+Máy đã chạy M4 chỉ cần `pnpm install`, `pnpm db:deploy`, `pnpm --filter @dpp/api db:deploy:test` và bước 7b, **không** làm mới CSDL (xem [docs/m5-products.md](docs/m5-products.md) mục 8).
+
 Mở trình duyệt:
 
 - http://localhost:3000 — trang tổng quan.
 - http://localhost:3000/register — tạo tài khoản, sau đó vào **Tài khoản** để liên kết MetaMask.
 - http://localhost:3000/organization — nộp đơn doanh nghiệp, theo dõi duyệt, rút phí khi bị từ chối (cần ví đã liên kết).
-- http://localhost:3000/admin — khu Quản trị: duyệt, từ chối, khoá doanh nghiệp, đổi phí. Chỉ tài khoản Admin mới thấy (người khác nhận 404). Tài khoản Admin phải liên kết **đúng ví đã deploy** PartyRegistry.
+- http://localhost:3000/admin — khu Quản trị: duyệt, từ chối, khoá doanh nghiệp, đổi phí; bấm vào từng doanh nghiệp để xem mọi lần nộp đơn kèm txHash. Chỉ tài khoản Admin mới thấy (người khác nhận 404). Tài khoản Admin phải liên kết **đúng ví đã deploy** PartyRegistry.
+- http://localhost:3000/products — (M5) sản phẩm của nhà sản xuất: thêm từng cái hoặc nhập CSV, tải QR, in tem. Chỉ hiện khi tài khoản đại diện nhà sản xuất đã duyệt.
+- http://localhost:3000/lookup — (M5) tra cứu công khai bằng mã, camera hoặc ảnh tem; hộ chiếu ở `/p/<mã>`, không cần đăng nhập.
+- Quét QR bằng điện thoại cùng Wi-Fi: đặt `PUBLIC_WEB_URL` bằng địa chỉ `Network: http://192.168.x.x:3000` mà `pnpm dev` in ra, rồi khởi động lại `pnpm dev`.
 - http://localhost:3000/system/status — trạng thái CSDL, blockchain và Indexer (mở từ khu Quản trị).
 - http://localhost:4000/api/v1/health/ready — báo cáo JSON (trả 503 khi chưa sẵn sàng).
 
@@ -130,7 +152,7 @@ Mở trình duyệt:
 pnpm --filter @dpp/contracts node
 ```
 
-Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`, rồi `pnpm dev`.
+Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`; tiếp theo `pnpm --filter @dpp/contracts deploy:products:local`, chép `PRODUCT_PASSPORT_ADDRESS` và `PRODUCT_PASSPORT_DEPLOY_BLOCK`; rồi `pnpm dev`.
 
 Để thử liên kết ví với mạng cục bộ: trong MetaMask thêm mạng RPC `http://127.0.0.1:8545`, chain ID `31337`, ký hiệu `ETH`; import một tài khoản thử từ danh sách Hardhat node in ra (khoá công khai, **chỉ dùng cục bộ**). Mỗi lần khởi động lại Hardhat node, contract phải deploy lại, CSDL cần làm mới bằng `pnpm --filter @dpp/api db:reset` (mốc quét của Indexer thuộc chain cũ), và MetaMask cần xoá lịch sử giao dịch của tài khoản (Settings → Advanced → Clear activity tab data) để không lệch nonce.
 
@@ -141,7 +163,7 @@ dpp/
 ├── apps/
 │   ├── api/                         # NestJS – Modular Monolith
 │   │   ├── prisma/
-│   │   │   ├── schema.prisma        # 21 bảng, enum, partial unique index
+│   │   │   ├── schema.prisma        # 22 bảng, enum, partial unique index
 │   │   │   └── migrations/          # SQL migration (kèm CHECK, trigger)
 │   │   ├── src/
 │   │   │   ├── main.ts              # tiến trình HTTP API
@@ -162,30 +184,32 @@ dpp/
 │   │   │       │   └── index.ts         # public API duy nhất của module
 │   │   │       ├── identity/        # M2: ACC-01..04, liên kết ví, projector PartyRegistry; M3: đối soát ví
 │   │   │       ├── chain-sync/      # M2: chốt giao dịch ví gửi; M3: Indexer, indexer_checkpoints
-│   │   │       ├── organizations/   # M4: ORG-01..06, phí, khu Quản trị, projector doanh nghiệp
+│   │   │       ├── organizations/   # M4: ORG-01..06, phí, khu Quản trị, projector doanh nghiệp; M5: lịch sử nộp đơn
+│   │   │       ├── products/        # M5: PRD-01..03, bản nháp, giấy phép, hộ chiếu công khai, projector ProductPassport
 │   │   │       └── audit/           # ghi audit_logs, anomaly_alerts (màn hình xem ở M12)
 │   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar, cấp quyền Admin
-│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp
+│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm
 │   └── web/                         # Next.js 16 + Tailwind 4
 │       └── src/
-│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /system/status
+│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /products, /lookup, /p/[code], /system/status
 │           ├── components/          # ui/ (button, badge, field, tabs, step-list, ...), layout/
-│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, ...
+│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, lookup, passport, ...
 │           └── lib/                 # env, format, nhãn trạng thái; wallet/ (MetaMask, gửi giao dịch)
 ├── packages/
 │   ├── contracts/                   # Hardhat 3 + OpenZeppelin 5
 │   │   ├── contracts/shared/        # DppTypes.sol, DppRoles.sol, DppErrors.sol
-│   │   ├── contracts/registry/      # M2: PartyRegistry.sol
+│   │   ├── contracts/registry/      # M2, M4: PartyRegistry.sol
+│   │   ├── contracts/product/       # M5: ProductPassport.sol
 │   │   ├── contracts/test/          # contract chỉ dùng trong test
 │   │   ├── ignition/modules/        # module deploy (Hardhat Ignition)
-│   │   ├── scripts/                 # deploy-identity.ts, export-abi.ts
+│   │   ├── scripts/                 # deploy-identity.ts, deploy-products.ts, grant-admin-role.ts, export-abi.ts
 │   │   ├── test/                    # mocha + ethers
 │   │   └── hardhat.config.ts        # mạng monadTestnet, verify
 │   └── shared/                      # dùng chung cho API, Web, test contract
 │       └── src/
 │           ├── abi/                 # ABI sinh từ artifact (không sửa tay)
-│           ├── chain/               # thông số mạng, EIP-712 của PartyRegistry
-│           ├── domain/              # enum, 4 state machine, role, enum on-chain
+│           ├── chain/               # thông số mạng, EIP-712 của PartyRegistry và ProductPassport
+│           ├── domain/              # enum, 4 state machine, role, enum on-chain, hash hồ sơ sản phẩm, mã QR
 │           ├── api/                 # hợp đồng dữ liệu API ↔ Web
 │           └── utils/               # chuẩn hoá địa chỉ, hash, MON
 ├── docker/postgres/init/            # tạo CSDL dpp_test lần đầu
@@ -231,30 +255,36 @@ Mỗi model trong `schema.prisma` ghi rõ loại và các cột [P].
 
 ### Ràng buộc chính đã kiểm chứng bằng test e2e
 
-| Ràng buộc                          | Ý nghĩa                                                    |
-| ---------------------------------- | ---------------------------------------------------------- |
-| `ck_parties_subject`               | Party trỏ tới đúng một User hoặc một Organization          |
-| `ck_products_owner_matches_state`  | Chưa bán thì chưa có owner; đã bán thì bắt buộc có owner   |
-| `ck_products_pending_custodian`    | Chỉ khi đang vận chuyển mới có bên nhận custody đang chờ   |
-| `ux_transfer_one_active`           | Mỗi sản phẩm tối đa 1 yêu cầu chuyển quyền REQUESTED       |
-| `ux_service_one_open`              | Mỗi sản phẩm tối đa 1 phiếu dịch vụ đang mở                |
-| `ux_wallet_one_active_owner`       | Mỗi tổ chức chỉ 1 ví OWNER đang hoạt động                  |
-| `ux_wallet_one_active_personal`    | Mỗi người dùng chỉ 1 ví cá nhân đang dùng                  |
-| `ux_wallet_one_pending_personal`   | (M2) Mỗi người dùng chỉ 1 yêu cầu liên kết ví đang chờ     |
-| `organizations_representative_*`   | (M4) Mỗi tài khoản đại diện tối đa 1 doanh nghiệp          |
-| `ck_organizations_status_reason_*` | (M4) Lý do từ chối/khoá nếu có thì không rỗng              |
-| `ck_users_session_version_*`       | (M2) Phiên bản phiên đăng nhập không âm                    |
-| `warranties_product_id_key`        | Mỗi sản phẩm 1 bảo hành hiện hành                          |
-| `ux_blockchain_events_identity`    | Event ghi idempotent theo (chain_id, tx_hash, log_index)   |
-| `ck_blockchain_events_finality`    | FINALIZED phải có thời điểm, không bao giờ thành ORPHANED  |
-| `ck_users_password_hash_argon2id`  | Mật khẩu lưu dạng băm Argon2id                             |
-| `trg_audit_logs_append_only`       | `audit_logs` không cho UPDATE/DELETE                       |
-| Địa chỉ, hash                      | Lưu chữ thường, đúng 42/66 ký tự hex                       |
-| Khoá ngoại                         | `ON DELETE RESTRICT`, không xoá dây chuyền dữ liệu lịch sử |
+| Ràng buộc                          | Ý nghĩa                                                     |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `ck_parties_subject`               | Party trỏ tới đúng một User hoặc một Organization           |
+| `ck_products_owner_matches_state`  | Chưa bán thì chưa có owner; đã bán thì bắt buộc có owner    |
+| `ck_products_pending_custodian`    | Chỉ khi đang vận chuyển mới có bên nhận custody đang chờ    |
+| `ux_transfer_one_active`           | Mỗi sản phẩm tối đa 1 yêu cầu chuyển quyền REQUESTED        |
+| `ux_service_one_open`              | Mỗi sản phẩm tối đa 1 phiếu dịch vụ đang mở                 |
+| `ux_wallet_one_active_owner`       | Mỗi tổ chức chỉ 1 ví OWNER đang hoạt động                   |
+| `ux_wallet_one_active_personal`    | Mỗi người dùng chỉ 1 ví cá nhân đang dùng                   |
+| `ux_wallet_one_pending_personal`   | (M2) Mỗi người dùng chỉ 1 yêu cầu liên kết ví đang chờ      |
+| `organizations_representative_*`   | (M4) Mỗi tài khoản đại diện tối đa 1 doanh nghiệp           |
+| `ck_organizations_status_reason_*` | (M4) Lý do từ chối/khoá nếu có thì không rỗng               |
+| `ux_org_application_one_pending`   | (M5) Mỗi doanh nghiệp tối đa 1 lần nộp đơn đang chờ duyệt   |
+| `ck_org_applications_*`            | (M5) Lần nộp đơn: số thứ tự, hash, địa chỉ, quyết định đúng |
+| `products_issuer_org_id_serial_*`  | (M5) Serial duy nhất trong một nhà sản xuất                 |
+| `ck_products_serial_pattern`       | (M5) Serial in hoa, chỉ gồm chữ, số và `. _ / -`            |
+| `ck_products_public_code_format`   | (M5) Mã QR đúng 12 ký tự, không có I, O, 0, 1               |
+| `ck_products_warranty_months_*`    | (M5) Bảo hành 0–120 tháng; ngày sản xuất từ 1990            |
+| `ck_users_session_version_*`       | (M2) Phiên bản phiên đăng nhập không âm                     |
+| `warranties_product_id_key`        | Mỗi sản phẩm 1 bảo hành hiện hành                           |
+| `ux_blockchain_events_identity`    | Event ghi idempotent theo (chain_id, tx_hash, log_index)    |
+| `ck_blockchain_events_finality`    | FINALIZED phải có thời điểm, không bao giờ thành ORPHANED   |
+| `ck_users_password_hash_argon2id`  | Mật khẩu lưu dạng băm Argon2id                              |
+| `trg_audit_logs_append_only`       | `audit_logs` không cho UPDATE/DELETE                        |
+| Địa chỉ, hash                      | Lưu chữ thường, đúng 42/66 ký tự hex                        |
+| Khoá ngoại                         | `ON DELETE RESTRICT`, không xoá dây chuyền dữ liệu lịch sử  |
 
 ### Thêm migration mới
 
-Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Migration của M4: `20261029000000_organization_representative` (thêm `organizations.representative_user_id` và `status_reason`). Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`; riêng M4 phải deploy lại PartyRegistry nên làm mới CSDL bằng `db:reset` (xem [docs/m4-organizations.md](docs/m4-organizations.md) mục 5).
+Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Migration của M4: `20261029000000_organization_representative` (thêm `organizations.representative_user_id` và `status_reason`). Migration của M5: `20261030000000_organization_applications` (bảng lịch sử nộp đơn, tự dựng lại từ `blockchain_events`) và `20261030010000_product_registration` (serial theo nhà sản xuất, ngày sản xuất, bảo hành). Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`; riêng M4 phải deploy lại PartyRegistry nên làm mới CSDL bằng `db:reset` (xem [docs/m4-organizations.md](docs/m4-organizations.md) mục 5), M5 thì không.
 
 ```bash
 # 1. Sửa apps/api/prisma/schema.prisma
@@ -278,6 +308,7 @@ pnpm db:migrate
   ```
 
 - Deploy PartyRegistry: `pnpm --filter @dpp/contracts deploy:monad` (hoặc `deploy:local` cho Hardhat node). Script cấp `REGISTRAR_ROLE` cho địa chỉ của `REGISTRAR_SIGNER_PRIVATE_KEY` và in các dòng cần chép vào `.env`. Khoá registrar chỉ ký giấy phép, không cần MON.
+- Deploy ProductPassport (M5): `pnpm --filter @dpp/contracts deploy:products:monad` (hoặc `deploy:products:local`). Contract đọc quyền nhà sản xuất từ PartyRegistry nên phải deploy sau PartyRegistry; script kiểm tra `PARTY_REGISTRY_ADDRESS` có contract rồi in hai dòng `PRODUCT_PASSPORT_*`.
 - Sau khi sửa contract: `pnpm --filter @dpp/contracts abi:export` để cập nhật ABI trong `@dpp/shared` (test báo đỏ nếu quên).
 - Xác minh mã nguồn: `pnpm --filter @dpp/contracts exec hardhat verify <địa_chỉ> --network monadTestnet`. Sourcify của MonadVision không cần API key; Monadscan cần `ETHERSCAN_API_KEY`.
 - Nếu mạng chặn tải trình biên dịch Solidity, đặt `SOLC_PATH` tới `soljson.js` (gói npm `solc`) hoặc file solc native.
@@ -290,38 +321,43 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 
 ## 7. Lệnh thường dùng
 
-| Lệnh                                         | Việc làm                                                           |
-| -------------------------------------------- | ------------------------------------------------------------------ |
-| `pnpm dev`                                   | Chạy API, Worker, Web cùng lúc ở chế độ theo dõi thay đổi          |
-| `pnpm build`                                 | Build toàn bộ theo đúng thứ tự phụ thuộc                           |
-| `pnpm lint` / `pnpm typecheck`               | Kiểm tra lint (oxlint, ESLint) và kiểu                             |
-| `pnpm test`                                  | Unit test (shared, api, web) và test contract                      |
-| `pnpm test:e2e`                              | Test e2e trên CSDL `dpp_test`                                      |
-| `pnpm format` / `pnpm format:check`          | Định dạng mã bằng Prettier                                         |
-| `pnpm db:up` / `pnpm db:down`                | Bật / tắt PostgreSQL trong Docker                                  |
-| `pnpm db:migrate` / `pnpm db:deploy`         | Tạo migration khi phát triển / áp migration có sẵn                 |
-| `pnpm db:studio`                             | Mở Prisma Studio xem dữ liệu                                       |
-| `pnpm contracts:compile` / `contracts:test`  | Biên dịch / test Smart Contract                                    |
-| `pnpm --filter @dpp/contracts deploy:local`  | Deploy PartyRegistry lên Hardhat node (`deploy:monad` cho testnet) |
-| `pnpm --filter @dpp/contracts abi:export`    | Sinh lại ABI vào `packages/shared/src/abi`                         |
-| `pnpm --filter @dpp/api secret:new`          | Sinh `JWT_SECRET`                                                  |
-| `pnpm --filter @dpp/api registrar:new`       | Sinh khoá ký giấy phép `REGISTRAR_SIGNER_PRIVATE_KEY`              |
-| `pnpm --filter @dpp/api admin:grant <email>` | Cấp quyền Admin cho tài khoản (`admin:revoke` để thu hồi)          |
+| Lệnh                                                 | Việc làm                                                                |
+| ---------------------------------------------------- | ----------------------------------------------------------------------- |
+| `pnpm dev`                                           | Chạy API, Worker, Web cùng lúc ở chế độ theo dõi thay đổi               |
+| `pnpm build`                                         | Build toàn bộ theo đúng thứ tự phụ thuộc                                |
+| `pnpm lint` / `pnpm typecheck`                       | Kiểm tra lint (oxlint, ESLint) và kiểu                                  |
+| `pnpm test`                                          | Unit test (shared, api, web) và test contract                           |
+| `pnpm test:e2e`                                      | Test e2e trên CSDL `dpp_test`                                           |
+| `pnpm format` / `pnpm format:check`                  | Định dạng mã bằng Prettier                                              |
+| `pnpm db:up` / `pnpm db:down`                        | Bật / tắt PostgreSQL trong Docker                                       |
+| `pnpm db:migrate` / `pnpm db:deploy`                 | Tạo migration khi phát triển / áp migration có sẵn                      |
+| `pnpm db:studio`                                     | Mở Prisma Studio xem dữ liệu                                            |
+| `pnpm contracts:compile` / `contracts:test`          | Biên dịch / test Smart Contract                                         |
+| `pnpm --filter @dpp/contracts deploy:local`          | Deploy PartyRegistry lên Hardhat node (`deploy:monad` cho testnet)      |
+| `pnpm --filter @dpp/contracts deploy:products:monad` | (M5) Deploy ProductPassport (`deploy:products:local` cho Hardhat node)  |
+| `pnpm --filter @dpp/contracts admin-role:monad`      | Ví deploy cấp quyền Admin PartyRegistry cho ví trong `NEW_ADMIN_WALLET` |
+| `pnpm --filter @dpp/contracts abi:export`            | Sinh lại ABI vào `packages/shared/src/abi`                              |
+| `pnpm --filter @dpp/api secret:new`                  | Sinh `JWT_SECRET`                                                       |
+| `pnpm --filter @dpp/api registrar:new`               | Sinh khoá ký giấy phép `REGISTRAR_SIGNER_PRIVATE_KEY`                   |
+| `pnpm --filter @dpp/api admin:grant <email>`         | Cấp quyền Admin cho tài khoản (`admin:revoke` để thu hồi)               |
 
 ## 8. Test chứng minh traceability
 
-| Test                                                                    | Chứng minh                                                                            |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `apps/api/src/infrastructure/database/prisma-enums.spec.ts`             | Enum PostgreSQL trùng tên và thứ tự với `@dpp/shared`                                 |
-| `packages/contracts/test/shared/dpp-types.test.ts`                      | Enum và role trong Solidity trùng với `@dpp/shared`                                   |
-| `apps/api/test/database/schema-constraints.e2e-spec.ts`                 | Từng ràng buộc CSDL chặn đúng dữ liệu sai                                             |
-| `packages/contracts/test/registry/party-registry.test.ts`               | ACC-03/04 on-chain: mỗi điều kiện revert có một ca                                    |
-| `packages/contracts/test/shared/abi-export.test.ts`                     | ABI dùng ở API/Web trùng contract đã biên dịch                                        |
-| `apps/api/test/identity/auth.e2e-spec.ts`                               | ACC-01/02: Argon2id, cookie, session_version, CSRF                                    |
-| `apps/api/test/identity/wallet-link.e2e-spec.ts`                        | ACC-03/04 thật trên Hardhat node: UC → DB → contract → event                          |
-| `apps/api/test/chain-sync/indexer.e2e-spec.ts`                          | (M3) Indexer chiếu event một lần, đối soát tạo cảnh báo                               |
-| `packages/contracts/test/registry/party-registry-organizations.test.ts` | (M4) Giữ phí, duyệt chuyển Treasury, từ chối và rút phí, nộp lại, đổi ví, khoá        |
-| `apps/api/test/organizations/organizations.e2e-spec.ts`                 | (M4) ORG-01..06 thật trên Hardhat node: nộp đơn → từ chối → rút phí → nộp lại → duyệt |
+| Test                                                                    | Chứng minh                                                                              |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `apps/api/src/infrastructure/database/prisma-enums.spec.ts`             | Enum PostgreSQL trùng tên và thứ tự với `@dpp/shared`                                   |
+| `packages/contracts/test/shared/dpp-types.test.ts`                      | Enum và role trong Solidity trùng với `@dpp/shared`                                     |
+| `apps/api/test/database/schema-constraints.e2e-spec.ts`                 | Từng ràng buộc CSDL chặn đúng dữ liệu sai                                               |
+| `packages/contracts/test/registry/party-registry.test.ts`               | ACC-03/04 on-chain: mỗi điều kiện revert có một ca                                      |
+| `packages/contracts/test/shared/abi-export.test.ts`                     | ABI dùng ở API/Web trùng contract đã biên dịch                                          |
+| `apps/api/test/identity/auth.e2e-spec.ts`                               | ACC-01/02: Argon2id, cookie, session_version, CSRF                                      |
+| `apps/api/test/identity/wallet-link.e2e-spec.ts`                        | ACC-03/04 thật trên Hardhat node: UC → DB → contract → event                            |
+| `apps/api/test/chain-sync/indexer.e2e-spec.ts`                          | (M3) Indexer chiếu event một lần, đối soát tạo cảnh báo                                 |
+| `packages/contracts/test/registry/party-registry-organizations.test.ts` | (M4) Giữ phí, duyệt chuyển Treasury, từ chối và rút phí, nộp lại, đổi ví, khoá          |
+| `apps/api/test/organizations/organizations.e2e-spec.ts`                 | (M4) ORG-01..06 thật trên Hardhat node: nộp đơn → từ chối → rút phí → nộp lại → duyệt   |
+| `packages/contracts/test/product/product-passport.test.ts`              | (M5) Chỉ nhà sản xuất đã duyệt, lô 1–50, giấy phép sai/hết hạn, trùng productId, đổi ví |
+| `apps/api/test/products/products.e2e-spec.ts`                           | (M5) PRD-01, PRD-02 thật trên Hardhat node, tra cứu công khai đọc lại contract          |
+| `apps/api/test/database/application-backfill.e2e-spec.ts`               | (M5) Migration dựng lại đúng lịch sử nộp đơn từ event cũ                                |
 
 Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự động mỗi lần chạy CI, nên một bên đổi mà quên bên kia thì test sẽ đỏ.
 
@@ -343,9 +379,16 @@ Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự đ�
 | Header hiện sai tên mạng                                  | Web đọc `CHAIN_ID` trong `.env`; sửa rồi khởi động lại `pnpm dev`                                                                                                                                                                                                                                                                        |
 | Trạng thái hệ thống báo Indexer chưa quét hoặc chậm       | Worker chưa chạy (`pnpm dev` chạy cả Worker) hoặc đang bắt kịp từ block deploy; xem log Worker. Chậm lâu thì kiểm tra `PARTY_REGISTRY_DEPLOY_BLOCK` và RPC                                                                                                                                                                               |
 | Worker báo block finalized thấp hơn mốc đã quét           | Thường do vừa khởi động lại Hardhat node: chạy `pnpm --filter @dpp/api db:reset` rồi deploy lại contract                                                                                                                                                                                                                                 |
-| Khu Quản trị báo ví Admin chưa có quyền trên contract     | Tài khoản Admin đang liên kết ví khác ví đã deploy PartyRegistry. Xoay ví (Tài khoản → Đổi ví) sang đúng ví deploy                                                                                                                                                                                                                       |
+| Khu Quản trị báo ví đang liên kết không có quyền Admin    | Ví MetaMask của tài khoản Admin khác ví deploy. Cấp quyền bằng ví deploy: `$env:NEW_ADMIN_WALLET="0x..."` rồi `pnpm --filter @dpp/contracts admin-role:monad`, sau đó tải lại trang                                                                                                                                                      |
 | Mở `/admin` ra trang 404                                  | Tài khoản chưa có quyền Admin: chạy `pnpm --filter @dpp/api admin:grant <email>` rồi tải lại trang                                                                                                                                                                                                                                       |
 | Nộp đơn báo "Phí đăng ký vừa được thay đổi"               | Admin vừa đổi phí sau khi bạn mở trang; tải lại trang Doanh nghiệp rồi nộp lại                                                                                                                                                                                                                                                           |
+| Deploy báo `HHE10120 ... reconciliation errors`           | Ignition đã có bản deploy cũ với tham số khác. Tăng `PARTY_REGISTRY_VERSION` trong `packages/contracts/scripts/deploy-identity.ts` khi contract đổi mà cần deploy mới                                                                                                                                                                    |
+| Trang Sản phẩm báo chưa cấu hình ProductPassport          | Thiếu `PRODUCT_PASSPORT_ADDRESS`: chạy `pnpm --filter @dpp/contracts deploy:products:monad`, chép hai dòng in ra vào `.env`, khởi động lại `pnpm dev`                                                                                                                                                                                    |
+| Không thấy mục Sản phẩm trên menu                         | Tài khoản không đại diện doanh nghiệp loại Nhà sản xuất (nhà bán lẻ, trung tâm bảo hành dùng ở M6, M7). Đơn chưa duyệt thì mục vẫn hiện nhưng chưa đăng ký được sản phẩm                                                                                                                                                                 |
+| MetaMask báo `NotAuthorizedManufacturer`                  | Ví đang chọn trong MetaMask không phải ví đã liên kết của người đại diện, hoặc doanh nghiệp đã bị khoá                                                                                                                                                                                                                                   |
+| Điện thoại quét QR không mở được trang                    | QR đang chứa `localhost`. Đặt `PUBLIC_WEB_URL=http://<địa chỉ Network>:3000`, khởi động lại `pnpm dev`, cho phép Node.js qua tường lửa Windows (mạng Private), điện thoại cùng Wi-Fi                                                                                                                                                     |
+| Nút "Quét bằng camera" báo cần HTTPS                      | Trình duyệt chỉ mở camera trên HTTPS hoặc `localhost`; trên điện thoại dùng ứng dụng camera có sẵn quét tem, hoặc tải ảnh tem lên                                                                                                                                                                                                        |
+| Nhập CSV báo thiếu cột                                    | Dùng nút "Tải file mẫu"; dòng đầu là tiêu đề, Excel lưu dạng "CSV UTF-8" để giữ dấu tiếng Việt                                                                                                                                                                                                                                           |
 | Test e2e báo "Chưa biên dịch contract"                    | Chạy `pnpm contracts:compile` (hoặc `pnpm test`) trước `pnpm test:e2e`                                                                                                                                                                                                                                                                   |
 | Windows: lệnh `cp` không có                               | Dùng `Copy-Item .env.example .env` (PowerShell) hoặc `copy .env.example .env` (cmd)                                                                                                                                                                                                                                                      |
 

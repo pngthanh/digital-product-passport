@@ -3,6 +3,7 @@ import type {
   AdminDecisionCall,
   AdminOrganizationList,
   AdminOverview,
+  OrganizationDetailView,
   OrganizationStage,
   TrackedTransactionView,
 } from '@dpp/shared';
@@ -16,6 +17,7 @@ import {
   SessionGuard,
 } from '../../identity/index.js';
 import { GetAdminOverview } from '../application/get-admin-overview.query.js';
+import { GetOrganizationDetail } from '../application/get-organization-detail.query.js';
 import { ListOrganizations } from '../application/list-organizations.query.js';
 import { PrepareAdminDecision } from '../application/prepare-admin-decision.use-case.js';
 import { RecordAdminTransaction } from '../application/record-admin-transaction.use-case.js';
@@ -35,6 +37,7 @@ export class AdminController {
   constructor(
     private readonly overview: GetAdminOverview,
     private readonly listOrganizations: ListOrganizations,
+    private readonly organizationDetail: GetOrganizationDetail,
     private readonly prepareDecision: PrepareAdminDecision,
     private readonly recordTransaction: RecordAdminTransaction,
   ) {}
@@ -49,6 +52,13 @@ export class AdminController {
     @Query('stage', new ZodValidationPipe(stageListSchema)) stages: OrganizationStage[],
   ): Promise<AdminOrganizationList> {
     return this.listOrganizations.execute(stages);
+  }
+
+  @Get('organizations/:id')
+  detail(
+    @Param('id', new ZodValidationPipe(organizationIdSchema)) organizationId: string,
+  ): Promise<OrganizationDetailView> {
+    return this.organizationDetail.execute(organizationId);
   }
 
   @Post('organizations/:id/decisions')

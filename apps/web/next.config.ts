@@ -17,8 +17,24 @@ const apiInternalUrl = (process.env.API_INTERNAL_URL || 'http://localhost:4000/a
   '',
 );
 
+/**
+ * Máy chủ dev của Next.js chặn trang mở qua địa chỉ khác localhost (điện thoại quét QR trong cùng
+ * Wi-Fi) nên trang không chạy được JavaScript; cho phép host trong PUBLIC_WEB_URL.
+ */
+function devOriginsOf(publicWebUrl: string | undefined): string[] {
+  if (!publicWebUrl) {
+    return [];
+  }
+  try {
+    return [new URL(publicWebUrl).hostname];
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: devOriginsOf(process.env.PUBLIC_WEB_URL?.trim()),
   poweredByHeader: false,
   typedRoutes: true,
   // Trình duyệt gọi /api/v1 trên chính origin của web; Next.js chuyển tiếp sang API.

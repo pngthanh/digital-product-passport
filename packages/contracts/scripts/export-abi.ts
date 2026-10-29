@@ -8,6 +8,11 @@ import { writeFile } from 'node:fs/promises';
  */
 const EXPORTS = [
   { contract: 'PartyRegistry', constant: 'PARTY_REGISTRY_ABI', file: 'party-registry.abi.ts' },
+  {
+    contract: 'ProductPassport',
+    constant: 'PRODUCT_PASSPORT_ABI',
+    file: 'product-passport.abi.ts',
+  },
 ] as const;
 
 const OUTPUT_DIR = new URL('../../shared/src/abi/', import.meta.url);

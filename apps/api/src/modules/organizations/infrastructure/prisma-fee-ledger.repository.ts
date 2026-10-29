@@ -43,6 +43,7 @@ export class PrismaFeeLedgerRepository implements FeeLedgerRepository {
     for (const row of rows) {
       const payments = result.get(row.partyId) ?? [];
       payments.push({
+        id: row.id,
         partyId: row.partyId,
         amountWei: toWei(row.amountWei),
         feeStatus: row.feeStatus,
@@ -57,8 +58,9 @@ export class PrismaFeeLedgerRepository implements FeeLedgerRepository {
     return result;
   }
 
-  async recordPaid(fee: PaidFee, scope: TransactionScope): Promise<void> {
-    await prismaFrom(this.prisma, scope).feePayment.createMany({
+  async recordPaid(fee: PaidFee, scope: TransactionScope): Promise<string> {
+    const db = prismaFrom(this.prisma, scope);
+    await db.feePayment.createMany({
       data: [
         {
           partyId: fee.partyId,
@@ -72,6 +74,11 @@ export class PrismaFeeLedgerRepository implements FeeLedgerRepository {
       ],
       skipDuplicates: true,
     });
+    const row = await db.feePayment.findUniqueOrThrow({
+      where: { paidTxHash: fee.txHash },
+      select: { id: true },
+    });
+    return row.id;
   }
 
   async settle(partyId: string, txHash: string, at: Date, scope: TransactionScope): Promise<void> {

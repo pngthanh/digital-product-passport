@@ -5,6 +5,7 @@ import { ChainSyncWorkerModule } from './modules/chain-sync/index.js';
 import { HealthModule } from './modules/health/index.js';
 import { IdentityWorkerModule } from './modules/identity/index.js';
 import { OrganizationsWorkerModule } from './modules/organizations/index.js';
+import { ProductsWorkerModule } from './modules/products/index.js';
 
 /**
  * Module gốc của tiến trình Worker (không mở cổng HTTP).
@@ -18,6 +19,7 @@ import { OrganizationsWorkerModule } from './modules/organizations/index.js';
     ChainSyncWorkerModule,
     IdentityWorkerModule,
     OrganizationsWorkerModule,
+    ProductsWorkerModule,
   ],
 })
 export class WorkerModule {}

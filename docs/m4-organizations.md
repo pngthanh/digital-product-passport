@@ -83,10 +83,11 @@ Hàm view cho các module sau: `authorizedOrganizationOf(wallet, role)` trả pa
 PartyRegistry có thêm phần doanh nghiệp nên phải **deploy lại** (contract đã deploy không sửa được). Dữ liệu cũ gắn với contract cũ, nên làm mới CSDL:
 
 1. `pnpm install` (thêm thư viện `pg` cho lệnh cấp quyền Admin).
-2. `pnpm --filter @dpp/contracts deploy:monad`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` mới vào `.env`.
+2. `pnpm --filter @dpp/contracts deploy:monad`, sửa `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` trong `.env` thành giá trị mới (không thêm dòng trùng). Bản M4 deploy vào thư mục Ignition `chain-10143-v2`; thư mục `chain-10143` của M2 giữ nguyên làm hồ sơ.
 3. `pnpm --filter @dpp/api db:reset` (xoá dữ liệu cũ, áp lại toàn bộ migration) và `pnpm --filter @dpp/api db:deploy:test`.
 4. `pnpm dev`, đăng ký tài khoản Admin trên web, rồi `pnpm --filter @dpp/api admin:grant <email>`.
 5. Tài khoản Admin liên kết **đúng ví MetaMask đã deploy** (ví có quyền Admin và là Treasury). Tài khoản người đại diện dùng ví khác.
+   Nếu ví Admin trong MetaMask khác ví deploy, cho ví deploy cấp quyền thay vì deploy lại: `$env:NEW_ADMIN_WALLET="0x..."` rồi `pnpm --filter @dpp/contracts admin-role:monad`; sau đó dùng nút "Đổi ví Treasury" trên trang Quản trị nếu muốn phí về ví đó.
 
 ## 6. Gas
 
@@ -117,3 +118,7 @@ PartyRegistry có thêm phần doanh nghiệp nên phải **deploy lại** (cont
 - Doanh nghiệp đã khoá chưa mở lại được (state machine DISABLED là trạng thái cuối).
 - Mỗi tài khoản đại diện tối đa một doanh nghiệp; muốn đại diện doanh nghiệp khác cần tài khoản khác (và ví khác).
 - Người đại diện không chuyển giao được cho tài khoản khác; nếu cần, bổ sung ở module sau.
+
+## 9. Cập nhật ở M5
+
+Theo góp ý khi chạy thử M4, M5 thêm bảng `organization_applications` lưu **mọi lần nộp đơn** (bản chụp hồ sơ, phí, lý do từ chối, ví ký, txHash nộp đơn và quyết định), và trang `/admin/organizations/<id>` cho Admin xem đủ hồ sơ cùng nhật ký on-chain có liên kết sang MonadVision. Chi tiết: [m5-products.md](m5-products.md) mục 4.

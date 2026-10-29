@@ -15,6 +15,7 @@ export type StatusProjection =
 /** Bảng organizations. */
 export interface OrganizationRepository {
   findById(id: string): Promise<OrganizationRecord | null>;
+  findManyByIds(ids: readonly string[]): Promise<OrganizationRecord[]>;
   findByRepresentative(userId: string): Promise<OrganizationRecord | null>;
   findByTaxCode(taxCode: string): Promise<OrganizationRecord | null>;
   /** Mới nhất trước; `stages` rỗng là mọi đơn đã nộp (trừ bản nháp). */

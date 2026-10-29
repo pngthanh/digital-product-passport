@@ -24,7 +24,7 @@ export function MainNav({ items }: { items: readonly NavItem[] }) {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'rounded-control px-3 py-1.5 text-sm whitespace-nowrap transition-colors',
+              'rounded-control px-2 py-1.5 text-sm whitespace-nowrap transition-colors sm:px-3',
               active ? 'bg-tint font-medium text-tint-ink' : 'text-muted hover:text-ink',
             )}
           >

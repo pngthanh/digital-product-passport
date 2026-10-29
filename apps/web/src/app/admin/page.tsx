@@ -1,14 +1,14 @@
 import { formatMon, type OrganizationStage, type OrganizationSummary } from '@dpp/shared';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound, redirect } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { HashText } from '@/components/ui/hash-text';
 import { Panel } from '@/components/ui/panel';
+import { adminContextOf, requireAdmin } from '@/features/admin/admin-context';
 import type { AdminContext } from '@/features/admin/admin-flows';
 import { FeeSettings } from '@/features/admin/fee-settings';
 import { OrganizationActions } from '@/features/admin/organization-actions';
-import { getIdentity } from '@/features/auth/get-identity';
+import { OrganizationDetails } from '@/features/organization/organization-details';
 import {
   adminOrganizationListSchema,
   adminOverviewSchema,
@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 import { serverChainId } from '@/lib/env';
 import { formatDate } from '@/lib/format';
 import { serverGet } from '@/lib/server-api';
-import { FEE_STATUS_LABELS, ORG_TYPE_LABELS, ORGANIZATION_STAGE_LABELS } from '@/lib/state-labels';
+import { FEE_STATUS_LABELS, ORGANIZATION_STAGE_LABELS } from '@/lib/state-labels';
 
 export const metadata: Metadata = { title: 'Quản trị' };
 
@@ -42,44 +42,36 @@ function OrganizationRow({
         <div className="min-w-0">
           <p className="font-medium">{organization.name}</p>
           <p className="text-sm text-muted">
-            {ORG_TYPE_LABELS[organization.orgType]} · MST{' '}
-            <span className="font-mono text-[13px]">{organization.taxCode}</span>
+            {organization.appliedAt
+              ? `Nộp đơn ${formatDate(organization.appliedAt)}`
+              : 'Chưa nộp đơn'}
+            {latestFee
+              ? ` · Phí ${formatMon(BigInt(latestFee.amountWei))} MON, ${FEE_STATUS_LABELS[latestFee.feeStatus].label.toLowerCase()}`
+              : ''}
           </p>
         </div>
         <Badge tone={stage.tone} dot>
           {stage.label}
         </Badge>
       </div>
-      <dl className="grid gap-3 text-sm sm:grid-cols-3">
-        <div>
-          <dt className="text-muted">Người đại diện</dt>
-          <dd>{organization.representative.fullName}</dd>
-          <dd className="text-muted break-all">{organization.representative.email}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Nộp đơn</dt>
-          <dd>{organization.appliedAt ? formatDate(organization.appliedAt) : 'Chưa nộp'}</dd>
-          <dd className="text-muted">{organization.contactEmail}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Phí lần gần nhất</dt>
-          <dd className="tabular-nums">
-            {latestFee ? `${formatMon(BigInt(latestFee.amountWei))} MON` : 'Không có'}
-          </dd>
-          {latestFee ? (
-            <dd className="text-muted">{FEE_STATUS_LABELS[latestFee.feeStatus].label}</dd>
-          ) : null}
-        </div>
-      </dl>
+      <OrganizationDetails organization={organization} />
       {organization.statusReason ? (
         <p className="rounded-control bg-canvas px-3 py-2 text-sm">
           <span className="text-muted">Lý do: </span>
           {organization.statusReason}
         </p>
       ) : null}
-      {context && (organization.stage === 'PENDING' || organization.stage === 'AUTHORIZED') ? (
-        <OrganizationActions organization={organization} context={context} />
-      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={`/admin/organizations/${organization.id}`}
+          className="text-sm font-medium text-tint-ink underline-offset-4 hover:underline"
+        >
+          Xem mọi lần nộp đơn và nhật ký on-chain
+        </Link>
+        {context && (organization.stage === 'PENDING' || organization.stage === 'AUTHORIZED') ? (
+          <OrganizationActions organization={organization} context={context} />
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -89,23 +81,13 @@ export default async function AdminPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const identity = await getIdentity();
-  if (!identity) {
-    redirect('/login');
-  }
-  if (identity.account.systemRole !== 'ADMIN') {
-    notFound();
-  }
+  await requireAdmin();
   const stage = readStage((await searchParams).stage);
   const [overview, list] = await Promise.all([
     serverGet('/admin/overview', adminOverviewSchema),
     serverGet(`/admin/organizations?stage=${stage}`, adminOrganizationListSchema),
   ]);
-  const chainId = serverChainId();
-  const context: AdminContext | null =
-    overview?.contract && overview.adminWallet && overview.walletHasAdminRole !== false
-      ? { chainId, contractAddress: overview.contract.address, wallet: overview.adminWallet }
-      : null;
+  const context = adminContextOf(overview, serverChainId());
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">

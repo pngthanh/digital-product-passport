@@ -17,6 +17,12 @@ export interface IdentityChainConfig {
   readonly partyRegistryAddress: string;
 }
 
+/** Cấu hình ProductPassport (M5). */
+export interface ProductChainConfig {
+  readonly registrarPrivateKey: string;
+  readonly productPassportAddress: string;
+}
+
 export interface IndexerConfig {
   readonly pollIntervalMs: number;
   /** Số block tối đa mỗi lần gọi eth_getLogs. */
@@ -99,6 +105,25 @@ export class AppConfigService {
   get partyRegistryDeployBlock(): bigint | null {
     const block = this.config.get('PARTY_REGISTRY_DEPLOY_BLOCK', { infer: true });
     return block === undefined ? null : BigInt(block);
+  }
+
+  get productPassportAddress(): string | null {
+    return this.config.get('PRODUCT_PASSPORT_ADDRESS', { infer: true }) ?? null;
+  }
+
+  /** Block lúc deploy ProductPassport; `null` nếu chưa khai báo. */
+  get productPassportDeployBlock(): bigint | null {
+    const block = this.config.get('PRODUCT_PASSPORT_DEPLOY_BLOCK', { infer: true });
+    return block === undefined ? null : BigInt(block);
+  }
+
+  /** ProductPassport cùng khoá registrar ký giấy phép đăng ký sản phẩm; `null` khi thiếu một trong hai. */
+  get productChain(): ProductChainConfig | null {
+    const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });
+    const productPassportAddress = this.config.get('PRODUCT_PASSPORT_ADDRESS', { infer: true });
+    return registrarPrivateKey && productPassportAddress
+      ? { registrarPrivateKey, productPassportAddress }
+      : null;
   }
 
   get indexer(): IndexerConfig {

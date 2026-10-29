@@ -19,9 +19,10 @@ export default async function HomePage() {
             sau có thể đối chiếu bằng mã giao dịch.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href="/lookup">Tra cứu bằng mã QR</ButtonLink>
             {identity ? (
               <>
-                <ButtonLink href="/account">
+                <ButtonLink href="/account" variant="secondary">
                   {hasActiveWallet ? 'Xem tài khoản' : 'Liên kết ví MetaMask'}
                 </ButtonLink>
                 {hasActiveWallet ? (
@@ -32,7 +33,9 @@ export default async function HomePage() {
               </>
             ) : (
               <>
-                <ButtonLink href="/register">Tạo tài khoản</ButtonLink>
+                <ButtonLink href="/register" variant="secondary">
+                  Tạo tài khoản
+                </ButtonLink>
                 <ButtonLink href="/login" variant="secondary">
                   Đăng nhập
                 </ButtonLink>

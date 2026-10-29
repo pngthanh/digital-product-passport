@@ -6,6 +6,8 @@ import { ButtonLink } from '@/components/ui/button';
 import { HashText } from '@/components/ui/hash-text';
 import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
+import { ChainLog } from '@/features/chain-log/chain-log';
+import { ApplicationHistory } from '@/features/organization/application-history';
 import { FeePaymentList, OrganizationDetails } from '@/features/organization/organization-details';
 import { OrganizationForm } from '@/features/organization/organization-form';
 import { myOrganizationSchema } from '@/features/organization/organization.schema';
@@ -144,6 +146,27 @@ export default async function OrganizationPage() {
                   Thông tin doanh nghiệp
                 </h2>
                 <OrganizationDetails organization={organization} />
+              </Panel>
+            ) : null}
+
+            {view.history.applications.length > 0 ? (
+              <Panel className="px-5 py-5" aria-labelledby="cac-lan-nop">
+                <h2 id="cac-lan-nop" className="mb-4 font-semibold">
+                  Các lần nộp đơn
+                </h2>
+                <ApplicationHistory applications={view.history.applications} chainId={chainId} />
+              </Panel>
+            ) : null}
+            {view.history.chainLog.length > 0 ? (
+              <Panel className="px-5 py-5" aria-labelledby="nhat-ky">
+                <h2 id="nhat-ky" className="font-semibold">
+                  Nhật ký on-chain
+                </h2>
+                <p className="mt-1 mb-4 text-sm text-muted">
+                  Mọi giao dịch của doanh nghiệp trên PartyRegistry; bấm mã giao dịch để xem trên
+                  explorer.
+                </p>
+                <ChainLog events={view.history.chainLog} chainId={chainId} />
               </Panel>
             ) : null}
           </div>

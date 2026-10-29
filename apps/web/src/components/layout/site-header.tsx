@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/button';
 import { getIdentity } from '@/features/auth/get-identity';
 import { SignOutButton } from '@/features/auth/sign-out-button';
+import { myProductListSchema } from '@/features/products/product.schema';
 import { serverChainId } from '@/lib/env';
+import { serverGet } from '@/lib/server-api';
 import { BrandMark } from './brand-mark';
 import { MainNav, type NavItem } from './main-nav';
 
@@ -12,23 +14,37 @@ export async function SiteHeader() {
   const chainId = serverChainId();
   const network = getNetwork(chainId);
   const identity = await getIdentity();
-  const navItems: NavItem[] = identity
-    ? [
-        { href: '/organization', label: 'Doanh nghiệp' },
-        ...(identity.account.systemRole === 'ADMIN'
-          ? [{ href: '/admin' as const, label: 'Quản trị' }]
-          : []),
-      ]
-    : [];
+  // Mục Sản phẩm chỉ hiện với người đại diện của một nhà sản xuất.
+  const products = identity
+    ? await serverGet('/me/products?pageSize=1', myProductListSchema)
+    : null;
+  const navItems: NavItem[] = [
+    { href: '/lookup', label: 'Tra cứu' },
+    ...(identity
+      ? [
+          ...(products?.manufacturer ? [{ href: '/products' as const, label: 'Sản phẩm' }] : []),
+          { href: '/organization' as const, label: 'Doanh nghiệp' },
+          ...(identity.account.systemRole === 'ADMIN'
+            ? [{ href: '/admin' as const, label: 'Quản trị' }]
+            : []),
+        ]
+      : []),
+  ];
 
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-6 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5 font-semibold tracking-tight">
+    <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur print:hidden">
+      {/* Màn hình nhỏ: menu xuống hàng thứ hai, đủ chỗ cho mọi mục mà không bị cắt. */}
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-2 px-4 sm:h-14 sm:flex-nowrap sm:gap-6 sm:px-6">
+        <Link
+          href="/"
+          className="flex h-14 shrink-0 items-center gap-2.5 font-semibold tracking-tight sm:h-auto"
+        >
           <BrandMark className="size-6" />
-          <span className="hidden sm:inline">Hộ chiếu số</span>
+          <span>Hộ chiếu số</span>
         </Link>
-        {navItems.length > 0 ? <MainNav items={navItems} /> : null}
+        <div className="order-last -mx-4 w-[calc(100%+2rem)] border-t border-line px-2 py-1.5 sm:order-none sm:mx-0 sm:w-auto sm:min-w-0 sm:border-0 sm:p-0">
+          <MainNav items={navItems} />
+        </div>
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <span className="hidden items-center gap-2 text-sm text-muted lg:inline-flex">
             <span aria-hidden className="size-1.5 rounded-full bg-focus" />

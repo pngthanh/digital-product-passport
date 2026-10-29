@@ -14,7 +14,7 @@ export class PrismaEventStore implements EventStore {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async finalize(event: ChainEvent, scope: TransactionScope): Promise<boolean> {
+  async finalize(event: ChainEvent, scope: TransactionScope): Promise<string | null> {
     const db = prismaFrom(this.prisma, scope);
     const finalizedAt = this.clock.now();
     // UPDATE khoá dòng: hai tiến trình cùng chốt một event thì chỉ một bên thấy count = 1.
@@ -22,16 +22,26 @@ export class PrismaEventStore implements EventStore {
       where: { ...identity(event), finalityStatus: { not: 'FINALIZED' } },
       data: { ...blockData(event), finalityStatus: 'FINALIZED', finalizedAt, orphanedAt: null },
     });
-    if (updated.count === 1) {
-      return true;
-    }
     // createMany + skipDuplicates dựa trên UNIQUE(chain_id, tx_hash, log_index): không lỗi khi trùng,
     // và không huỷ giao dịch đang mở như khi bắt lỗi P2002.
-    const created = await db.blockchainEvent.createMany({
-      data: [{ ...identity(event), ...blockData(event), finalityStatus: 'FINALIZED', finalizedAt }],
-      skipDuplicates: true,
+    const firstTime =
+      updated.count === 1 ||
+      (
+        await db.blockchainEvent.createMany({
+          data: [
+            { ...identity(event), ...blockData(event), finalityStatus: 'FINALIZED', finalizedAt },
+          ],
+          skipDuplicates: true,
+        })
+      ).count === 1;
+    if (!firstTime) {
+      return null;
+    }
+    const row = await db.blockchainEvent.findUniqueOrThrow({
+      where: { chainId_txHash_logIndex: identity(event) },
+      select: { id: true },
     });
-    return created.count === 1;
+    return row.id;
   }
 
   async recordObserved(event: ChainEvent, scope: TransactionScope): Promise<void> {
@@ -100,6 +110,7 @@ function blockData(event: ChainEvent) {
     txIndex: event.txIndex,
     eventName: event.eventName,
     correlationKey: event.correlationKey,
+    chainProductId: event.chainProductId ?? null,
     actorAddress: event.actorAddress,
     payload: { contract: event.contractName, args: { ...event.args } },
   };

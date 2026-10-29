@@ -5,8 +5,10 @@ import {
   createTestPrisma,
   expectConstraintViolation,
   type Fixtures,
+  PRODUCT_PROFILE,
   randomAddress,
   randomBytes32,
+  randomPublicCode,
   resetDatabase,
   SAMPLE_ARGON2ID_HASH,
   seedFixtures,
@@ -25,6 +27,30 @@ const blockchainEvent = (overrides: Record<string, unknown> = {}) => ({
   logIndex: 0,
   eventName: 'OwnershipTransferred',
   payload: {},
+  ...overrides,
+});
+
+/** Một lần nộp đơn đang chờ duyệt (M5). */
+const round = (organizationId: string, overrides: Record<string, unknown> = {}) => ({
+  organizationId,
+  round: 1,
+  orgType: 'MANUFACTURER' as const,
+  profileHash: randomBytes32(),
+  applicantAddress: randomAddress(),
+  appliedTxHash: randomBytes32(),
+  appliedAt: new Date(),
+  ...overrides,
+});
+
+/** Bản nháp sản phẩm (M5). */
+const draft = (issuerOrgId: string, overrides: Record<string, unknown> = {}) => ({
+  chainProductId: randomBytes32(),
+  serialNumber: 'ABC-2026-000128',
+  publicCode: randomPublicCode(),
+  modelName: 'ABC Pro 14',
+  metadataHash: randomBytes32(),
+  issuerOrgId,
+  ...PRODUCT_PROFILE,
   ...overrides,
 });
 
@@ -76,7 +102,8 @@ describe('Ràng buộc CSDL', () => {
       data: {
         chainProductId: randomBytes32(),
         serialNumber: `ABC-${state}-${Date.now()}`,
-        publicCode: `code${Date.now()}`,
+        publicCode: randomPublicCode(),
+        ...PRODUCT_PROFILE,
         modelName: 'ABC Pro 14',
         metadataHash: randomBytes32(),
         issuerOrgId: fixtures.manufacturerId,
@@ -150,6 +177,108 @@ describe('Ràng buộc CSDL', () => {
     });
   });
 
+  describe('Từng lần nộp đơn của tổ chức (M5)', () => {
+    it('mỗi tổ chức tối đa một lần nộp đang chờ duyệt', async () => {
+      await prisma.organizationApplication.create({ data: round(fixtures.manufacturerId) });
+
+      await expectConstraintViolation(
+        prisma.organizationApplication.create({
+          data: round(fixtures.manufacturerId, { round: 2 }),
+        }),
+        'ux_org_application_one_pending',
+      );
+    });
+
+    it('đơn bị từ chối phải có hash lý do đã gửi on-chain', async () => {
+      await expectConstraintViolation(
+        prisma.organizationApplication.create({
+          data: round(fixtures.manufacturerId, {
+            status: 'REJECTED',
+            decidedByAddress: randomAddress(),
+            decidedTxHash: randomBytes32(),
+            decidedAt: new Date(Date.now() + 1000),
+          }),
+        }),
+        'ck_org_applications_reason',
+      );
+    });
+
+    it('đơn đã quyết định phải có giao dịch, thời điểm và ví ký quyết định', async () => {
+      await expectConstraintViolation(
+        prisma.organizationApplication.create({
+          data: round(fixtures.manufacturerId, { status: 'AUTHORIZED' }),
+        }),
+        'ck_org_applications_decision',
+      );
+    });
+
+    it('bản chụp hồ sơ có đủ hoặc không có gì', async () => {
+      await expectConstraintViolation(
+        prisma.organizationApplication.create({
+          data: round(fixtures.manufacturerId, { name: 'ABC Electronics' }),
+        }),
+        'ck_org_applications_snapshot',
+      );
+    });
+  });
+
+  describe('Đăng ký sản phẩm (M5)', () => {
+    it('serial duy nhất trong một nhà sản xuất; nhà sản xuất khác được trùng serial', async () => {
+      const otherMaker = await prisma.organization.create({
+        data: {
+          name: 'XYZ Devices',
+          taxCode: '0388888888',
+          orgType: 'MANUFACTURER',
+          contactEmail: 'xyz@example.vn',
+          representativeUserId: (await createRepresentative(prisma, 'xyz')).id,
+        },
+      });
+      await prisma.product.create({ data: draft(fixtures.manufacturerId) });
+      await prisma.product.create({ data: draft(otherMaker.id) });
+
+      await expectConstraintViolation(
+        prisma.product.create({ data: draft(fixtures.manufacturerId) }),
+        'issuer_org_id',
+      );
+    });
+
+    it('một giao dịch đăng ký cả lô: nhiều sản phẩm chung created_tx_hash', async () => {
+      const txHash = randomBytes32();
+      await prisma.product.create({
+        data: draft(fixtures.manufacturerId, { serialNumber: 'LOT-1', createdTxHash: txHash }),
+      });
+
+      await expect(
+        prisma.product.create({
+          data: draft(fixtures.manufacturerId, { serialNumber: 'LOT-2', createdTxHash: txHash }),
+        }),
+      ).resolves.toMatchObject({ createdTxHash: txHash });
+    });
+
+    it('serial lưu chữ in hoa, chỉ gồm chữ, số và . _ / -', async () => {
+      await expectConstraintViolation(
+        prisma.product.create({ data: draft(fixtures.manufacturerId, { serialNumber: 'abc 1' }) }),
+        'ck_products_serial_pattern',
+      );
+    });
+
+    it('mã QR công khai đúng 12 ký tự của bảng chữ đã chọn', async () => {
+      await expectConstraintViolation(
+        prisma.product.create({
+          data: draft(fixtures.manufacturerId, { publicCode: 'ABCDEFGHIJ10' }),
+        }),
+        'ck_products_public_code_format',
+      );
+    });
+
+    it('thời hạn bảo hành từ 0 tới 120 tháng', async () => {
+      await expectConstraintViolation(
+        prisma.product.create({ data: draft(fixtures.manufacturerId, { warrantyMonths: 121 }) }),
+        'ck_products_warranty_months_range',
+      );
+    });
+  });
+
   describe('Custody và Ownership tách biệt', () => {
     it('sản phẩm ở kho nhà bán lẻ chưa được có owner', async () => {
       await expectConstraintViolation(
@@ -175,7 +304,8 @@ describe('Ràng buộc CSDL', () => {
           data: {
             chainProductId: randomBytes32(),
             serialNumber: 'ABC-2026-000999',
-            publicCode: 'pendingcode',
+            publicCode: randomPublicCode(),
+            ...PRODUCT_PROFILE,
             modelName: 'ABC Pro 14',
             metadataHash: randomBytes32(),
             issuerOrgId: fixtures.manufacturerId,
@@ -432,7 +562,8 @@ describe('Ràng buộc CSDL', () => {
         data: {
           chainProductId: randomBytes32(),
           serialNumber: 'XYZ-2026-000001',
-          publicCode: 'xyzcode001',
+          publicCode: randomPublicCode(),
+          ...PRODUCT_PROFILE,
           modelName: 'XYZ Air',
           metadataHash: randomBytes32(),
           issuerOrgId: issuer.id,

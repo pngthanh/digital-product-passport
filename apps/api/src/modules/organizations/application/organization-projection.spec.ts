@@ -1,7 +1,14 @@
-import { FEE_ACTION_IDS, MANUFACTURER_ROLE, partyIdFromUuid, statusReasonHash } from '@dpp/shared';
+import {
+  FEE_ACTION_IDS,
+  MANUFACTURER_ROLE,
+  organizationProfileHash,
+  partyIdFromUuid,
+  statusReasonHash,
+} from '@dpp/shared';
 import { recordingAudit } from '../../../../test/support/identity-fakes.js';
 import {
   InMemoryFeeLedger,
+  InMemoryOrganizationApplications,
   InMemoryOrganizations,
 } from '../../../../test/support/organization-fakes.js';
 import { TransactionScope } from '../../../common/persistence/transaction-scope.js';
@@ -11,11 +18,20 @@ import { OrganizationRegistryProjector } from './organization-registry.projector
 const scope = new TransactionScope({});
 const PAYER = '0x1111111111111111111111111111111111111111';
 const TREASURY = '0x2222222222222222222222222222222222222222';
+const ADMIN = '0x3333333333333333333333333333333333333333';
 const FEE = '8000000000000000000';
-const PROFILE = '0x' + 'aa'.repeat(32);
+const PROFILE_FIELDS = {
+  name: 'ABC Electronics',
+  taxCode: '0312345678',
+  orgType: 'MANUFACTURER',
+  contactEmail: 'lien.he@abc.vn',
+  contactPhone: null,
+  address: null,
+} as const;
+const PROFILE = organizationProfileHash(PROFILE_FIELDS);
 let txCounter = 0;
 
-function event(eventName: string, args: ChainEvent['args']): ChainEvent {
+function event(eventName: string, args: ChainEvent['args'], actor = PAYER): ChainEvent {
   txCounter += 1;
   return {
     chainId: 31337,
@@ -29,7 +45,7 @@ function event(eventName: string, args: ChainEvent['args']): ChainEvent {
     txHash: `0x${txCounter.toString(16).padStart(64, '0')}`,
     txIndex: 0,
     logIndex: 0,
-    actorAddress: PAYER,
+    actorAddress: actor,
     correlationKey: typeof args.partyId === 'string' ? args.partyId : null,
   };
 }
@@ -37,40 +53,40 @@ function event(eventName: string, args: ChainEvent['args']): ChainEvent {
 async function setup() {
   const organizations = new InMemoryOrganizations();
   const ledger = new InMemoryFeeLedger();
+  const applications = new InMemoryOrganizationApplications();
   const { audit, writer } = recordingAudit();
   const draft = await organizations.createDraft({
     representativeUserId: 'user-1',
-    name: 'ABC Electronics',
-    taxCode: '0312345678',
-    orgType: 'MANUFACTURER',
-    contactEmail: 'lien.he@abc.vn',
-    contactPhone: null,
-    address: null,
+    ...PROFILE_FIELDS,
     profileHash: PROFILE,
   });
   const partyId = partyIdFromUuid(draft.id);
-  const projector = new OrganizationRegistryProjector(organizations, ledger, audit);
-  const applied = async () => {
+  const projector = new OrganizationRegistryProjector(organizations, ledger, applications, audit);
+  const applied = async (profileHash = PROFILE) => {
+    const application = event('OrganizationApplied', {
+      partyId,
+      representativeId: '0x' + '01'.repeat(32),
+      role: MANUFACTURER_ROLE.toLowerCase(),
+      profileHash,
+    });
+    await projector.project(application, scope);
+    // FeePaid phát cùng giao dịch, ngay sau OrganizationApplied.
     await projector.project(
-      event('OrganizationApplied', {
-        partyId,
-        representativeId: '0x' + '01'.repeat(32),
-        role: MANUFACTURER_ROLE.toLowerCase(),
-        profileHash: PROFILE,
-      }),
-      scope,
-    );
-    await projector.project(
-      event('FeePaid', {
-        partyId,
-        action: FEE_ACTION_IDS.ORG_REGISTRATION,
-        payer: PAYER,
-        amount: FEE,
-      }),
+      {
+        ...event('FeePaid', {
+          partyId,
+          action: FEE_ACTION_IDS.ORG_REGISTRATION,
+          payer: PAYER,
+          amount: FEE,
+        }),
+        txHash: application.txHash,
+        blockNumber: application.blockNumber,
+        logIndex: application.logIndex + 1,
+      },
       scope,
     );
   };
-  return { organizations, ledger, writer, projector, draft, partyId, applied };
+  return { organizations, ledger, applications, writer, projector, draft, partyId, applied };
 }
 
 describe('Projector tổ chức và phí (Worker)', () => {
@@ -132,6 +148,53 @@ describe('Projector tổ chức và phí (Worker)', () => {
       scope,
     );
     expect(ledger.statuses(draft.id)).toEqual(['REFUNDED', 'ESCROWED']);
+  });
+
+  it('mỗi lần nộp là một dòng riêng: lần bị từ chối giữ nguyên hồ sơ, phí, lý do và mã giao dịch', async () => {
+    const { organizations, ledger, applications, projector, applied, partyId, draft } =
+      await setup();
+    await applied();
+    await organizations.saveStatusReason(draft.id, 'Sai địa chỉ');
+    await applications.saveDecisionReason(draft.id, 'Sai địa chỉ');
+    const rejection = event(
+      'OrganizationRejected',
+      { partyId, reasonHash: statusReasonHash('Sai địa chỉ') },
+      ADMIN,
+    );
+    await projector.project(rejection, scope);
+    await applied();
+    await projector.project(
+      event('OrganizationApproved', { partyId, role: MANUFACTURER_ROLE }, ADMIN),
+      scope,
+    );
+
+    const [second, first] = await applications.listFor(draft.id);
+    expect(first).toMatchObject({
+      round: 1,
+      status: 'REJECTED',
+      profile: PROFILE_FIELDS,
+      profileHash: PROFILE,
+      applicantAddress: PAYER,
+      decisionReason: 'Sai địa chỉ',
+      decisionReasonHash: statusReasonHash('Sai địa chỉ'),
+      decidedByAddress: ADMIN,
+      decidedTxHash: rejection.txHash,
+    });
+    expect(second).toMatchObject({ round: 2, status: 'AUTHORIZED', decisionReason: null });
+    expect(first?.feePaymentId).toBe(ledger.payments[0]?.id);
+    expect(second?.feePaymentId).toBe(ledger.payments[1]?.id);
+  });
+
+  it('hồ sơ trong CSDL khác hash on-chain: vẫn ghi lần nộp nhưng không lưu bản chụp sai', async () => {
+    const { applications, applied, draft } = await setup();
+
+    await applied('0x' + 'ee'.repeat(32));
+
+    expect((await applications.listFor(draft.id))[0]).toMatchObject({
+      round: 1,
+      profile: null,
+      profileHash: '0x' + 'ee'.repeat(32),
+    });
   });
 
   it('FeeUpdated, TreasuryUpdated cập nhật fee_policies', async () => {

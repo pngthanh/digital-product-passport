@@ -73,6 +73,14 @@ export class PrismaOrganizationRepository implements OrganizationRepository {
     return row && toRecord(row);
   }
 
+  async findManyByIds(ids: readonly string[]): Promise<OrganizationRecord[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.prisma.organization.findMany({ where: { id: { in: [...ids] } } });
+    return rows.map(toRecord);
+  }
+
   async findByRepresentative(userId: string): Promise<OrganizationRecord | null> {
     const row = await this.prisma.organization.findUnique({
       where: { representativeUserId: userId },

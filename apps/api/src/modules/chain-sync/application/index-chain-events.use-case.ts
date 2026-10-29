@@ -150,9 +150,12 @@ export class IndexChainEvents {
 
     return this.unitOfWork.run(async (scope) => {
       for (const event of events) {
-        if (await this.events.finalize(event, scope)) {
+        const eventId = await this.events.finalize(event, scope);
+        if (eventId) {
           summary.finalized += 1;
-          await this.projectors.find(event.contractName, event.eventName)?.project(event, scope);
+          await this.projectors
+            .find(event.contractName, event.eventName)
+            ?.project({ ...event, eventId }, scope);
         }
       }
       summary.orphaned += await this.events.orphanPending(

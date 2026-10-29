@@ -7,6 +7,7 @@ import { UTC_SESSION_OPTIONS } from '../../src/infrastructure/database/prisma.se
 const ALL_TABLES = [
   'users',
   'organizations',
+  'organization_applications',
   'parties',
   'party_wallets',
   'fee_policies',
@@ -52,6 +53,16 @@ export function randomBytes32(): string {
 export function randomAddress(): string {
   return `0x${randomBytes(20).toString('hex')}`;
 }
+
+const PUBLIC_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/** Mã QR công khai hợp lệ (12 ký tự, khớp ck_products_public_code_format). */
+export function randomPublicCode(): string {
+  return Array.from(randomBytes(12), (byte) => PUBLIC_CODE_CHARS[byte % 32]).join('');
+}
+
+/** Cột hồ sơ bắt buộc của products từ M5. */
+export const PRODUCT_PROFILE = { manufacturedOn: new Date('2026-10-01'), warrantyMonths: 24 };
 
 export function randomTaxCode(): string {
   return String(randomInt(1_000_000_000, 9_999_999_999));
@@ -138,7 +149,8 @@ export async function createSoldProduct(prisma: PrismaClient, fixtures: Fixtures
     data: {
       chainProductId: randomBytes32(),
       serialNumber: serial,
-      publicCode: randomBytes(6).toString('hex'),
+      publicCode: randomPublicCode(),
+      ...PRODUCT_PROFILE,
       modelName: 'ABC Pro 14',
       metadataHash: randomBytes32(),
       issuerOrgId: fixtures.manufacturerId,

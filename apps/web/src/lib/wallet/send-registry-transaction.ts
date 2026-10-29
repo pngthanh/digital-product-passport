@@ -1,28 +1,38 @@
 import { formatMon, PARTY_REGISTRY_ABI, type PartyRegistryMethod, shortenHex } from '@dpp/shared';
-import { BrowserProvider, Contract } from 'ethers';
+import { BrowserProvider, Contract, type InterfaceAbi } from 'ethers';
 import { ensureChain, requestAccount, requireInjectedProvider } from './ethereum';
 import { WalletFlowError } from './wallet-errors';
 
 /** Monad tính phí theo gas limit, nên chỉ cộng 10% vào số ước lượng thay vì mức dư mặc định. */
 export const GAS_LIMIT_MARGIN_DIVISOR = 10n;
 
-export interface RegistryCall {
+export interface ContractCall<Method extends string = string> {
   /** Chain hệ thống đang chạy (CHAIN_ID phía server). */
   chainId: number;
   contractAddress: string;
   /** Ví cá nhân đã liên kết của người dùng; MetaMask phải đang chọn đúng ví này. */
   wallet: string;
-  method: PartyRegistryMethod;
+  method: Method;
   args: readonly unknown[];
   /** Số MON (wei) gửi kèm, ví dụ phí đăng ký doanh nghiệp. */
   value?: bigint;
 }
 
+export type RegistryCall = ContractCall<PartyRegistryMethod>;
+
+/** Gửi một giao dịch lên PartyRegistry bằng ví cá nhân trong MetaMask. */
+export function sendRegistryTransaction(call: RegistryCall): Promise<string> {
+  return sendContractTransaction(PARTY_REGISTRY_ABI, call);
+}
+
 /**
- * Gửi một giao dịch lên PartyRegistry bằng ví cá nhân trong MetaMask, ví tự trả gas.
+ * Gửi một giao dịch lên contract của hệ thống bằng ví cá nhân trong MetaMask, ví tự trả gas.
  * Kiểm tra đúng ví, đúng mạng, đủ MON và ước lượng gas trước khi ví ký, để lỗi hiện sớm.
  */
-export async function sendRegistryTransaction(call: RegistryCall): Promise<string> {
+export async function sendContractTransaction(
+  abi: InterfaceAbi,
+  call: ContractCall,
+): Promise<string> {
   const ethereum = requireInjectedProvider();
   const account = await requestAccount(ethereum);
   if (account.toLowerCase() !== call.wallet.toLowerCase()) {
@@ -45,8 +55,8 @@ export async function sendRegistryTransaction(call: RegistryCall): Promise<strin
   }
 
   const signer = await provider.getSigner(account);
-  const registry = new Contract(call.contractAddress, PARTY_REGISTRY_ABI, signer);
-  const fn = registry.getFunction(call.method);
+  const contract = new Contract(call.contractAddress, abi, signer);
+  const fn = contract.getFunction(call.method);
   // Ước lượng trước: contract revert (sai trạng thái, hết hạn giấy phép…) thì báo lỗi trước khi ví ký.
   const estimated = await fn.estimateGas(...call.args, { value });
   const tx: unknown = await fn(...call.args, {

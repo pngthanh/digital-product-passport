@@ -26,6 +26,7 @@ describe('AbiContractCatalog', () => {
       eventName: 'PartyRegistered',
       args: { partyId: PARTY_ID.toLowerCase(), kind: 1, wallet: WALLET.toLowerCase() },
       correlationKey: PARTY_ID.toLowerCase(),
+      chainProductId: null,
     });
   });
 

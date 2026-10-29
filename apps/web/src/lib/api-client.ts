@@ -4,7 +4,11 @@ import { BROWSER_API_BASE } from './env';
 
 type ApiPath = `/${string}`;
 
-async function send(path: ApiPath, method: 'GET' | 'POST', body: unknown): Promise<Response> {
+async function send(
+  path: ApiPath,
+  method: 'GET' | 'POST' | 'DELETE',
+  body: unknown,
+): Promise<Response> {
   try {
     return await fetch(`${BROWSER_API_BASE}${path}`, {
       method,
@@ -51,3 +55,11 @@ export async function apiCommand(path: ApiPath, body?: unknown): Promise<void> {
 }
 
 export { ApiError };
+
+/** Xoá một tài nguyên (API trả 204). */
+export async function apiDelete(path: ApiPath): Promise<void> {
+  const response = await send(path, 'DELETE', undefined);
+  if (!response.ok) {
+    throw toApiError(response.status, await readJson(response));
+  }
+}

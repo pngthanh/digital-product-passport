@@ -4,10 +4,14 @@ import {
   type AdminOverview,
   CONTACT_PHONE_PATTERN,
   EMAIL_MAX_LENGTH,
+  type FeePaymentSummary,
   type MyOrganizationView,
   ORGANIZATION_ADDRESS_MAX_LENGTH,
   ORGANIZATION_NAME_MAX_LENGTH,
   type OrganizationApplicationAuthorization,
+  type OrganizationApplicationView,
+  type OrganizationDetailView,
+  type OrganizationHistory,
   type OrganizationSummary,
   OrgType,
   STATUS_REASON_MAX_LENGTH,
@@ -15,11 +19,14 @@ import {
   type TrackedTransactionView,
 } from '@dpp/shared';
 import { z } from 'zod';
+import {
+  addressSchema as address,
+  bytes32Schema as bytes32,
+  chainEventSchema,
+  isoDateSchema as isoDate,
+  weiSchema as wei,
+} from '@/lib/chain-schema';
 
-const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
-const bytes32 = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
-const isoDate = z.iso.datetime({ offset: true });
-const wei = z.string().regex(/^\d+$/);
 const stage = z.enum(['DRAFT', 'PENDING', 'AUTHORIZED', 'REJECTED', 'DISABLED']);
 const orgType = z.enum(Object.values(OrgType));
 
@@ -30,6 +37,16 @@ const feePolicySchema = z.object({
 });
 
 const contractSchema = z.object({ chainId: z.number().int().positive(), address });
+
+const feePaymentSchema: z.ZodType<FeePaymentSummary> = z.object({
+  amountWei: wei,
+  feeStatus: z.enum(['ESCROWED', 'SETTLED', 'REFUNDABLE', 'REFUNDED']),
+  payerAddress: address,
+  paidTxHash: bytes32,
+  paidAt: isoDate,
+  settledTxHash: bytes32.nullable(),
+  refundTxHash: bytes32.nullable(),
+});
 
 /** Kiểm tra đúng hợp đồng dữ liệu của API trước khi hiển thị (không tin dữ liệu mạng). */
 export const organizationSummarySchema: z.ZodType<OrganizationSummary> = z.object({
@@ -49,23 +66,54 @@ export const organizationSummarySchema: z.ZodType<OrganizationSummary> = z.objec
   rejectedAt: isoDate.nullable(),
   disabledAt: isoDate.nullable(),
   representative: z.object({ userId: z.uuid(), fullName: z.string(), email: z.string() }),
-  feePayments: z.array(
-    z.object({
-      amountWei: wei,
-      feeStatus: z.enum(['ESCROWED', 'SETTLED', 'REFUNDABLE', 'REFUNDED']),
-      payerAddress: address,
-      paidTxHash: bytes32,
-      paidAt: isoDate,
-      settledTxHash: bytes32.nullable(),
-      refundTxHash: bytes32.nullable(),
-    }),
-  ),
+  feePayments: z.array(feePaymentSchema),
   refundableWei: wei,
+});
+
+const applicationSchema: z.ZodType<OrganizationApplicationView> = z.object({
+  round: z.number().int().positive(),
+  status: z.enum(['PENDING', 'AUTHORIZED', 'REJECTED']),
+  orgType,
+  profile: z
+    .object({
+      name: z.string(),
+      taxCode: z.string(),
+      orgType,
+      contactEmail: z.string(),
+      contactPhone: z.string().nullable(),
+      address: z.string().nullable(),
+    })
+    .nullable(),
+  profileHash: bytes32,
+  profileMatchesChain: z.boolean().nullable(),
+  applicantAddress: address,
+  appliedTxHash: bytes32,
+  appliedAt: isoDate,
+  fee: feePaymentSchema.nullable(),
+  decisionReason: z.string().nullable(),
+  decisionReasonHash: bytes32.nullable(),
+  reasonMatchesChain: z.boolean().nullable(),
+  decidedByAddress: address.nullable(),
+  decidedTxHash: bytes32.nullable(),
+  decidedAt: isoDate.nullable(),
+});
+
+const historySchema: z.ZodType<OrganizationHistory> = z.object({
+  applications: z.array(applicationSchema),
+  chainLog: z.array(chainEventSchema),
 });
 
 export const myOrganizationSchema: z.ZodType<MyOrganizationView> = z.object({
   organization: organizationSummarySchema.nullable(),
+  history: historySchema,
   registrationFee: feePolicySchema.nullable(),
+  contract: contractSchema.nullable(),
+});
+
+export const organizationDetailSchema: z.ZodType<OrganizationDetailView> = z.object({
+  organization: organizationSummarySchema,
+  applications: z.array(applicationSchema),
+  chainLog: z.array(chainEventSchema),
   contract: contractSchema.nullable(),
 });
 

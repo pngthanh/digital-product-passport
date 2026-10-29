@@ -26,8 +26,15 @@ import type {
   IndexerCheckpointRepository,
   StoredCheckpoint,
 } from '../../src/modules/chain-sync/application/indexer-checkpoint.repository.js';
+import {
+  ChainEventHistory,
+  type ChainEventReader,
+} from '../../src/modules/chain-sync/application/chain-event-history.query.js';
 import type { BlockRange } from '../../src/modules/chain-sync/domain/block-range.js';
-import type { ChainEvent } from '../../src/modules/chain-sync/domain/chain-event.js';
+import type {
+  ChainEvent,
+  RecordedChainEvent,
+} from '../../src/modules/chain-sync/domain/chain-event.js';
 import type {
   IndexedContract,
   IndexerCheckpoint,
@@ -176,6 +183,7 @@ export class FakeCatalog implements ContractCatalog {
           eventName: log.topics[0] ?? '',
           args: { wallet: USER_WALLET },
           correlationKey: null,
+          chainProductId: null,
         }
       : null;
   }
@@ -229,10 +237,10 @@ export class InMemoryEvents implements EventStore {
   async finalize(event: ChainEvent) {
     const row = this.rows.get(keyOf(event));
     if (row?.status === 'FINALIZED') {
-      return false;
+      return null;
     }
     this.rows.set(keyOf(event), { event, status: 'FINALIZED' });
-    return true;
+    return `event-${keyOf(event)}`;
   }
 
   async recordObserved(event: ChainEvent) {
@@ -305,3 +313,47 @@ export class InMemoryCheckpoints implements IndexerCheckpointRepository {
 export const passthroughUnitOfWork: UnitOfWork = {
   run: (work) => work(new TransactionScope({})),
 };
+
+/** blockchain_events (chỉ đọc) trong bộ nhớ: đọc lại các event mà test đưa vào. */
+export class InMemoryChainEventReader implements ChainEventReader {
+  readonly events: (ChainEvent & { chainProductId?: string | null })[] = [];
+
+  async byCorrelation(chainId: number, contractAddress: string, correlationKey: string) {
+    return this.events
+      .filter(
+        (event) =>
+          event.chainId === chainId &&
+          event.contractAddress === contractAddress &&
+          event.correlationKey === correlationKey,
+      )
+      .map(toRecorded);
+  }
+
+  async byProduct(chainId: number, chainProductIds: readonly string[]) {
+    return this.events
+      .filter(
+        (event) =>
+          event.chainId === chainId &&
+          !!event.chainProductId &&
+          chainProductIds.includes(event.chainProductId),
+      )
+      .map(toRecorded);
+  }
+}
+
+function toRecorded(event: ChainEvent): RecordedChainEvent {
+  return {
+    eventName: event.eventName,
+    txHash: event.txHash,
+    blockNumber: event.blockNumber,
+    logIndex: event.logIndex,
+    blockTimestamp: event.blockTimestamp,
+    actorAddress: event.actorAddress,
+    args: event.args,
+  };
+}
+
+/** ChainEventHistory thật trên dữ liệu trong bộ nhớ. */
+export function inMemoryChainHistory(reader = new InMemoryChainEventReader()): ChainEventHistory {
+  return new ChainEventHistory(reader, new FakeCatalog(), new FakeChain());
+}

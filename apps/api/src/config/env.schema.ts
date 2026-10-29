@@ -61,6 +61,9 @@ export const envSchema = z.object({
   PARTY_REGISTRY_ADDRESS: optionalAddress,
   // Indexer (M3) quét log từ block này; để trống thì bắt đầu từ block finalized lúc Worker chạy lần đầu.
   PARTY_REGISTRY_DEPLOY_BLOCK: optionalBlockNumber,
+  // M5: để trống thì phần đăng ký sản phẩm báo "chưa cấu hình", phần còn lại vẫn chạy.
+  PRODUCT_PASSPORT_ADDRESS: optionalAddress,
+  PRODUCT_PASSPORT_DEPLOY_BLOCK: optionalBlockNumber,
 
   INDEXER_POLL_INTERVAL_MS: z.coerce.number().int().min(200).max(60_000).default(1000),
   // RPC công khai của Monad Testnet giới hạn eth_getLogs 100 block mỗi lần.

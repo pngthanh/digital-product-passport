@@ -10,6 +10,11 @@ import type {
 } from '../../src/modules/organizations/application/ports/fee-ledger.repository.js';
 import type { OrganizationChain } from '../../src/modules/organizations/application/ports/organization-chain.port.js';
 import type {
+  AppliedRound,
+  OrganizationApplicationRepository,
+  RoundDecision,
+} from '../../src/modules/organizations/application/ports/organization-application.repository.js';
+import type {
   DraftInput,
   OrganizationRepository,
   StatusProjection,
@@ -18,6 +23,7 @@ import {
   type OrganizationRecord,
   stageOf,
 } from '../../src/modules/organizations/domain/organization.js';
+import type { OrganizationApplicationRecord } from '../../src/modules/organizations/domain/organization-application.js';
 import { TaxCodeTakenError } from '../../src/modules/organizations/domain/organizations.errors.js';
 import { TEST_PARTY_REGISTRY, TEST_REGISTRAR_KEY } from './test-config.js';
 
@@ -27,6 +33,10 @@ export class InMemoryOrganizations implements OrganizationRepository {
 
   async findById(id: string) {
     return this.rows.get(id) ?? null;
+  }
+
+  async findManyByIds(ids: readonly string[]) {
+    return [...this.rows.values()].filter((row) => ids.includes(row.id));
   }
 
   async findByRepresentative(userId: string) {
@@ -147,10 +157,13 @@ export class InMemoryFeeLedger implements FeeLedgerRepository {
   }
 
   async recordPaid(fee: PaidFee) {
-    if (this.payments.some((payment) => payment.paidTxHash === fee.txHash)) {
-      return;
+    const existing = this.payments.find((payment) => payment.paidTxHash === fee.txHash);
+    if (existing) {
+      return existing.id;
     }
+    const id = randomUUID();
     this.payments.push({
+      id,
       partyId: fee.partyId,
       amountWei: fee.amountWei,
       feeStatus: 'ESCROWED',
@@ -160,6 +173,7 @@ export class InMemoryFeeLedger implements FeeLedgerRepository {
       settledTxHash: null,
       refundTxHash: null,
     });
+    return id;
   }
 
   async settle(partyId: string, txHash: string) {
@@ -198,6 +212,88 @@ export class InMemoryFeeLedger implements FeeLedgerRepository {
     this.payments.forEach((payment, index) => {
       if (payment.partyId === partyId && payment.feeStatus === from) {
         this.payments[index] = { ...payment, ...patch };
+      }
+    });
+  }
+}
+
+/** organization_applications trong bộ nhớ, giữ UNIQUE(applied_tx_hash) và tối đa một lần nộp đang chờ. */
+export class InMemoryOrganizationApplications implements OrganizationApplicationRepository {
+  readonly rows: OrganizationApplicationRecord[] = [];
+
+  async listFor(organizationId: string) {
+    return this.rows
+      .filter((row) => row.organizationId === organizationId)
+      .toSorted((a, b) => b.round - a.round);
+  }
+
+  async recordApplied(round: AppliedRound) {
+    if (this.rows.some((row) => row.appliedTxHash === round.txHash)) {
+      return;
+    }
+    const own = this.rows.filter((row) => row.organizationId === round.organizationId);
+    if (own.some((row) => row.status === 'PENDING')) {
+      throw new Error('ux_org_application_one_pending');
+    }
+    this.rows.push({
+      id: randomUUID(),
+      organizationId: round.organizationId,
+      round: own.length + 1,
+      orgType: round.orgType,
+      profile: round.profile,
+      profileHash: round.profileHash,
+      applicantAddress: round.applicantAddress.toLowerCase(),
+      appliedTxHash: round.txHash,
+      appliedAt: round.appliedAt,
+      feePaymentId: null,
+      status: 'PENDING',
+      decisionReason: null,
+      decisionReasonHash: null,
+      decidedByAddress: null,
+      decidedTxHash: null,
+      decidedAt: null,
+    });
+  }
+
+  async attachFee(appliedTxHash: string, feePaymentId: string) {
+    this.patch((row) => row.appliedTxHash === appliedTxHash, { feePaymentId });
+  }
+
+  async saveDecisionReason(organizationId: string, reason: string) {
+    this.patch((row) => row.organizationId === organizationId && row.status === 'PENDING', {
+      decisionReason: reason,
+    });
+  }
+
+  async decide(organizationId: string, decision: RoundDecision) {
+    const index = this.rows.findIndex(
+      (row) => row.organizationId === organizationId && row.status === 'PENDING',
+    );
+    const row = this.rows[index];
+    if (!row) {
+      return null;
+    }
+    const decided: OrganizationApplicationRecord = {
+      ...row,
+      status: decision.status,
+      decidedByAddress: decision.decidedBy.toLowerCase(),
+      decidedTxHash: decision.txHash,
+      decidedAt: decision.at,
+      ...(decision.status === 'REJECTED'
+        ? { decisionReasonHash: decision.reasonHash }
+        : { decisionReason: null }),
+    };
+    this.rows[index] = decided;
+    return decided;
+  }
+
+  private patch(
+    match: (row: OrganizationApplicationRecord) => boolean,
+    patch: Partial<OrganizationApplicationRecord>,
+  ) {
+    this.rows.forEach((row, index) => {
+      if (match(row)) {
+        this.rows[index] = { ...row, ...patch };
       }
     });
   }

@@ -18,4 +18,19 @@ export interface ChainEvent {
   actorAddress: string | null;
   /** Khoá gom các event cùng đối tượng (partyId, requestId…). */
   correlationKey: string | null;
+  /** productId (bytes32) khi event thuộc một sản phẩm. */
+  chainProductId?: string | null;
+  /** id dòng blockchain_events; có khi projector được gọi, để bảng [P] trỏ về đúng event. */
+  eventId?: string;
+}
+
+/** Event đã FINALIZED đọc lại từ blockchain_events để hiển thị lịch sử. */
+export interface RecordedChainEvent {
+  eventName: string;
+  txHash: string;
+  blockNumber: bigint;
+  logIndex: number;
+  blockTimestamp: Date;
+  actorAddress: string | null;
+  args: Readonly<Record<string, ChainEventArg>>;
 }

@@ -9,10 +9,12 @@ import {
   statusReasonHash,
 } from '@dpp/shared';
 import { verifyTypedData, Wallet } from 'ethers';
+import { inMemoryChainHistory } from '../../../../test/support/chain-sync-fakes.js';
 import { InMemoryIdentityStore, recordingAudit } from '../../../../test/support/identity-fakes.js';
 import {
   FakeOrganizationChain,
   InMemoryFeeLedger,
+  InMemoryOrganizationApplications,
   InMemoryOrganizations,
 } from '../../../../test/support/organization-fakes.js';
 import { TEST_REGISTRAR_KEY, TestClock } from '../../../../test/support/test-config.js';
@@ -53,10 +55,11 @@ async function setup() {
   const store = new InMemoryIdentityStore();
   const organizations = new InMemoryOrganizations();
   const ledger = new InMemoryFeeLedger();
+  const applications = new InMemoryOrganizationApplications();
   const chain = new FakeOrganizationChain();
   const { audit, writer } = recordingAudit();
   const identity = new IdentityDirectory(store, store);
-  const views = new OrganizationViews(ledger, identity);
+  const views = new OrganizationViews(ledger, applications, identity, inMemoryChainHistory());
 
   async function account(email: string, wallet: string | null): Promise<AuthenticatedUser> {
     const { account: created } = await store.createWithParty({
@@ -77,6 +80,7 @@ async function setup() {
     store,
     organizations,
     ledger,
+    applications,
     chain,
     writer,
     account,
@@ -90,7 +94,7 @@ async function setup() {
       audit,
     ),
     getMine: new GetMyOrganization(organizations, chain, views),
-    decide: new PrepareAdminDecision(organizations, chain, identity, audit),
+    decide: new PrepareAdminDecision(organizations, chain, applications, identity, audit),
   };
 }
 
@@ -209,6 +213,7 @@ describe('ORG-01 Nộp đơn đăng ký doanh nghiệp', () => {
     const view = await getMine.execute(representative);
 
     expect(view.organization).toMatchObject({ stage: 'DRAFT', refundableWei: '0' });
+    expect(view.history).toEqual({ applications: [], chainLog: [] });
     expect(view.organization?.representative.email).toBe('dai.dien@abc.vn');
     expect(view.registrationFee).toMatchObject({ amountWei: '8000000000000000000' });
     expect(view.contract?.chainId).toBe(31337);
@@ -216,8 +221,8 @@ describe('ORG-01 Nộp đơn đăng ký doanh nghiệp', () => {
 });
 
 describe('ORG-03, ORG-04 Admin chuẩn bị quyết định', () => {
-  it('lưu lý do vào CSDL, trả hash để ví Admin gửi rejectOrganization', async () => {
-    const { submit, decide, organizations, account, representative } = await setup();
+  it('lưu lý do vào CSDL và vào đúng lần nộp đang chờ, trả hash để ví Admin gửi rejectOrganization', async () => {
+    const { submit, decide, organizations, applications, account, representative } = await setup();
     await submit.execute(representative, INPUT, client);
     const { id } = organizations.only();
     await organizations.applyStatus(id, {
@@ -225,6 +230,15 @@ describe('ORG-03, ORG-04 Admin chuẩn bị quyết định', () => {
       at: new Date(),
       profileHash: '0x' + 'aa'.repeat(32),
       orgType: 'MANUFACTURER',
+    });
+    await applications.recordApplied({
+      organizationId: id,
+      orgType: 'MANUFACTURER',
+      profile: null,
+      profileHash: '0x' + 'aa'.repeat(32),
+      applicantAddress: WALLET,
+      txHash: '0x' + '01'.repeat(32),
+      appliedAt: new Date(),
     });
     const admin = {
       ...(await account('admin@dpp.vn', ADMIN_WALLET)),
@@ -240,6 +254,7 @@ describe('ORG-03, ORG-04 Admin chuẩn bị quyết định', () => {
       wallet: '0x2222222222222222222222222222222222222222',
     });
     expect(organizations.only().statusReason).toBe('Mã số thuế không khớp');
+    expect((await applications.listFor(id))[0]?.decisionReason).toBe('Mã số thuế không khớp');
   });
 
   it('chỉ từ chối đơn đang chờ và chỉ khoá doanh nghiệp đã duyệt', async () => {
