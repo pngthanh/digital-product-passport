@@ -11,6 +11,8 @@
     "node": "hardhat node",
     "deploy:local": "hardhat run --network localhost scripts/deploy-identity.ts",
     "deploy:monad": "hardhat run --network monadTestnet scripts/deploy-identity.ts",
+    "admin-role:local": "hardhat run --network localhost scripts/grant-admin-role.ts",
+    "admin-role:monad": "hardhat run --network monadTestnet scripts/grant-admin-role.ts",
     "abi:export": "hardhat run scripts/export-abi.ts",
     "clean": "hardhat clean",
     "typecheck": "hardhat build --quiet && tsc --noEmit",

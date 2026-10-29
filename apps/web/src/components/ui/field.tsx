@@ -1,4 +1,10 @@
-import { type InputHTMLAttributes, type ReactNode, useId } from 'react';
+import {
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  useId,
+} from 'react';
 import { cn } from '@/lib/cn';
 
 interface ControlProps {
@@ -23,8 +29,9 @@ export function Field({
   const messageId = `${id}-message`;
   const message = error ?? help;
 
+  // content-start: ô cạnh nhau trong lưới thẳng hàng dù dòng gợi ý dài ngắn khác nhau.
   return (
-    <div className="grid gap-1.5">
+    <div className="grid content-start gap-1.5">
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
@@ -50,6 +57,22 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
         'placeholder:text-muted aria-invalid:border-bad',
         className,
       )}
+      {...props}
+    />
+  );
+}
+
+const CONTROL_CLASSES =
+  'w-full rounded-control border border-line-strong bg-surface px-3 text-[15px] text-ink aria-invalid:border-bad';
+
+export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select className={cn(CONTROL_CLASSES, 'h-10', className)} {...props} />;
+}
+
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(CONTROL_CLASSES, 'min-h-20 py-2 placeholder:text-muted', className)}
       {...props}
     />
   );

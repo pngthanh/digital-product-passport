@@ -23,3 +23,10 @@ export const ORG_TYPE_ROLE: Readonly<Record<OrgType, string>> = {
   [OrgType.SERVICE_CENTER]: SERVICE_CENTER_ROLE,
   [OrgType.INSPECTOR]: INSPECTOR_ROLE,
 };
+
+/** Loại tổ chức từ role id on-chain; `null` nếu không phải role nghiệp vụ của tổ chức. */
+export function orgTypeFromRole(role: string): OrgType | null {
+  const normalized = role.toLowerCase();
+  const match = Object.entries(ORG_TYPE_ROLE).find(([, value]) => value === normalized);
+  return match ? (match[0] as OrgType) : null;
+}

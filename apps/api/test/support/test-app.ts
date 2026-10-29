@@ -7,6 +7,7 @@ import { AppConfigService } from '../../src/config/app-config.service.js';
 import { ChainProviderService } from '../../src/infrastructure/blockchain/chain-provider.service.js';
 import { ChainSyncWorkerModule } from '../../src/modules/chain-sync/index.js';
 import { IdentityWorkerModule } from '../../src/modules/identity/index.js';
+import { OrganizationsWorkerModule } from '../../src/modules/organizations/index.js';
 
 /** RPC "ngoại tuyến": khớp chain ID khi khởi động, mọi lời gọi khác đều lỗi. */
 export function offlineChain(chainId: number) {
@@ -58,7 +59,12 @@ export function sessionCookieFrom(setCookie: string[] | string | undefined): str
 /** Phần Worker cần cho test (không bật ScheduleModule): test tự gọi runOnce() đúng lúc cần. */
 export async function createWorkerContext(config: AppConfigService): Promise<TestingModule> {
   const moduleRef = await Test.createTestingModule({
-    imports: [AppConfigModule, ChainSyncWorkerModule, IdentityWorkerModule],
+    imports: [
+      AppConfigModule,
+      ChainSyncWorkerModule,
+      IdentityWorkerModule,
+      OrganizationsWorkerModule,
+    ],
   })
     .overrideProvider(AppConfigService)
     .useValue(config)

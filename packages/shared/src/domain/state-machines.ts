@@ -47,11 +47,11 @@ export const TRANSFER_STATE_TRANSITIONS: TransitionTable<TransferState> = {
   [TransferState.EXPIRED]: [],
 };
 
-/** Trạng thái phê duyệt tổ chức. */
+/** Trạng thái phê duyệt tổ chức. Đơn bị từ chối được sửa và nộp lại (D27). */
 export const AUTH_STATUS_TRANSITIONS: TransitionTable<AuthStatus> = {
   [AuthStatus.PENDING]: [AuthStatus.AUTHORIZED, AuthStatus.REJECTED],
   [AuthStatus.AUTHORIZED]: [AuthStatus.DISABLED],
-  [AuthStatus.REJECTED]: [],
+  [AuthStatus.REJECTED]: [AuthStatus.PENDING],
   [AuthStatus.DISABLED]: [],
 };
 

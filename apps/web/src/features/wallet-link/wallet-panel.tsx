@@ -12,13 +12,13 @@ import { type FormEvent, useState, useSyncExternalStore } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/field';
+import { StepList } from '@/components/ui/step-list';
 import { formatDate, formatTime } from '@/lib/format';
 import { WALLET_STATUS_LABELS } from '@/lib/state-labels';
 import { FormAlert } from '../auth/form-alert';
-import { injectedProvider } from './ethereum';
-import { type LinkStep, linkWallet } from './link-wallet';
-import { describeWalletError } from './wallet-errors';
-import { WalletSteps } from './wallet-steps';
+import { injectedProvider } from '@/lib/wallet/ethereum';
+import { LINK_STEPS, type LinkStep, linkWallet } from './link-wallet';
+import { describeWalletError } from '@/lib/wallet/wallet-errors';
 
 const METAMASK_DOWNLOAD_URL = 'https://metamask.io/download/';
 
@@ -113,7 +113,9 @@ export function WalletPanel({ wallets, chainId }: { wallets: WalletSummary[]; ch
       ) : null}
 
       {running || activity.kind === 'done' ? (
-        <WalletSteps
+        <StepList
+          label="Tiến trình liên kết ví"
+          steps={LINK_STEPS}
           current={activity.kind === 'running' ? activity.step : 'done'}
           labels={stepLabels}
         />

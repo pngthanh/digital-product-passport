@@ -49,7 +49,7 @@ async function setup() {
     userId: account.id,
     partyId,
     chainPartyId: partyIdFromUuid(partyId),
-    projector: new PartyRegistryProjector(store, audit),
+    projector: new PartyRegistryProjector(store, store, audit),
   };
 }
 

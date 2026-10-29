@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { ContractFactory, JsonRpcProvider } from 'ethers';
+import { ContractFactory, JsonRpcProvider, parseEther } from 'ethers';
 
 const CONTRACTS_DIR = fileURLToPath(new URL('../../../../packages/contracts/', import.meta.url));
 const HARDHAT_CLI = `${CONTRACTS_DIR}node_modules/hardhat/dist/src/cli.js`;
@@ -15,7 +15,11 @@ export interface LocalChain {
   provider: JsonRpcProvider;
   /** Ví thứ i của Hardhat node (đã có sẵn ETH), dùng vai MetaMask của người dùng. */
   signer(index: number): ReturnType<JsonRpcProvider['getSigner']>;
-  deployPartyRegistry(registrar: string): Promise<string>;
+  /** Ví 0 của node là Admin; Treasury mặc định cũng là ví 0, phí đăng ký tổ chức mặc định 8 ETH. */
+  deployPartyRegistry(
+    registrar: string,
+    options?: { treasury?: string; registrationFee?: bigint },
+  ): Promise<string>;
   mine(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -67,14 +71,19 @@ export async function startHardhatNode(): Promise<LocalChain> {
     url,
     provider,
     signer: (index) => provider.getSigner(index),
-    async deployPartyRegistry(registrar) {
+    async deployPartyRegistry(registrar, options = {}) {
       const artifact: unknown = JSON.parse(await readFile(PARTY_REGISTRY_ARTIFACT, 'utf8'));
       if (typeof artifact !== 'object' || artifact === null || !('abi' in artifact)) {
         throw new Error('Artifact PartyRegistry không hợp lệ');
       }
       const deployer = await provider.getSigner(0);
       const factory = ContractFactory.fromSolidity(artifact, deployer);
-      const contract = await factory.deploy(deployer.address, registrar);
+      const contract = await factory.deploy(
+        deployer.address,
+        registrar,
+        options.treasury ?? deployer.address,
+        options.registrationFee ?? parseEther('8'),
+      );
       await contract.waitForDeployment();
       return contract.getAddress();
     },

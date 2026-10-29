@@ -234,35 +234,42 @@ model User {
   updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt      DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  party             Party?
-  auditLogs         AuditLog[]
-  chainTransactions ChainTransaction[]
-  reviewedAlerts    AnomalyAlert[]
+  party                   Party?
+  representedOrganization Organization?
+  auditLogs               AuditLog[]
+  chainTransactions       ChainTransaction[]
+  reviewedAlerts          AnomalyAlert[]
 
   @@index([status])
   @@map("users")
 }
 
 /// [A+P] Tổ chức tham gia hệ thống. Cột [P]: authStatus, appliedAt, approvedAt, rejectedAt, disabledAt.
+/// Tổ chức không có ví riêng: mọi giao dịch do ví cá nhân của người đại diện ký (D25).
 model Organization {
-  id           String     @id @default(uuid(7)) @db.Uuid
-  name         String     @db.VarChar(255)
-  taxCode      String     @unique @map("tax_code") @db.VarChar(32)
-  orgType      OrgType    @map("org_type")
-  contactEmail String     @map("contact_email") @db.VarChar(255)
-  contactPhone String?    @map("contact_phone") @db.VarChar(32)
-  address      String?    @db.VarChar(500)
+  id                   String     @id @default(uuid(7)) @db.Uuid
+  /// [A] Tài khoản đại diện; mỗi tài khoản đại diện tối đa một tổ chức.
+  representativeUserId String     @unique @map("representative_user_id") @db.Uuid
+  name                 String     @db.VarChar(255)
+  taxCode              String     @unique @map("tax_code") @db.VarChar(32)
+  orgType              OrgType    @map("org_type")
+  contactEmail         String     @map("contact_email") @db.VarChar(255)
+  contactPhone         String?    @map("contact_phone") @db.VarChar(32)
+  address              String?    @db.VarChar(500)
   /// Hash hồ sơ pháp lý gửi kèm giao dịch applyOrganization.
-  profileHash  String?    @map("profile_hash") @db.Char(66)
-  authStatus   AuthStatus @default(PENDING) @map("auth_status")
-  appliedAt    DateTime?  @map("applied_at") @db.Timestamptz(6)
-  approvedAt   DateTime?  @map("approved_at") @db.Timestamptz(6)
-  rejectedAt   DateTime?  @map("rejected_at") @db.Timestamptz(6)
-  disabledAt   DateTime?  @map("disabled_at") @db.Timestamptz(6)
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz(6)
+  profileHash          String?    @map("profile_hash") @db.Char(66)
+  authStatus           AuthStatus @default(PENDING) @map("auth_status")
+  appliedAt            DateTime?  @map("applied_at") @db.Timestamptz(6)
+  approvedAt           DateTime?  @map("approved_at") @db.Timestamptz(6)
+  rejectedAt           DateTime?  @map("rejected_at") @db.Timestamptz(6)
+  disabledAt           DateTime?  @map("disabled_at") @db.Timestamptz(6)
+  /// [A] Lý do từ chối hoặc khoá gần nhất do Admin nhập; contract chỉ lưu hash.
+  statusReason         String?    @map("status_reason") @db.VarChar(500)
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
+  representative  User             @relation(fields: [representativeUserId], references: [id], onDelete: Restrict)
   party           Party?
   issuedProducts  Product[]        @relation("ProductIssuer")
   serviceRequests ServiceRequest[] @relation("ServiceCenter")

@@ -20,9 +20,16 @@ export default async function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             {identity ? (
-              <ButtonLink href="/account">
-                {hasActiveWallet ? 'Xem tài khoản' : 'Liên kết ví MetaMask'}
-              </ButtonLink>
+              <>
+                <ButtonLink href="/account">
+                  {hasActiveWallet ? 'Xem tài khoản' : 'Liên kết ví MetaMask'}
+                </ButtonLink>
+                {hasActiveWallet ? (
+                  <ButtonLink href="/organization" variant="secondary">
+                    Doanh nghiệp
+                  </ButtonLink>
+                ) : null}
+              </>
             ) : (
               <>
                 <ButtonLink href="/register">Tạo tài khoản</ButtonLink>

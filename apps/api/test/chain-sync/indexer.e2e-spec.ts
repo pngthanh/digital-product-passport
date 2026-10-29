@@ -69,7 +69,8 @@ describe('M3: Indexer, chốt event đúng một lần và đối soát ví (e2e
 
   async function indexUntilCaughtUp(): Promise<number> {
     const indexer = worker.get(IndexChainEvents);
-    const head = BigInt(await chain.provider.getBlockNumber());
+    // Gọi thẳng eth_blockNumber: getBlockNumber() của ethers giữ kết quả cũ trong 250 ms.
+    const head = BigInt(await chain.provider.send('eth_blockNumber', []));
     let finalized = 0;
     for (let round = 0; round < 20; round += 1) {
       finalized += (await indexer.runOnce()).finalized;
@@ -87,8 +88,8 @@ describe('M3: Indexer, chốt event đúng một lần và đối soát ví (e2e
     const authorization = await authorize(owner, alice, 'LINK');
     const txHash = await submit(alice, authorization);
 
-    // Constructor phát 2 RoleGranted (không có projector) cộng PartyRegistered.
-    expect(await indexUntilCaughtUp()).toBe(3);
+    // Constructor phát 2 RoleGranted, TreasuryUpdated, FeeUpdated; cộng PartyRegistered của ví.
+    expect(await indexUntilCaughtUp()).toBe(5);
 
     const me = await owner.get('/api/v1/auth/me').expect(200);
     expect(me.body.party).toMatchObject({ partyId, registeredOnChain: true });

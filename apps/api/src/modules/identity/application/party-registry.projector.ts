@@ -4,6 +4,10 @@ import type { TransactionScope } from '../../../common/persistence/transaction-s
 import { AuditAction, AuditTrail } from '../../audit/index.js';
 import type { ChainEvent, EventProjector } from '../../chain-sync/index.js';
 import {
+  PARTY_DIRECTORY_REPOSITORY,
+  type PartyDirectoryRepository,
+} from './ports/party-directory.repository.js';
+import {
   PARTY_WALLET_REPOSITORY,
   type PartyWalletRepository,
   type ProjectionResult,
@@ -12,6 +16,7 @@ import {
 /**
  * Chiếu event finalized của PartyRegistry sang các cột [P]: parties.chain_party_id,
  * party_wallets.status/activated_at/revoked_at/link_tx_hash. On-chain là nguồn sự thật.
+ * Event riêng của tổ chức và phí do module organizations chiếu.
  */
 @Injectable()
 export class PartyRegistryProjector implements EventProjector {
@@ -21,6 +26,7 @@ export class PartyRegistryProjector implements EventProjector {
 
   constructor(
     @Inject(PARTY_WALLET_REPOSITORY) private readonly wallets: PartyWalletRepository,
+    @Inject(PARTY_DIRECTORY_REPOSITORY) private readonly directory: PartyDirectoryRepository,
     private readonly audit: AuditTrail,
   ) {}
 
@@ -35,8 +41,10 @@ export class PartyRegistryProjector implements EventProjector {
     }
 
     if (event.eventName === 'PartyRegistered') {
-      // Party tổ chức đăng ký qua luồng riêng ở M4.
-      if (decodeChainEnum('PartyKind', Number(event.args.kind)) !== 'USER') {
+      if (decodeChainEnum('PartyKind', Number(event.args.kind)) === 'ORGANIZATION') {
+        if (!(await this.directory.markOrganizationRegistered(partyId, chainPartyId, scope))) {
+          this.logger.warn(`Tổ chức ${chainPartyId} chưa có trong CSDL (tx ${event.txHash})`);
+        }
         return;
       }
       const result = await this.wallets.applyRegistration(

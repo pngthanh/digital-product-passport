@@ -7,7 +7,7 @@ import {
   walletBindingDigest,
 } from '@dpp/shared';
 import { expect } from 'chai';
-import { type BaseWallet, Wallet, ZeroAddress, ZeroHash } from 'ethers';
+import { type BaseWallet, parseEther, Wallet, ZeroAddress, ZeroHash } from 'ethers';
 import { network } from 'hardhat';
 
 const { ethers, networkHelpers } = await network.create();
@@ -16,6 +16,7 @@ const PARTY_KIND_USER = 1n;
 const ALICE_PARTY = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-000000000001');
 const BOB_PARTY = partyIdFromUuid('0199a3b2-7c4d-7e8f-9a0b-000000000002');
 const AUTHORIZATION_TTL_SECONDS = 15 * 60;
+const REGISTRATION_FEE = parseEther('8');
 
 async function deployFixture() {
   const [admin, alice, bob, carol] = await ethers.getSigners();
@@ -23,6 +24,8 @@ async function deployFixture() {
   const registry = await ethers.deployContract('PartyRegistry', [
     admin!.address,
     registrar.address,
+    admin!.address,
+    REGISTRATION_FEE,
   ]);
   const { chainId } = await ethers.provider.getNetwork();
   const registryAddress = await registry.getAddress();
@@ -323,10 +326,28 @@ describe('PartyRegistry', () => {
       const { registry, registrar, admin } = await networkHelpers.loadFixture(deployFixture);
 
       await expect(
-        ethers.deployContract('PartyRegistry', [ZeroAddress, registrar.address]),
+        ethers.deployContract('PartyRegistry', [
+          ZeroAddress,
+          registrar.address,
+          admin.address,
+          REGISTRATION_FEE,
+        ]),
       ).to.be.revertedWithCustomError(registry, 'ZeroAddress');
       await expect(
-        ethers.deployContract('PartyRegistry', [admin.address, ZeroAddress]),
+        ethers.deployContract('PartyRegistry', [
+          admin.address,
+          ZeroAddress,
+          admin.address,
+          REGISTRATION_FEE,
+        ]),
+      ).to.be.revertedWithCustomError(registry, 'ZeroAddress');
+      await expect(
+        ethers.deployContract('PartyRegistry', [
+          admin.address,
+          registrar.address,
+          ZeroAddress,
+          REGISTRATION_FEE,
+        ]),
       ).to.be.revertedWithCustomError(registry, 'ZeroAddress');
     });
 

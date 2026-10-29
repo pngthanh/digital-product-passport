@@ -2,7 +2,7 @@
  * Hợp đồng dữ liệu của module Identity & Auth (M2), dùng chung cho API và Web.
  */
 
-import type { PartyRegistryMethod } from '../chain/party-registry.js';
+import type { WalletLinkMethod } from '../chain/party-registry.js';
 import type {
   CustodyType,
   PartyType,
@@ -62,7 +62,7 @@ export interface WalletLinkChallenge {
 /** Giấy phép EIP-712 do backend ký; ví `wallet` tự gửi giao dịch `method` lên contract. */
 export interface WalletLinkAuthorization {
   walletId: string;
-  method: PartyRegistryMethod;
+  method: WalletLinkMethod;
   chainId: number;
   contractAddress: string;
   partyId: string;

@@ -6,6 +6,7 @@ import { AppConfigModule } from './config/app-config.module.js';
 import { AppConfigService } from './config/app-config.service.js';
 import { HealthModule } from './modules/health/index.js';
 import { IdentityModule } from './modules/identity/index.js';
+import { OrganizationsModule } from './modules/organizations/index.js';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -23,6 +24,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
     }),
     HealthModule,
     IdentityModule,
+    OrganizationsModule,
   ],
 })
 export class AppModule implements NestModule {

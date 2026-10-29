@@ -8,6 +8,10 @@ import type {
   NewAccount,
 } from '../../src/modules/identity/application/ports/account.repository.js';
 import type { PasswordHasher } from '../../src/modules/identity/application/ports/password-hasher.port.js';
+import type {
+  PartyDirectoryRepository,
+  UserSummary,
+} from '../../src/modules/identity/application/ports/party-directory.repository.js';
 import type { PartyRegistryReader } from '../../src/modules/identity/application/ports/party-registry-reader.port.js';
 import type {
   IdentityRecord,
@@ -105,9 +109,32 @@ interface StoredParty {
 }
 
 /** Bộ nhớ thay cho bảng users, parties, party_wallets; giữ các ràng buộc UNIQUE quan trọng. */
-export class InMemoryIdentityStore implements AccountRepository, PartyWalletRepository {
+export class InMemoryIdentityStore
+  implements AccountRepository, PartyWalletRepository, PartyDirectoryRepository
+{
   readonly accounts = new Map<string, UserAccount>();
   readonly parties = new Map<string, StoredParty>();
+  /** Party tổ chức: id (trùng id tổ chức) → chain_party_id. */
+  readonly organizationParties = new Map<string, string | null>();
+
+  async describeUsers(userIds: readonly string[]): Promise<UserSummary[]> {
+    return userIds.flatMap((userId) => {
+      const account = this.accounts.get(userId);
+      return account ? [{ userId, fullName: account.fullName, email: account.email }] : [];
+    });
+  }
+
+  async createOrganizationParty(organizationId: string): Promise<void> {
+    this.organizationParties.set(organizationId, null);
+  }
+
+  async markOrganizationRegistered(partyId: string, chainPartyId: string): Promise<boolean> {
+    if (!this.organizationParties.has(partyId)) {
+      return false;
+    }
+    this.organizationParties.set(partyId, chainPartyId);
+    return true;
+  }
   readonly wallets = new Map<string, WalletRecord>();
 
   async findByEmail(email: string): Promise<UserAccount | null> {

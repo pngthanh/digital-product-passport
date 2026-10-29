@@ -1,4 +1,7 @@
 import type {
+  FeeStatus,
+  OrganizationStage,
+  OrgType,
   ProductState,
   ServiceState,
   TransferState,
@@ -51,4 +54,26 @@ export const WALLET_STATUS_LABELS: Record<WalletStatus, StateLabel> = {
   ACTIVE: { label: 'Đang dùng', tone: 'ok' },
   ROTATED: { label: 'Đã thay', tone: 'neutral' },
   REVOKED: { label: 'Đã thu hồi', tone: 'bad' },
+};
+
+export const ORG_TYPE_LABELS: Record<OrgType, string> = {
+  MANUFACTURER: 'Nhà sản xuất',
+  RETAILER: 'Nhà bán lẻ',
+  SERVICE_CENTER: 'Trung tâm bảo hành',
+  INSPECTOR: 'Đơn vị kiểm định',
+};
+
+export const ORGANIZATION_STAGE_LABELS: Record<OrganizationStage, StateLabel> = {
+  DRAFT: { label: 'Chưa nộp phí', tone: 'neutral' },
+  PENDING: { label: 'Chờ duyệt', tone: 'warn' },
+  AUTHORIZED: { label: 'Đã duyệt', tone: 'ok' },
+  REJECTED: { label: 'Bị từ chối', tone: 'bad' },
+  DISABLED: { label: 'Đã khoá', tone: 'bad' },
+};
+
+export const FEE_STATUS_LABELS: Record<FeeStatus, StateLabel> = {
+  ESCROWED: { label: 'Contract đang giữ', tone: 'ocean' },
+  SETTLED: { label: 'Đã chuyển Treasury', tone: 'ok' },
+  REFUNDABLE: { label: 'Chờ rút lại', tone: 'warn' },
+  REFUNDED: { label: 'Đã hoàn về ví', tone: 'neutral' },
 };

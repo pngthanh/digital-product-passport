@@ -1,5 +1,6 @@
 import type { PrismaClient } from '../../src/infrastructure/database/generated/client.js';
 import {
+  createRepresentative,
   createSoldProduct,
   createTestPrisma,
   expectConstraintViolation,
@@ -115,6 +116,37 @@ describe('Ràng buộc CSDL', () => {
       });
 
       expect(updated.currentOwnerPartyId).toBe(fixtures.retailerPartyId);
+    });
+  });
+
+  describe('Tổ chức gắn với tài khoản đại diện (M4)', () => {
+    it('mỗi tài khoản đại diện tối đa một tổ chức', async () => {
+      const organization = await prisma.organization.findFirstOrThrow();
+
+      await expectConstraintViolation(
+        prisma.organization.create({
+          data: {
+            name: 'Chi nhánh khác',
+            taxCode: '0399999999',
+            orgType: 'RETAILER',
+            contactEmail: 'khac@example.vn',
+            representativeUserId: organization.representativeUserId,
+          },
+        }),
+        'representative_user_id',
+      );
+    });
+
+    it('lý do từ chối/khoá nếu có thì không được rỗng', async () => {
+      const organization = await prisma.organization.findFirstOrThrow();
+
+      await expectConstraintViolation(
+        prisma.organization.update({
+          where: { id: organization.id },
+          data: { statusReason: '   ' },
+        }),
+        'ck_organizations_status_reason_not_blank',
+      );
     });
   });
 
@@ -386,12 +418,14 @@ describe('Ràng buộc CSDL', () => {
     });
 
     it('không xoá được tổ chức đã phát hành sản phẩm (ON DELETE RESTRICT)', async () => {
+      const representative = await createRepresentative(prisma, 'xyz');
       const issuer = await prisma.organization.create({
         data: {
           name: 'XYZ Devices',
           taxCode: '0312345678',
           orgType: 'MANUFACTURER',
           contactEmail: 'xyz@example.vn',
+          representativeUserId: representative.id,
         },
       });
       await prisma.product.create({

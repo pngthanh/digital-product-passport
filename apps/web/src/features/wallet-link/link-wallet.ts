@@ -11,13 +11,12 @@ import {
   walletLinkChallengeSchema,
   walletSummarySchema,
 } from '../auth/identity.schema';
-import { ensureChain, requestAccount, requireInjectedProvider } from './ethereum';
-import { WalletFlowError } from './wallet-errors';
+import { ensureChain, requestAccount, requireInjectedProvider } from '@/lib/wallet/ethereum';
+import { GAS_LIMIT_MARGIN_DIVISOR } from '@/lib/wallet/send-registry-transaction';
+import { WalletFlowError } from '@/lib/wallet/wallet-errors';
 
-export type LinkStep = 'connect' | 'sign' | 'send' | 'confirm';
-
-/** Monad tính phí theo gas limit, nên chỉ cộng 10% vào số ước lượng thay vì mức dư mặc định. */
-const GAS_LIMIT_MARGIN_DIVISOR = 10n;
+export const LINK_STEPS = ['connect', 'sign', 'send', 'confirm'] as const;
+export type LinkStep = (typeof LINK_STEPS)[number];
 const CONFIRM_POLL_MS = 1500;
 const CONFIRM_TIMEOUT_MS = 120_000;
 

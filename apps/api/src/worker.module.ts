@@ -4,10 +4,11 @@ import { AppConfigModule } from './config/app-config.module.js';
 import { ChainSyncWorkerModule } from './modules/chain-sync/index.js';
 import { HealthModule } from './modules/health/index.js';
 import { IdentityWorkerModule } from './modules/identity/index.js';
+import { OrganizationsWorkerModule } from './modules/organizations/index.js';
 
 /**
  * Module gốc của tiến trình Worker (không mở cổng HTTP).
- * Chốt giao dịch và chiếu event (M2), Indexer quét log (M3) và các job Scheduler đăng ký tại đây.
+ * Indexer, chốt giao dịch, projector của từng module và các job Scheduler đăng ký tại đây.
  */
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { IdentityWorkerModule } from './modules/identity/index.js';
     HealthModule,
     ChainSyncWorkerModule,
     IdentityWorkerModule,
+    OrganizationsWorkerModule,
   ],
 })
 export class WorkerModule {}

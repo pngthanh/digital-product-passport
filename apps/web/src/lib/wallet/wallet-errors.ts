@@ -1,7 +1,7 @@
 import { isError } from 'ethers';
 import { ApiError } from '@/lib/api-error';
 
-/** Lỗi trong luồng liên kết ví mà người dùng tự xử lý được (thiếu MetaMask, thiếu MON…). */
+/** Lỗi trong luồng giao dịch bằng ví mà người dùng tự xử lý được (thiếu MetaMask, thiếu MON…). */
 export class WalletFlowError extends Error {
   constructor(message: string) {
     super(message);
@@ -18,6 +18,16 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
     'Tài khoản đã có ví trên blockchain và đang được đồng bộ. Tải lại trang sau ít phút.',
   StalePreviousWallet: 'Ví hiện tại trên blockchain đã thay đổi. Tải lại trang rồi thử lại.',
   PartyNotRegistered: 'Tài khoản chưa có ví trên blockchain. Hãy liên kết ví trước.',
+  WalletNotLinked: 'Ví này chưa liên kết với tài khoản nào. Liên kết ví ở trang Tài khoản trước.',
+  IncorrectFeeAmount: 'Phí đăng ký vừa được thay đổi. Tải lại trang rồi nộp lại.',
+  RepresentativeHasOrganization: 'Tài khoản đã đại diện cho một doanh nghiệp khác trên blockchain.',
+  NotRepresentative: 'Ví đang chọn không phải ví của người đại diện doanh nghiệp.',
+  InvalidOrganizationStatus:
+    'Trạng thái doanh nghiệp vừa thay đổi. Tải lại trang để xem trạng thái mới.',
+  NothingToRefund: 'Không còn khoản phí nào để rút.',
+  UnknownOrganizationRole: 'Loại doanh nghiệp không hợp lệ.',
+  AccessControlUnauthorizedAccount:
+    'Ví đang chọn không có quyền Admin trên PartyRegistry. Dùng đúng ví đã deploy contract.',
 };
 
 /** Mã lỗi EIP-1193 thường gặp từ MetaMask. */

@@ -160,3 +160,12 @@ export class BlockchainUnavailableError extends DomainError {
     super('Không kết nối được blockchain để kiểm tra ví. Thử lại sau.');
   }
 }
+
+export class AdminRequiredError extends DomainError {
+  readonly code = 'ADMIN_REQUIRED';
+  readonly kind = 'forbidden';
+
+  constructor() {
+    super('Chức năng này chỉ dành cho quản trị viên.');
+  }
+}

@@ -6,11 +6,20 @@ import { getIdentity } from '@/features/auth/get-identity';
 import { SignOutButton } from '@/features/auth/sign-out-button';
 import { serverChainId } from '@/lib/env';
 import { BrandMark } from './brand-mark';
+import { MainNav, type NavItem } from './main-nav';
 
 export async function SiteHeader() {
   const chainId = serverChainId();
   const network = getNetwork(chainId);
   const identity = await getIdentity();
+  const navItems: NavItem[] = identity
+    ? [
+        { href: '/organization', label: 'Doanh nghiệp' },
+        ...(identity.account.systemRole === 'ADMIN'
+          ? [{ href: '/admin' as const, label: 'Quản trị' }]
+          : []),
+      ]
+    : [];
 
   return (
     <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur">
@@ -19,6 +28,7 @@ export async function SiteHeader() {
           <BrandMark className="size-6" />
           <span className="hidden sm:inline">Hộ chiếu số</span>
         </Link>
+        {navItems.length > 0 ? <MainNav items={navItems} /> : null}
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <span className="hidden items-center gap-2 text-sm text-muted lg:inline-flex">
             <span aria-hidden className="size-1.5 rounded-full bg-focus" />

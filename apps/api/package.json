@@ -23,7 +23,9 @@
     "db:validate": "prisma validate",
     "db:deploy:test": "cross-env PRISMA_DATABASE=test prisma migrate deploy",
     "secret:new": "node scripts/generate-secret.mjs jwt",
-    "registrar:new": "node scripts/generate-secret.mjs registrar"
+    "registrar:new": "node scripts/generate-secret.mjs registrar",
+    "admin:grant": "node scripts/grant-admin.mjs grant",
+    "admin:revoke": "node scripts/grant-admin.mjs revoke"
   },
   "dependencies": {
     "@dpp/shared": "workspace:*",
@@ -40,6 +42,7 @@
     "dotenv": "^18.0.9",
     "ethers": "^6.17.0",
     "jose": "^6.2.13",
+    "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.6.7"

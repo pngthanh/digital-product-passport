@@ -1,22 +1,23 @@
 import { Check, LoaderCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import type { LinkStep } from './link-wallet';
 
-const STEP_ORDER: readonly LinkStep[] = ['connect', 'sign', 'send', 'confirm'];
-
-/** Tiến trình 4 bước liên kết ví; bước đang chạy có vòng xoay, bước xong có dấu tích. */
-export function WalletSteps({
+/** Tiến trình nhiều bước (ví dụ ký, gửi giao dịch, chờ xác nhận); bước đang chạy có vòng xoay. */
+export function StepList<Step extends string>({
+  label,
+  steps,
   current,
   labels,
 }: {
-  current: LinkStep | 'done';
-  labels: Readonly<Record<LinkStep, string>>;
+  label: string;
+  steps: readonly Step[];
+  current: Step | 'done';
+  labels: Readonly<Record<Step, string>>;
 }) {
-  const currentIndex = current === 'done' ? STEP_ORDER.length : STEP_ORDER.indexOf(current);
+  const currentIndex = current === 'done' ? steps.length : steps.indexOf(current);
 
   return (
-    <ol className="grid gap-2.5" aria-label="Tiến trình liên kết ví">
-      {STEP_ORDER.map((step, index) => {
+    <ol className="grid gap-2.5" aria-label={label}>
+      {steps.map((step, index) => {
         const state = index < currentIndex ? 'done' : index === currentIndex ? 'active' : 'todo';
         return (
           <li

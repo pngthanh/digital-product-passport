@@ -81,15 +81,28 @@ export interface Fixtures {
   receiverPartyId: string;
 }
 
+/** Tài khoản đại diện cho một tổ chức trong dữ liệu test. */
+export function createRepresentative(prisma: PrismaClient, label: string) {
+  return prisma.user.create({
+    data: {
+      email: `dai-dien-${label}-${randomInt(1_000_000)}@example.vn`,
+      fullName: `Đại diện ${label}`,
+      passwordHash: SAMPLE_ARGON2ID_HASH,
+    },
+  });
+}
+
 /** Dữ liệu nền: một nhà sản xuất, một nhà bán lẻ và hai người dùng cá nhân. */
 export async function seedFixtures(prisma: PrismaClient): Promise<Fixtures> {
   const createOrganizationParty = async (orgType: 'MANUFACTURER' | 'RETAILER', name: string) => {
+    const representative = await createRepresentative(prisma, orgType.toLowerCase());
     const organization = await prisma.organization.create({
       data: {
         name,
         taxCode: randomTaxCode(),
         orgType,
         contactEmail: `${orgType.toLowerCase()}@example.vn`,
+        representativeUserId: representative.id,
       },
     });
     const party = await prisma.party.create({
