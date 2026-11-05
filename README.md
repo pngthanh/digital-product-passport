@@ -78,7 +78,7 @@ Nhà sản xuất gửi hàng, nhà bán lẻ nhận rồi bán cho tài khoản
 - **Đã mua** (`/owned`): người mua xem sản phẩm của mình, bảo hành đến ngày nào, còn bao nhiêu ngày. Hộ chiếu công khai thêm bên đang giữ, bảo hành và hành trình từng bước có txHash, không lộ người mua.
 - **ProductPassport phiên bản 2** (deploy mới) và **WarrantyManager**: mỗi lần chuyển trạng thái phát `ProductStateChanged(trước, sau)`; có sẵn điểm nối qua role cho M7 (tạm dừng bảo hành), M9 (chuyển nhượng), M10 (thu hồi, báo mất) nên các module sau không phải deploy lại ProductPassport.
 - Lệnh `products:reset` dọn sản phẩm test của bản M5, giữ tài khoản, doanh nghiệp và nhật ký.
-- **408 test tự động** (322 unit và contract, 86 e2e). Test e2e phân phối chạy trọn luồng trên Hardhat node: gửi, từ chối, gửi lại, huỷ, nhận, bán cho tài khoản chưa có ví, bảo hành, hành trình 9 bước.
+- **410 test tự động** (324 unit và contract, 86 e2e). Test e2e phân phối chạy trọn luồng trên Hardhat node: gửi, từ chối, gửi lại, huỷ, nhận, bán cho tài khoản chưa có ví, bảo hành, hành trình 9 bước.
 
 ---
 
@@ -415,18 +415,3 @@ Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự đ�
 | Nhập CSV báo thiếu cột                                       | Dùng nút "Tải file mẫu"; dòng đầu là tiêu đề, Excel lưu dạng "CSV UTF-8" để giữ dấu tiếng Việt                                                                                                                                                                                                                                           |
 | Test e2e báo "Chưa biên dịch contract"                       | Chạy `pnpm contracts:compile` (hoặc `pnpm test`) trước `pnpm test:e2e`                                                                                                                                                                                                                                                                   |
 | Windows: lệnh `cp` không có                                  | Dùng `Copy-Item .env.example .env` (PowerShell) hoặc `copy .env.example .env` (cmd)                                                                                                                                                                                                                                                      |
-
-## 10. Đưa lên GitHub
-
-Tạo repo trống trên GitHub (không tick thêm README, .gitignore hay license), rồi chạy ở thư mục gốc:
-
-```bash
-git init -b main
-git check-ignore -v .env   # phải in ra dòng .gitignore chứa .env
-git add .
-git commit -m "feat(m1): foundation monorepo, 22-table schema, health API, Hardhat Monad config"
-git remote add origin <url-repo-cua-nhom>
-git push -u origin main
-```
-
-`.gitignore` đã loại `node_modules`, kết quả build, Prisma Client sinh ra và file `.env`. `.gitattributes` giữ xuống dòng kiểu LF trên mọi máy để `pnpm format:check` không báo lỗi trên Windows. CI trên GitHub Actions chạy đủ lint, typecheck, test, test e2e trên PostgreSQL và build ở mỗi lần push.
