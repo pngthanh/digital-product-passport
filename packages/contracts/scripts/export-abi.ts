@@ -7,6 +7,11 @@ import { writeFile } from 'node:fs/promises';
  * Chạy: pnpm --filter @dpp/contracts abi:export
  */
 const EXPORTS = [
+  {
+    contract: 'InspectionRegistry',
+    constant: 'INSPECTION_REGISTRY_ABI',
+    file: 'inspection-registry.abi.ts',
+  },
   { contract: 'PartyRegistry', constant: 'PARTY_REGISTRY_ABI', file: 'party-registry.abi.ts' },
   {
     contract: 'ProductPassport',

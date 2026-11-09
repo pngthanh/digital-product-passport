@@ -1,4 +1,5 @@
 import {
+  INSPECTION_REGISTRY_ABI,
   PARTY_REGISTRY_ABI,
   PRODUCT_PASSPORT_ABI,
   SERVICE_TICKET_MANAGER_ABI,
@@ -21,6 +22,11 @@ describe('ABI trong @dpp/shared khớp contract đã biên dịch', () => {
   it('ServiceTicketManager', async () => {
     const { abi } = await artifacts.readArtifact('ServiceTicketManager');
     expect(SERVICE_TICKET_MANAGER_ABI).to.deep.equal(abi);
+  });
+
+  it('InspectionRegistry', async () => {
+    const { abi } = await artifacts.readArtifact('InspectionRegistry');
+    expect(INSPECTION_REGISTRY_ABI).to.deep.equal(abi);
   });
 
   it('WarrantyManager', async () => {
