@@ -14,8 +14,8 @@ export async function SiteHeader() {
   const chainId = serverChainId();
   const network = getNetwork(chainId);
   const identity = await getIdentity();
-  // Menu theo vai trò: nhà sản xuất có Sản phẩm, nhà bán lẻ có Kho hàng; người không đại diện tổ
-  // chức nào (hoặc đã mua hàng) có Đã mua.
+  // Menu theo vai trò: nhà sản xuất có Sản phẩm, nhà bán lẻ có Kho hàng, trung tâm bảo hành có Bảo
+  // hành, đơn vị kiểm định có Kiểm định; người không đại diện tổ chức nào (hoặc đã mua hàng) có Đã mua.
   const workspace = identity ? await serverGet('/me/workspace', workspaceSchema) : null;
   const orgType = workspace?.organization?.orgType;
   const showOwned = !!workspace && (workspace.ownedProducts > 0 || !workspace.organization);
@@ -27,6 +27,12 @@ export async function SiteHeader() {
             ? [{ href: '/products' as const, label: 'Sản phẩm' }]
             : []),
           ...(orgType === 'RETAILER' ? [{ href: '/inventory' as const, label: 'Kho hàng' }] : []),
+          ...(orgType === 'SERVICE_CENTER'
+            ? [{ href: '/service' as const, label: 'Bảo hành' }]
+            : []),
+          ...(orgType === 'INSPECTOR'
+            ? [{ href: '/inspection' as const, label: 'Kiểm định' }]
+            : []),
           ...(showOwned ? [{ href: '/owned' as const, label: 'Đã mua' }] : []),
           { href: '/organization' as const, label: 'Doanh nghiệp' },
           ...(identity.account.systemRole === 'ADMIN'

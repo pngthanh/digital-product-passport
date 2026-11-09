@@ -1,5 +1,8 @@
 import type {
   FeeStatus,
+  InspectionRequestState,
+  InspectionResult,
+  ServiceActionCode,
   OrganizationStage,
   OrgType,
   ProductState,
@@ -39,6 +42,29 @@ export const SERVICE_STATE_LABELS: Record<ServiceState, StateLabel> = {
   REPAIRED: { label: 'Đã sửa xong', tone: 'ok' },
   REJECTED: { label: 'Không sửa được', tone: 'bad' },
   CANCELLED: { label: 'Đã huỷ', tone: 'neutral' },
+};
+
+/** Việc trung tâm bảo hành đã làm (service_records.action_code). */
+export const SERVICE_ACTION_LABELS: Record<ServiceActionCode, string> = {
+  REPAIR: 'Sửa chữa',
+  REPLACE_PART: 'Thay linh kiện',
+  SOFTWARE_UPDATE: 'Cập nhật phần mềm',
+  CLEANING: 'Vệ sinh, bảo dưỡng',
+  INSPECTION_ONLY: 'Chỉ kiểm tra',
+  OTHER: 'Khác',
+};
+
+export const INSPECTION_REQUEST_STATE_LABELS: Record<InspectionRequestState, StateLabel> = {
+  REQUESTED: { label: 'Chờ kiểm định', tone: 'ocean' },
+  COMPLETED: { label: 'Đã có kết quả', tone: 'ok' },
+  DECLINED: { label: 'Bị từ chối', tone: 'bad' },
+  CANCELLED: { label: 'Đã huỷ', tone: 'neutral' },
+};
+
+export const INSPECTION_RESULT_LABELS: Record<InspectionResult, StateLabel> = {
+  PASS: { label: 'Đạt', tone: 'ok' },
+  CONDITIONAL: { label: 'Đạt có điều kiện', tone: 'warn' },
+  FAIL: { label: 'Không đạt', tone: 'bad' },
 };
 
 export const TRANSFER_STATE_LABELS: Record<TransferState, StateLabel> = {

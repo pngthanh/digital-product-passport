@@ -8,6 +8,8 @@ import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
 import { ChainLog } from '@/features/chain-log/chain-log';
 import { DispatchPanel } from '@/features/distribution/dispatch-panel';
+import { productInspectionSchema } from '@/features/inspection/inspection.schema';
+import { InspectionRequesterPanel } from '@/features/inspection/requester-panel';
 import { PassportHistory } from '@/features/passport/passport-history';
 import { ProofList } from '@/features/passport/proof-list';
 import { DraftActions } from '@/features/products/draft-actions';
@@ -65,6 +67,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       ? ((await serverGet('/me/retailers', retailerOptionsSchema)) ?? [])
       : [];
   const location = locationText(product);
+  const inspection = registered
+    ? await serverGet(`/me/products/${id}/inspection`, productInspectionSchema)
+    : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -128,6 +133,24 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             </Panel>
           ) : null}
 
+          {inspection ? (
+            <Panel className="px-5 py-5" aria-labelledby="kiem-dinh">
+              <h2 id="kiem-dinh" className="font-semibold">
+                Kiểm định
+              </h2>
+              <p className="mt-1 mb-4 text-sm text-muted">
+                Gửi yêu cầu tới đơn vị kiểm định đã được duyệt, ở mọi giai đoạn trước và sau khi
+                bán. Kết quả và hash biên bản được ghi lên blockchain, hiện công khai trên hộ chiếu.
+              </p>
+              <InspectionRequesterPanel
+                scope="products"
+                productId={product.id}
+                inspection={inspection}
+                chainId={chainId}
+              />
+            </Panel>
+          ) : null}
+
           {registered ? (
             <Panel className="py-1" aria-labelledby="hanh-trinh">
               <h2 id="hanh-trinh" className="sr-only">
@@ -158,7 +181,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 Lịch sử on-chain
               </h2>
               <p className="mt-1 mb-4 text-sm text-muted">
-                Event đã chốt của sản phẩm trên ProductPassport và WarrantyManager.
+                Event đã chốt của sản phẩm: phát hành, phân phối, bảo hành, sửa chữa và kiểm định.
               </p>
               <ChainLog events={product.history} chainId={chainId} />
             </Panel>

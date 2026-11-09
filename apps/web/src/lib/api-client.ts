@@ -9,12 +9,14 @@ async function send(
   method: 'GET' | 'POST' | 'DELETE',
   body: unknown,
 ): Promise<Response> {
+  const form = body instanceof FormData;
   try {
     return await fetch(`${BROWSER_API_BASE}${path}`, {
       method,
       credentials: 'same-origin',
-      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      // FormData: trình duyệt tự đặt multipart/form-data kèm boundary.
+      headers: body === undefined || form ? undefined : { 'content-type': 'application/json' },
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     });
   } catch {
     throw networkError();
@@ -32,6 +34,7 @@ async function readJson(response: Response): Promise<unknown> {
 export async function apiRequest<T>(
   path: ApiPath,
   schema: ZodType<T>,
+  /** `body` là FormData thì gửi multipart (tải file), còn lại gửi JSON. */
   options: { method?: 'GET' | 'POST'; body?: unknown } = {},
 ): Promise<T> {
   const response = await send(path, options.method ?? 'GET', options.body);

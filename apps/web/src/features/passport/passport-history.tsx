@@ -4,9 +4,10 @@ import type { JourneyStep, JourneyStepKind } from '@dpp/shared';
 import { ChainLink } from '@/components/ui/chain-link';
 import { Tabs } from '@/components/ui/tabs';
 import { formatDate, formatTime } from '@/lib/format';
+import { INSPECTION_RESULT_LABELS } from '@/lib/state-labels';
 import { partyText } from '../products/product-status';
 
-type Category = 'distribution' | 'service' | 'ownership';
+type Category = 'distribution' | 'service' | 'inspection' | 'ownership';
 type TabId = 'all' | Category;
 
 /** Tiêu đề, mô tả và nhóm của từng bước; lần bán đầu thuộc cả Phân phối lẫn Chuyển nhượng. */
@@ -56,12 +57,37 @@ const STEPS: Readonly<
     categories: ['service'],
     describe: (step) => `${partyText(step.from)} kích hoạt khi bán`,
   },
+  SERVICE_OPENED: {
+    title: 'Tiếp nhận sửa chữa',
+    categories: ['service'],
+    describe: (step) =>
+      step.warrantyCovered
+        ? `${partyText(step.from)} mở phiếu, bảo hành tạm dừng trong lúc sửa`
+        : `${partyText(step.from)} mở phiếu, sửa ngoài bảo hành`,
+  },
+  SERVICE_REPAIRED: {
+    title: 'Sửa xong',
+    categories: ['service'],
+    describe: (step) => `${partyText(step.from)} đóng phiếu, biên bản đã ghi hash`,
+  },
+  SERVICE_REJECTED: {
+    title: 'Không sửa được',
+    categories: ['service'],
+    describe: (step) => `${partyText(step.from)} đóng phiếu, biên bản đã ghi hash`,
+  },
+  INSPECTED: {
+    title: 'Kiểm định',
+    categories: ['inspection'],
+    describe: (step) =>
+      `${partyText(step.from)}: ${step.inspectionResult ? INSPECTION_RESULT_LABELS[step.inspectionResult].label : 'đã ghi kết quả'}, biên bản đã ghi hash`,
+  },
 };
 
 const TABS: readonly { id: TabId; label: string; empty: string }[] = [
   { id: 'all', label: 'Tất cả', empty: 'Chưa có sự kiện nào được ghi nhận.' },
   { id: 'distribution', label: 'Phân phối', empty: 'Chưa có lần phát hành hay bàn giao nào.' },
   { id: 'service', label: 'Bảo hành', empty: 'Chưa có lần kích hoạt bảo hành hay sửa chữa nào.' },
+  { id: 'inspection', label: 'Kiểm định', empty: 'Chưa có kết quả kiểm định nào.' },
   { id: 'ownership', label: 'Chuyển nhượng', empty: 'Chưa có lần đổi chủ nào.' },
 ];
 
@@ -70,7 +96,8 @@ function stepsOf(steps: readonly JourneyStep[], tab: TabId) {
 }
 
 /**
- * Hành trình đã ghi trên blockchain (mới nhất trước), chia tab Phân phối, Bảo hành, Chuyển nhượng;
+ * Hành trình đã ghi trên blockchain (mới nhất trước), chia tab Phân phối, Bảo hành, Kiểm định,
+ * Chuyển nhượng;
  * mỗi bước mở được giao dịch trên explorer. Người mua không hiện tên.
  */
 export function PassportHistory({

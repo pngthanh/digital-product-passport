@@ -7,10 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { ButtonLink } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
+import { productInspectionSchema } from '@/features/inspection/inspection.schema';
+import { InspectionRequesterPanel } from '@/features/inspection/requester-panel';
 import { PassportHistory } from '@/features/passport/passport-history';
 import { ProofList } from '@/features/passport/proof-list';
 import { ownedProductDetailSchema } from '@/features/products/product.schema';
 import { productStatusLabel, warrantyLabel } from '@/features/products/product-status';
+import { OwnerServicePanel } from '@/features/service/owner-service-panel';
+import { ownedProductServiceSchema } from '@/features/service/service.schema';
 import { WarrantySummary } from '@/features/warranty/warranty-summary';
 import { serverChainId } from '@/lib/env';
 import { formatDate } from '@/lib/format';
@@ -29,7 +33,10 @@ function Item({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Chi tiết sản phẩm người dùng đang sở hữu: bảo hành, hành trình và bằng chứng on-chain. */
+/**
+ * Chi tiết sản phẩm người dùng đang sở hữu: bảo hành, yêu cầu bảo hành và sửa chữa (M7), hành trình
+ * và bằng chứng on-chain.
+ */
 export default async function OwnedProductPage({ params }: { params: Promise<{ id: string }> }) {
   const identity = await getIdentity();
   if (!identity) {
@@ -39,7 +46,11 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
   if (!UUID_PATTERN.test(id)) {
     notFound();
   }
-  const product = await serverGet(`/me/owned-products/${id}`, ownedProductDetailSchema);
+  const [product, service, inspection] = await Promise.all([
+    serverGet(`/me/owned-products/${id}`, ownedProductDetailSchema),
+    serverGet(`/me/owned-products/${id}/service`, ownedProductServiceSchema),
+    serverGet(`/me/owned-products/${id}/inspection`, productInspectionSchema),
+  ]);
   if (!product) {
     notFound();
   }
@@ -82,6 +93,39 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
                 <Item label="Mô tả">{product.description ?? 'Không có'}</Item>
               </div>
             </dl>
+          </Panel>
+          <Panel className="px-5 py-5" aria-labelledby="sua-chua">
+            <h2 id="sua-chua" className="font-semibold">
+              Bảo hành và sửa chữa
+            </h2>
+            <p className="mt-1 mb-4 text-sm text-muted">
+              Gửi yêu cầu tới trung tâm bảo hành đã được duyệt. Biên bản sửa chữa được ghi hash lên
+              blockchain để ai cũng kiểm chứng được.
+            </p>
+            {service ? (
+              <OwnerServicePanel productId={product.id} service={service} chainId={chainId} />
+            ) : (
+              <p className="text-sm text-bad">Không tải được phần bảo hành từ API.</p>
+            )}
+          </Panel>
+          <Panel className="px-5 py-5" aria-labelledby="kiem-dinh">
+            <h2 id="kiem-dinh" className="font-semibold">
+              Kiểm định
+            </h2>
+            <p className="mt-1 mb-4 text-sm text-muted">
+              Gửi yêu cầu tới đơn vị kiểm định đã được duyệt. Kết quả và hash biên bản được ghi lên
+              blockchain, hiện công khai trên hộ chiếu.
+            </p>
+            {inspection ? (
+              <InspectionRequesterPanel
+                scope="owned-products"
+                productId={product.id}
+                inspection={inspection}
+                chainId={chainId}
+              />
+            ) : (
+              <p className="text-sm text-bad">Không tải được phần kiểm định từ API.</p>
+            )}
           </Panel>
           <Panel className="py-1" aria-labelledby="hanh-trinh">
             <h2 id="hanh-trinh" className="sr-only">

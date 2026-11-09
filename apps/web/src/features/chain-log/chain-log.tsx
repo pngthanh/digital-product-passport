@@ -23,6 +23,9 @@ const EVENT_LABELS: Record<string, string> = {
   WarrantyActivated: 'Kích hoạt bảo hành',
   WarrantySuspended: 'Tạm dừng bảo hành',
   WarrantyResumed: 'Tiếp tục bảo hành',
+  ServiceTicketOpened: 'Mở phiếu sửa chữa',
+  ServiceTicketClosed: 'Đóng phiếu sửa chữa',
+  InspectionRecorded: 'Ghi kết quả kiểm định',
 };
 
 function stateName(value: string | number | boolean | undefined): string {

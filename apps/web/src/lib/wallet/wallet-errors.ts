@@ -1,4 +1,4 @@
-import { isError } from 'ethers';
+import { type Interface, isCallException, isError } from 'ethers';
 import { ApiError } from '@/lib/api-error';
 
 /** Lỗi trong luồng giao dịch bằng ví mà người dùng tự xử lý được (thiếu MetaMask, thiếu MON…). */
@@ -9,7 +9,10 @@ export class WalletFlowError extends Error {
   }
 }
 
-/** Thông báo cho custom error của PartyRegistry, ProductPassport (khi ước lượng gas hoặc bị revert). */
+/**
+ * Thông báo cho custom error của PartyRegistry, ProductPassport, ServiceTicketManager,
+ * InspectionRegistry (khi ước lượng gas hoặc bị revert).
+ */
 const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   WalletAlreadyUsed: 'Ví này đã từng được liên kết trong hệ thống. Hãy chọn ví khác.',
   AuthorizationExpired: 'Giấy phép đã hết hạn. Bấm làm lại để nhận giấy phép mới.',
@@ -46,6 +49,25 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   NotAuthorizedRetailer:
     'Ví đang chọn không đại diện nhà bán lẻ đã được duyệt. Kiểm tra ví MetaMask và trạng thái doanh nghiệp.',
   InvalidBuyer: 'Không bán được cho tài khoản này. Kiểm tra lại email người mua.',
+  NotAuthorizedServiceCenter:
+    'Ví đang chọn không đại diện trung tâm bảo hành đã được duyệt. Kiểm tra ví MetaMask và trạng thái doanh nghiệp.',
+  TicketAlreadyExists:
+    'Phiếu này đã được mở trên blockchain, hệ thống đang đồng bộ. Tải lại trang.',
+  ProductHasOpenTicket: 'Sản phẩm đang có một phiếu sửa chữa chưa đóng. Tải lại trang.',
+  ProductNotOwned: 'Sản phẩm không còn ở trạng thái đã có chủ nên không mở phiếu được.',
+  RequesterNotOwner:
+    'Người gửi yêu cầu không còn là chủ sở hữu sản phẩm (đã chuyển nhượng). Tải lại trang.',
+  TicketNotOpen: 'Phiếu chưa mở hoặc đã đóng. Tải lại trang để xem trạng thái mới.',
+  NotTicketServiceCenter: 'Phiếu này do trung tâm bảo hành khác mở.',
+  NotAuthorizedInspector:
+    'Ví đang chọn không đại diện đơn vị kiểm định đã được duyệt. Kiểm tra ví MetaMask và trạng thái doanh nghiệp.',
+  InspectionAlreadyRecorded:
+    'Kết quả kiểm định này đã được ghi trên blockchain, hệ thống đang đồng bộ. Tải lại trang.',
+  InvalidInspectionResult: 'Kết quả kiểm định không hợp lệ. Chọn lại kết quả.',
+  ProductNotInspectable:
+    'Sản phẩm đã thu hồi, báo mất hoặc ngừng sử dụng nên không kiểm định được.',
+  RequesterNotAllowed:
+    'Người gửi không còn quyền yêu cầu kiểm định sản phẩm này (đã đổi chủ). Tải lại trang.',
 };
 
 /** Mã lỗi EIP-1193 thường gặp từ MetaMask. */
@@ -64,6 +86,21 @@ function providerCode(error: unknown): number | null {
     : null;
 }
 
+/**
+ * ethers chỉ giải mã custom error khi gọi staticCall, còn estimateGas thì để `revert = null`.
+ * Giải mã lại bằng ABI của contract để describeWalletError hiện đúng lý do.
+ */
+export function withRevertReason(error: unknown, contractInterface: Interface): unknown {
+  if (!isCallException(error) || error.revert !== null || !error.data) {
+    return error;
+  }
+  try {
+    return contractInterface.makeError(error.data, error.transaction);
+  } catch {
+    return error;
+  }
+}
+
 /** Chuyển mọi lỗi của MetaMask, ethers và API thành một câu tiếng Việt dễ hiểu. */
 export function describeWalletError(error: unknown): string {
   if (error instanceof WalletFlowError || error instanceof ApiError) {
@@ -77,10 +114,13 @@ export function describeWalletError(error: unknown): string {
   }
   if (isError(error, 'CALL_EXCEPTION')) {
     const reason = error.revert?.name;
-    return (
-      (reason && REVERT_MESSAGES[reason]) ??
-      'Contract từ chối giao dịch. Bắt đầu lại để thử lần nữa.'
-    );
+    if (reason) {
+      return (
+        REVERT_MESSAGES[reason] ??
+        `Contract từ chối giao dịch (${reason}). Bắt đầu lại để thử lần nữa.`
+      );
+    }
+    return 'Contract từ chối giao dịch. Bắt đầu lại để thử lần nữa.';
   }
   const code = providerCode(error);
   if (code !== null && PROVIDER_MESSAGES[code]) {

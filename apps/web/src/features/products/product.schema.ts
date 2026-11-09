@@ -1,5 +1,6 @@
 import {
   AuthStatus,
+  InspectionResult,
   type InventoryDetail,
   type InventoryItem,
   JOURNEY_STEP_KINDS,
@@ -46,7 +47,7 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const publicCode = z.string().regex(PUBLIC_CODE_PATTERN);
 const contractSchema = z.object({ chainId: z.number().int().positive(), address });
 
-const organizationLabelSchema: z.ZodType<OrganizationLabel> = z.object({
+export const organizationLabelSchema: z.ZodType<OrganizationLabel> = z.object({
   organizationId: z.uuid(),
   name: z.string(),
   partyId: bytes32,
@@ -92,6 +93,8 @@ const journeyStepSchema: z.ZodType<JourneyStep> = z.object({
   txHash: bytes32,
   from: partyLabelSchema.nullable(),
   to: partyLabelSchema.nullable(),
+  warrantyCovered: z.boolean().optional(),
+  inspectionResult: z.enum(Object.values(InspectionResult)).optional(),
 });
 
 const proofSchema: z.ZodType<ProductProof> = z.object({
@@ -136,7 +139,7 @@ const detailShape = {
 
 export const productDetailSchema: z.ZodType<ProductDetail> = z.object(detailShape);
 
-const organizationInfoSchema = z.object({
+export const organizationInfoSchema = z.object({
   organizationId: z.uuid(),
   name: z.string(),
   partyId: bytes32,
