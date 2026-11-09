@@ -1,4 +1,11 @@
-import { AuthStatus, ProductState, ServiceState, TransferState, WarrantyState } from './enums.js';
+import {
+  AuthStatus,
+  InspectionRequestState,
+  ProductState,
+  ServiceState,
+  TransferState,
+  WarrantyState,
+} from './enums.js';
 
 /** Bảng chuyển trạng thái: khoá là trạng thái hiện tại, giá trị là các trạng thái kế tiếp hợp lệ. */
 export type TransitionTable<S extends string> = Readonly<Record<S, readonly S[]>>;
@@ -36,6 +43,21 @@ export const SERVICE_STATE_TRANSITIONS: TransitionTable<ServiceState> = {
   [ServiceState.REPAIRED]: [],
   [ServiceState.REJECTED]: [],
   [ServiceState.CANCELLED]: [],
+};
+
+/**
+ * Yêu cầu kiểm định (M8). COMPLETED khi InspectionRegistry ghi kết quả; DECLINED (đơn vị kiểm định
+ * từ chối) và CANCELLED (người gửi huỷ) chỉ có off-chain.
+ */
+export const INSPECTION_REQUEST_STATE_TRANSITIONS: TransitionTable<InspectionRequestState> = {
+  [InspectionRequestState.REQUESTED]: [
+    InspectionRequestState.COMPLETED,
+    InspectionRequestState.DECLINED,
+    InspectionRequestState.CANCELLED,
+  ],
+  [InspectionRequestState.COMPLETED]: [],
+  [InspectionRequestState.DECLINED]: [],
+  [InspectionRequestState.CANCELLED]: [],
 };
 
 /** Transfer State của một yêu cầu chuyển quyền. acceptTransfer là giao dịch nguyên tử. */

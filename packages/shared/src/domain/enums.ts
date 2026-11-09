@@ -76,6 +76,15 @@ export type TransferState = EnumValue<typeof TransferState>;
 export const InspectionResult = defineEnum(['PASS', 'FAIL', 'CONDITIONAL']);
 export type InspectionResult = EnumValue<typeof InspectionResult>;
 
+/** Yêu cầu kiểm định (M8): chỉ COMPLETED được chiếu từ event, còn lại off-chain. */
+export const InspectionRequestState = defineEnum([
+  'REQUESTED',
+  'COMPLETED',
+  'DECLINED',
+  'CANCELLED',
+]);
+export type InspectionRequestState = EnumValue<typeof InspectionRequestState>;
+
 // --- Đồng bộ on-chain ---
 /** Trạng thái xác nhận của bản ghi [A+P] do Backend tạo trước khi giao dịch được ghi nhận. */
 export const SyncStatus = defineEnum(['PENDING', 'CONFIRMED', 'FAILED']);
@@ -117,6 +126,7 @@ export const DOMAIN_ENUMS = {
   ServiceState,
   TransferState,
   InspectionResult,
+  InspectionRequestState,
   SyncStatus,
   TxStatus,
   FinalityStatus,

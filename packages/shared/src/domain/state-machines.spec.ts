@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { enumValues } from './define-enum.js';
-import { ProductState, ServiceState, TransferState, WarrantyState } from './enums.js';
+import {
+  InspectionRequestState,
+  ProductState,
+  ServiceState,
+  TransferState,
+  WarrantyState,
+} from './enums.js';
 import {
   canTransition,
+  INSPECTION_REQUEST_STATE_TRANSITIONS,
   isTerminalState,
   PRODUCT_STATE_TRANSITIONS,
   SERVICE_STATE_TRANSITIONS,
@@ -24,6 +31,9 @@ describe('4 state machine độc lập', () => {
     expect(Object.keys(TRANSFER_STATE_TRANSITIONS).toSorted()).toEqual(
       enumValues(TransferState).toSorted(),
     );
+    expect(Object.keys(INSPECTION_REQUEST_STATE_TRANSITIONS).toSorted()).toEqual(
+      enumValues(InspectionRequestState).toSorted(),
+    );
   });
 
   it('bàn giao custody không nhảy thẳng tới SOLD', () => {
@@ -42,5 +52,12 @@ describe('4 state machine độc lập', () => {
   it('phiếu dịch vụ đã đóng không mở lại được', () => {
     expect(isTerminalState(SERVICE_STATE_TRANSITIONS, 'REPAIRED')).toBe(true);
     expect(canTransition(SERVICE_STATE_TRANSITIONS, 'REJECTED', 'IN_REPAIR')).toBe(false);
+  });
+
+  it('chỉ yêu cầu kiểm định đang chờ mới đổi được trạng thái', () => {
+    const openStates = enumValues(InspectionRequestState).filter(
+      (state) => !isTerminalState(INSPECTION_REQUEST_STATE_TRANSITIONS, state),
+    );
+    expect(openStates).toEqual(['REQUESTED']);
   });
 });

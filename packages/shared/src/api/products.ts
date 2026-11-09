@@ -5,6 +5,7 @@
 import type { ProductPassportMethod } from '../chain/product-passport.js';
 import type {
   AuthStatus,
+  InspectionResult,
   OrgType,
   ProductState,
   SyncStatus,
@@ -145,6 +146,10 @@ export const JOURNEY_STEP_KINDS = [
   'SOLD',
   'OWNERSHIP_TRANSFERRED',
   'WARRANTY_ACTIVATED',
+  'SERVICE_OPENED',
+  'SERVICE_REPAIRED',
+  'SERVICE_REJECTED',
+  'INSPECTED',
 ] as const;
 export type JourneyStepKind = (typeof JOURNEY_STEP_KINDS)[number];
 
@@ -155,6 +160,10 @@ export interface JourneyStep {
   txHash: string;
   from: PartyLabel | null;
   to: PartyLabel | null;
+  /** (M7) SERVICE_OPENED: còn bảo hành lúc mở phiếu; `false` là sửa ngoài bảo hành. */
+  warrantyCovered?: boolean;
+  /** (M8) INSPECTED: kết quả kiểm định. */
+  inspectionResult?: InspectionResult;
 }
 
 /** `GET /me/products/:id`. */
