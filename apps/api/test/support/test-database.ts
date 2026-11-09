@@ -18,6 +18,7 @@ const ALL_TABLES = [
   'warranties',
   'service_requests',
   'service_records',
+  'inspection_requests',
   'inspections',
   'recalls',
   'transfer_requests',

@@ -7,8 +7,10 @@ import { AppConfigService } from '../../src/config/app-config.service.js';
 import { ChainProviderService } from '../../src/infrastructure/blockchain/chain-provider.service.js';
 import { ChainSyncWorkerModule } from '../../src/modules/chain-sync/index.js';
 import { IdentityWorkerModule } from '../../src/modules/identity/index.js';
+import { InspectionWorkerModule } from '../../src/modules/inspection/index.js';
 import { OrganizationsWorkerModule } from '../../src/modules/organizations/index.js';
 import { ProductsWorkerModule } from '../../src/modules/products/index.js';
+import { ServiceWorkerModule } from '../../src/modules/service/index.js';
 
 /** RPC "ngoại tuyến": khớp chain ID khi khởi động, mọi lời gọi khác đều lỗi. */
 export function offlineChain(chainId: number) {
@@ -66,6 +68,8 @@ export async function createWorkerContext(config: AppConfigService): Promise<Tes
       IdentityWorkerModule,
       OrganizationsWorkerModule,
       ProductsWorkerModule,
+      ServiceWorkerModule,
+      InspectionWorkerModule,
     ],
   })
     .overrideProvider(AppConfigService)

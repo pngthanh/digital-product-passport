@@ -15,6 +15,7 @@ import {
 } from './application/owned-product-queries.js';
 import { PartyLabels } from './application/party-labels.js';
 import { PrepareProductSale } from './application/prepare-product-sale.use-case.js';
+import { ProductDirectory } from './application/product-directory.service.js';
 import { ProductAuthorizer } from './application/product-authorizer.service.js';
 import {
   GetMyProduct,
@@ -38,6 +39,7 @@ import { PublicProductsController } from './presentation/public-products.control
 /**
  * Products (tiến trình API). M5: PRD-01..03 đăng ký sản phẩm, mã QR, tra cứu công khai.
  * M6: DST-01..03 gửi hàng, nhận hàng, bán và kích hoạt bảo hành; sản phẩm của người mua.
+ * M7: ProductDirectory cho module service đọc sản phẩm và bảo hành.
  */
 @Module({
   imports: [
@@ -76,6 +78,8 @@ import { PublicProductsController } from './presentation/public-products.control
     ListOwnedProducts,
     GetOwnedProduct,
     GetWorkspace,
+    ProductDirectory,
   ],
+  exports: [ProductDirectory],
 })
 export class ProductsModule {}

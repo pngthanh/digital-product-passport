@@ -157,6 +157,15 @@ enum InspectionResult {
   @@map("inspection_result")
 }
 
+enum InspectionRequestState {
+  REQUESTED
+  COMPLETED
+  DECLINED
+  CANCELLED
+
+  @@map("inspection_request_state")
+}
+
 enum SyncStatus {
   PENDING
   CONFIRMED
@@ -269,13 +278,14 @@ model Organization {
   updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt            DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  representative  User                      @relation(fields: [representativeUserId], references: [id], onDelete: Restrict)
-  party           Party?
-  applications    OrganizationApplication[]
-  issuedProducts  Product[]                 @relation("ProductIssuer")
-  serviceRequests ServiceRequest[]          @relation("ServiceCenter")
-  inspections     Inspection[]              @relation("Inspector")
-  recalls         Recall[]                  @relation("RecallIssuer")
+  representative     User                      @relation(fields: [representativeUserId], references: [id], onDelete: Restrict)
+  party              Party?
+  applications       OrganizationApplication[]
+  issuedProducts     Product[]                 @relation("ProductIssuer")
+  serviceRequests    ServiceRequest[]          @relation("ServiceCenter")
+  inspections        Inspection[]              @relation("Inspector")
+  inspectionRequests InspectionRequest[]       @relation("InspectionRequestInspector")
+  recalls            Recall[]                  @relation("RecallIssuer")
 
   @@index([orgType, authStatus])
   @@map("organizations")
@@ -338,17 +348,18 @@ model Party {
 
   wallets                 PartyWallet[]
   feePayments             FeePayment[]
-  custodiedProducts       Product[]         @relation("ProductCustodian")
-  incomingCustodyProducts Product[]         @relation("ProductPendingCustodian")
-  ownedProducts           Product[]         @relation("ProductOwner")
-  custodyFrom             CustodyRecord[]   @relation("CustodyFrom")
-  custodyTo               CustodyRecord[]   @relation("CustodyTo")
-  ownershipFrom           OwnershipRecord[] @relation("OwnershipFrom")
-  ownershipTo             OwnershipRecord[] @relation("OwnershipTo")
-  activatedWarranties     Warranty[]        @relation("WarrantyActivator")
-  serviceRequests         ServiceRequest[]  @relation("ServiceRequester")
-  outgoingTransfers       TransferRequest[] @relation("TransferFrom")
-  incomingTransfers       TransferRequest[] @relation("TransferTo")
+  custodiedProducts       Product[]           @relation("ProductCustodian")
+  incomingCustodyProducts Product[]           @relation("ProductPendingCustodian")
+  ownedProducts           Product[]           @relation("ProductOwner")
+  custodyFrom             CustodyRecord[]     @relation("CustodyFrom")
+  custodyTo               CustodyRecord[]     @relation("CustodyTo")
+  ownershipFrom           OwnershipRecord[]   @relation("OwnershipFrom")
+  ownershipTo             OwnershipRecord[]   @relation("OwnershipTo")
+  activatedWarranties     Warranty[]          @relation("WarrantyActivator")
+  serviceRequests         ServiceRequest[]    @relation("ServiceRequester")
+  inspectionRequests      InspectionRequest[] @relation("InspectionRequester")
+  outgoingTransfers       TransferRequest[]   @relation("TransferFrom")
+  incomingTransfers       TransferRequest[]   @relation("TransferTo")
   notifications           Notification[]
   anomalyAlerts           AnomalyAlert[]
 
@@ -458,15 +469,16 @@ model Product {
   pendingCustodian Party?       @relation("ProductPendingCustodian", fields: [pendingCustodianPartyId], references: [id], onDelete: Restrict)
   currentOwner     Party?       @relation("ProductOwner", fields: [currentOwnerPartyId], references: [id], onDelete: Restrict)
 
-  custodyRecords   CustodyRecord[]
-  ownershipRecords OwnershipRecord[]
-  warranty         Warranty?
-  serviceRequests  ServiceRequest[]
-  inspections      Inspection[]
-  recall           Recall?
-  transferRequests TransferRequest[]
-  events           BlockchainEvent[]
-  anomalyAlerts    AnomalyAlert[]
+  custodyRecords     CustodyRecord[]
+  ownershipRecords   OwnershipRecord[]
+  warranty           Warranty?
+  serviceRequests    ServiceRequest[]
+  inspectionRequests InspectionRequest[]
+  inspections        Inspection[]
+  recall             Recall?
+  transferRequests   TransferRequest[]
+  events             BlockchainEvent[]
+  anomalyAlerts      AnomalyAlert[]
 
   @@unique([issuerOrgId, serialNumber])
   @@index([issuerOrgId, createdAt])
@@ -595,13 +607,45 @@ model ServiceRecord {
   @@map("service_records")
 }
 
-/// [A+P] Kết quả kiểm định. Cột [P]: chainInspectionId, inspectedAt, txHash, syncStatus.
+/// [A] Yêu cầu kiểm định (M8) của nhà sản xuất hoặc chủ sở hữu gửi tới đơn vị kiểm định. COMPLETED
+/// chiếu từ event InspectionRecorded; DECLINED, CANCELLED chỉ có off-chain.
+model InspectionRequest {
+  id                 String                 @id @default(uuid(7)) @db.Uuid
+  productId          String                 @map("product_id") @db.Uuid
+  /// Party của nhà sản xuất (dùng chung UUID với organizations) hoặc của chủ sở hữu.
+  requestedByPartyId String                 @map("requested_by_party_id") @db.Uuid
+  inspectorOrgId     String                 @map("inspector_org_id") @db.Uuid
+  note               String
+  requestState       InspectionRequestState @default(REQUESTED) @map("request_state")
+  requestedAt        DateTime               @default(now()) @map("requested_at") @db.Timestamptz(6)
+  /// Lúc có kết quả, bị từ chối hoặc bị huỷ.
+  closedAt           DateTime?              @map("closed_at") @db.Timestamptz(6)
+  declineReason      String?                @map("decline_reason") @db.VarChar(500)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  requestedBy Party        @relation("InspectionRequester", fields: [requestedByPartyId], references: [id], onDelete: Restrict)
+  inspector   Organization @relation("InspectionRequestInspector", fields: [inspectorOrgId], references: [id], onDelete: Restrict)
+  inspections Inspection[]
+
+  @@unique([productId], map: "ux_inspection_one_pending", where: raw("request_state = 'REQUESTED'::inspection_request_state"))
+  @@index([inspectorOrgId, requestState])
+  @@index([requestedByPartyId])
+  @@index([productId, requestedAt])
+  @@map("inspection_requests")
+}
+
+/// [A+P] Biên bản kiểm định: PENDING khi đơn vị kiểm định lưu, CONFIRMED khi InspectionRecorded có
+/// đúng report_hash. Cột [P]: chainInspectionId, inspectedAt, txHash, syncStatus.
 model Inspection {
   id                String           @id @default(uuid(7)) @db.Uuid
+  requestId         String           @map("request_id") @db.Uuid
   productId         String           @map("product_id") @db.Uuid
   inspectorOrgId    String           @map("inspector_org_id") @db.Uuid
   result            InspectionResult
   summary           String?
+  /// Khoá file biên bản trong kho lưu trữ (UPLOAD_DIR), không phải URL công khai.
   reportUrl         String?          @map("report_url") @db.VarChar(1000)
   reportHash        String           @map("report_hash") @db.Char(66)
   chainInspectionId String?          @unique @map("chain_inspection_id") @db.Char(66)
@@ -611,11 +655,14 @@ model Inspection {
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  product   Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
-  inspector Organization @relation("Inspector", fields: [inspectorOrgId], references: [id], onDelete: Restrict)
+  request   InspectionRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  product   Product           @relation(fields: [productId], references: [id], onDelete: Restrict)
+  inspector Organization      @relation("Inspector", fields: [inspectorOrgId], references: [id], onDelete: Restrict)
 
+  @@unique([requestId], map: "ux_inspections_one_confirmed", where: raw("sync_status = 'CONFIRMED'::sync_status"))
   @@index([productId, createdAt])
   @@index([inspectorOrgId])
+  @@index([requestId, createdAt])
   @@map("inspections")
 }
 

@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import {
+  INSPECTION_REGISTRY_ABI,
+  INSPECTION_REGISTRY_CONTRACT_NAME,
   PARTY_REGISTRY_ABI,
   PARTY_REGISTRY_CONTRACT_NAME,
   PRODUCT_PASSPORT_ABI,
   PRODUCT_PASSPORT_CONTRACT_NAME,
+  SERVICE_TICKET_MANAGER_ABI,
+  SERVICE_TICKET_MANAGER_CONTRACT_NAME,
   WARRANTY_MANAGER_ABI,
   WARRANTY_MANAGER_CONTRACT_NAME,
 } from '@dpp/shared';
@@ -67,6 +71,22 @@ export class AbiContractCatalog implements ContractCatalog {
         correlationArg: 'productId',
         productArg: 'productId',
         startBlock: config.productPassportDeployBlock,
+      },
+      {
+        name: SERVICE_TICKET_MANAGER_CONTRACT_NAME,
+        address: config.serviceTicketManagerAddress,
+        abi: SERVICE_TICKET_MANAGER_ABI,
+        correlationArg: 'ticketId',
+        productArg: 'productId',
+        startBlock: config.serviceTicketManagerDeployBlock,
+      },
+      {
+        name: INSPECTION_REGISTRY_CONTRACT_NAME,
+        address: config.inspectionRegistryAddress,
+        abi: INSPECTION_REGISTRY_ABI,
+        correlationArg: 'inspectionId',
+        productArg: 'productId',
+        startBlock: config.inspectionRegistryDeployBlock,
       },
     ];
     this.entries = definitions.flatMap(({ address, abi, ...rest }) =>

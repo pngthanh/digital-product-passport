@@ -66,6 +66,14 @@ export const envSchema = z.object({
   PRODUCT_PASSPORT_DEPLOY_BLOCK: optionalBlockNumber,
   // M6: deploy cùng ProductPassport v2; Indexer quét từ PRODUCT_PASSPORT_DEPLOY_BLOCK.
   WARRANTY_MANAGER_ADDRESS: optionalAddress,
+  // M7: để trống thì phần bảo hành, sửa chữa báo "chưa cấu hình", phần còn lại vẫn chạy.
+  SERVICE_TICKET_MANAGER_ADDRESS: optionalAddress,
+  SERVICE_TICKET_MANAGER_DEPLOY_BLOCK: optionalBlockNumber,
+  // M8: để trống thì phần kiểm định báo "chưa cấu hình", phần còn lại vẫn chạy.
+  INSPECTION_REGISTRY_ADDRESS: optionalAddress,
+  INSPECTION_REGISTRY_DEPLOY_BLOCK: optionalBlockNumber,
+  // Thư mục lưu file biên bản sửa chữa, kiểm định (ảnh, PDF); tương đối tính từ thư mục apps/api.
+  UPLOAD_DIR: z.preprocess(emptyAsUndefined, z.string().min(1).default('storage/uploads')),
 
   INDEXER_POLL_INTERVAL_MS: z.coerce.number().int().min(200).max(60_000).default(1000),
   // RPC công khai của Monad Testnet giới hạn eth_getLogs 100 block mỗi lần.

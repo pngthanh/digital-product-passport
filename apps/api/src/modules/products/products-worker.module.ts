@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/index.js';
 import { ChainSyncWorkerModule, EventProjectorRegistry } from '../chain-sync/index.js';
 import { IdentityWorkerModule } from '../identity/index.js';
 import { ExpireWarranties } from './application/expire-warranties.use-case.js';
+import { ProductDirectory } from './application/product-directory.service.js';
 import { ProductPassportProjector } from './application/product-passport.projector.js';
 import { WarrantyManagerProjector } from './application/warranty-manager.projector.js';
 import { PRODUCT_PORT_PROVIDERS } from './products.providers.js';
@@ -25,8 +26,9 @@ import { WarrantyExpiryScheduler } from './presentation/warranty-expiry.schedule
     WarrantyManagerProjector,
     ExpireWarranties,
     WarrantyExpiryScheduler,
+    ProductDirectory,
   ],
-  exports: [ExpireWarranties],
+  exports: [ExpireWarranties, ProductDirectory],
 })
 export class ProductsWorkerModule implements OnModuleInit {
   constructor(

@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { type ChainNetwork, getNetwork } from '@dpp/shared';
 import { Injectable, type LogLevel } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,18 @@ export interface SessionConfig {
 export interface IdentityChainConfig {
   readonly registrarPrivateKey: string;
   readonly partyRegistryAddress: string;
+}
+
+/** Cấu hình ServiceTicketManager (M7). */
+export interface ServiceChainConfig {
+  readonly registrarPrivateKey: string;
+  readonly serviceTicketManagerAddress: string;
+}
+
+/** Cấu hình InspectionRegistry (M8). */
+export interface InspectionChainConfig {
+  readonly registrarPrivateKey: string;
+  readonly inspectionRegistryAddress: string;
 }
 
 /** Cấu hình ProductPassport (M5). */
@@ -120,6 +133,49 @@ export class AppConfigService {
   /** WarrantyManager (M6), deploy cùng ProductPassport nên dùng chung block bắt đầu quét. */
   get warrantyManagerAddress(): string | null {
     return this.config.get('WARRANTY_MANAGER_ADDRESS', { infer: true }) ?? null;
+  }
+
+  get serviceTicketManagerAddress(): string | null {
+    return this.config.get('SERVICE_TICKET_MANAGER_ADDRESS', { infer: true }) ?? null;
+  }
+
+  /** Block lúc deploy ServiceTicketManager; `null` nếu chưa khai báo. */
+  get serviceTicketManagerDeployBlock(): bigint | null {
+    const block = this.config.get('SERVICE_TICKET_MANAGER_DEPLOY_BLOCK', { infer: true });
+    return block === undefined ? null : BigInt(block);
+  }
+
+  /** ServiceTicketManager cùng khoá registrar ký giấy phép mở phiếu; `null` khi thiếu một trong hai. */
+  get serviceChain(): ServiceChainConfig | null {
+    const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });
+    const serviceTicketManagerAddress = this.serviceTicketManagerAddress;
+    return registrarPrivateKey && serviceTicketManagerAddress
+      ? { registrarPrivateKey, serviceTicketManagerAddress }
+      : null;
+  }
+
+  get inspectionRegistryAddress(): string | null {
+    return this.config.get('INSPECTION_REGISTRY_ADDRESS', { infer: true }) ?? null;
+  }
+
+  /** Block lúc deploy InspectionRegistry; `null` nếu chưa khai báo. */
+  get inspectionRegistryDeployBlock(): bigint | null {
+    const block = this.config.get('INSPECTION_REGISTRY_DEPLOY_BLOCK', { infer: true });
+    return block === undefined ? null : BigInt(block);
+  }
+
+  /** InspectionRegistry cùng khoá registrar ký giấy phép ghi kết quả; `null` khi thiếu một trong hai. */
+  get inspectionChain(): InspectionChainConfig | null {
+    const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });
+    const inspectionRegistryAddress = this.inspectionRegistryAddress;
+    return registrarPrivateKey && inspectionRegistryAddress
+      ? { registrarPrivateKey, inspectionRegistryAddress }
+      : null;
+  }
+
+  /** Thư mục tuyệt đối lưu file biên bản sửa chữa, kiểm định. */
+  get uploadDir(): string {
+    return resolve(this.config.get('UPLOAD_DIR', { infer: true }));
   }
 
   /** ProductPassport cùng khoá registrar ký giấy phép đăng ký sản phẩm; `null` khi thiếu một trong hai. */
