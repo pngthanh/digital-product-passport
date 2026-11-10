@@ -1,10 +1,12 @@
 export * from './abi/inspection-registry.abi.js';
+export * from './abi/ownership-transfer.abi.js';
 export * from './abi/party-registry.abi.js';
 export * from './abi/product-passport.abi.js';
 export * from './abi/service-ticket-manager.abi.js';
 export * from './abi/warranty-manager.abi.js';
 export * from './chain/inspection-registry.js';
 export * from './chain/networks.js';
+export * from './chain/ownership-transfer.js';
 export * from './chain/party-registry.js';
 export * from './chain/product-passport.js';
 export * from './chain/service-ticket.js';
@@ -32,3 +34,4 @@ export * from './api/inspection.js';
 export * from './api/organizations.js';
 export * from './api/products.js';
 export * from './api/service.js';
+export * from './api/transfer.js';
