@@ -8,6 +8,11 @@ import { writeFile } from 'node:fs/promises';
  */
 const EXPORTS = [
   {
+    contract: 'OwnershipTransfer',
+    constant: 'OWNERSHIP_TRANSFER_ABI',
+    file: 'ownership-transfer.abi.ts',
+  },
+  {
     contract: 'InspectionRegistry',
     constant: 'INSPECTION_REGISTRY_ABI',
     file: 'inspection-registry.abi.ts',
