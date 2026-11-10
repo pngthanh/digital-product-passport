@@ -11,7 +11,7 @@ export class WalletFlowError extends Error {
 
 /**
  * Thông báo cho custom error của PartyRegistry, ProductPassport, ServiceTicketManager,
- * InspectionRegistry (khi ước lượng gas hoặc bị revert).
+ * InspectionRegistry, OwnershipTransfer (khi ước lượng gas hoặc bị revert).
  */
 const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   WalletAlreadyUsed: 'Ví này đã từng được liên kết trong hệ thống. Hãy chọn ví khác.',
@@ -68,6 +68,24 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
     'Sản phẩm đã thu hồi, báo mất hoặc ngừng sử dụng nên không kiểm định được.',
   RequesterNotAllowed:
     'Người gửi không còn quyền yêu cầu kiểm định sản phẩm này (đã đổi chủ). Tải lại trang.',
+  ProductNotSold:
+    'Sản phẩm không còn ở trạng thái đã có chủ (đã thu hồi, báo mất hoặc ngừng sử dụng) nên không chuyển nhượng được.',
+  NotProductOwner:
+    'Ví đang chọn không thuộc chủ sở hữu hiện tại của sản phẩm (có thể vừa đổi chủ). Tải lại trang.',
+  InvalidRecipient:
+    'Bên nhận không hợp lệ: chưa có danh tính on-chain, là chính chủ hiện tại, hoặc doanh nghiệp chưa được duyệt.',
+  InvalidExpiry: 'Thời gian chờ phải từ 1 đến 30 ngày. Bắt đầu lại để nhận giấy phép mới.',
+  TransferAlreadyActive:
+    'Sản phẩm đang có một yêu cầu chuyển nhượng chờ bên nhận. Tải lại trang để xem yêu cầu đó.',
+  ProductUnderRepair:
+    'Sản phẩm đang có phiếu sửa chữa mở nên chưa chuyển nhượng được. Chờ trung tâm bảo hành đóng phiếu.',
+  RequestNotOpen: 'Yêu cầu chuyển nhượng đã được đóng. Tải lại trang để xem trạng thái mới.',
+  NotSender: 'Chỉ bên gửi (chủ sở hữu) mới huỷ được yêu cầu này. Kiểm tra ví MetaMask.',
+  NotRecipient:
+    'Ví đang chọn không thuộc bên nhận của yêu cầu này. Kiểm tra ví MetaMask và trạng thái doanh nghiệp.',
+  RequestExpired:
+    'Yêu cầu đã quá hạn nên không chấp nhận được nữa. Bên gửi có thể gửi lại yêu cầu mới.',
+  RequestNotExpired: 'Yêu cầu chưa hết hạn. Tải lại trang để xem hạn chấp nhận.',
 };
 
 /** Mã lỗi EIP-1193 thường gặp từ MetaMask. */

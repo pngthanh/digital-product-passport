@@ -15,6 +15,8 @@ import { ownedProductDetailSchema } from '@/features/products/product.schema';
 import { productStatusLabel, warrantyLabel } from '@/features/products/product-status';
 import { OwnerServicePanel } from '@/features/service/owner-service-panel';
 import { ownedProductServiceSchema } from '@/features/service/service.schema';
+import { OwnerTransferPanel } from '@/features/transfer/owner-transfer-panel';
+import { ownedProductTransferSchema } from '@/features/transfer/transfer.schema';
 import { WarrantySummary } from '@/features/warranty/warranty-summary';
 import { serverChainId } from '@/lib/env';
 import { formatDate } from '@/lib/format';
@@ -34,8 +36,8 @@ function Item({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /**
- * Chi tiết sản phẩm người dùng đang sở hữu: bảo hành, yêu cầu bảo hành và sửa chữa (M7), hành trình
- * và bằng chứng on-chain.
+ * Chi tiết sản phẩm người dùng đang sở hữu: bảo hành, yêu cầu bảo hành và sửa chữa (M7), kiểm định
+ * (M8), chuyển nhượng (M9), hành trình và bằng chứng on-chain.
  */
 export default async function OwnedProductPage({ params }: { params: Promise<{ id: string }> }) {
   const identity = await getIdentity();
@@ -46,10 +48,11 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
   if (!UUID_PATTERN.test(id)) {
     notFound();
   }
-  const [product, service, inspection] = await Promise.all([
+  const [product, service, inspection, transfer] = await Promise.all([
     serverGet(`/me/owned-products/${id}`, ownedProductDetailSchema),
     serverGet(`/me/owned-products/${id}/service`, ownedProductServiceSchema),
     serverGet(`/me/owned-products/${id}/inspection`, productInspectionSchema),
+    serverGet(`/me/owned-products/${id}/transfer`, ownedProductTransferSchema),
   ]);
   if (!product) {
     notFound();
@@ -125,6 +128,20 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
               />
             ) : (
               <p className="text-sm text-bad">Không tải được phần kiểm định từ API.</p>
+            )}
+          </Panel>
+          <Panel className="px-5 py-5" aria-labelledby="chuyen-nhuong">
+            <h2 id="chuyen-nhuong" className="font-semibold">
+              Chuyển nhượng
+            </h2>
+            <p className="mt-1 mb-4 text-sm text-muted">
+              Chuyển sản phẩm cho người khác hoặc một doanh nghiệp. Quyền sở hữu chỉ đổi khi bên
+              nhận chấp nhận bằng ví của họ; bảo hành còn lại đi theo sản phẩm.
+            </p>
+            {transfer ? (
+              <OwnerTransferPanel productId={product.id} transfer={transfer} chainId={chainId} />
+            ) : (
+              <p className="text-sm text-bad">Không tải được phần chuyển nhượng từ API.</p>
             )}
           </Panel>
           <Panel className="py-1" aria-labelledby="hanh-trinh">

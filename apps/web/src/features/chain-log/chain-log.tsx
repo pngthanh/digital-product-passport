@@ -26,6 +26,11 @@ const EVENT_LABELS: Record<string, string> = {
   ServiceTicketOpened: 'Mở phiếu sửa chữa',
   ServiceTicketClosed: 'Đóng phiếu sửa chữa',
   InspectionRecorded: 'Ghi kết quả kiểm định',
+  TransferRequested: 'Gửi yêu cầu chuyển nhượng',
+  TransferAccepted: 'Bên nhận chấp nhận chuyển nhượng',
+  TransferRejected: 'Bên nhận từ chối chuyển nhượng',
+  TransferCancelled: 'Huỷ yêu cầu chuyển nhượng',
+  TransferExpired: 'Đóng yêu cầu chuyển nhượng hết hạn',
 };
 
 function stateName(value: string | number | boolean | undefined): string {
