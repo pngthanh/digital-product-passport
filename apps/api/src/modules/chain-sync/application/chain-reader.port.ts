@@ -43,7 +43,8 @@ export interface ChainBlock {
 }
 
 export interface LogFilter {
-  address: string;
+  /** Một lần gọi lấy log của nhiều contract (eth_getLogs nhận mảng địa chỉ). */
+  addresses: readonly string[];
   fromBlock: bigint;
   toBlock: bigint;
 }
@@ -53,6 +54,14 @@ export class LogRangeTooLargeError extends Error {
   constructor(readonly blocks: number) {
     super(`RPC từ chối eth_getLogs cho ${blocks} block`);
     this.name = 'LogRangeTooLargeError';
+  }
+}
+
+/** RPC chưa trả được dữ liệu block (node phía sau chưa có hoặc lỗi tạm); vòng sau đọc lại. */
+export class ChainDataUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ChainDataUnavailableError';
   }
 }
 

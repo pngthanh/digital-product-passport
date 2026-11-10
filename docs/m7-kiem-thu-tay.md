@@ -67,10 +67,10 @@ pnpm build
 
 ## 5. Lỗi thường gặp
 
-| Hiện tượng                                              | Cách xử lý                                                                                                 |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Trang Bảo hành báo "chưa cấu hình ServiceTicketManager" | Chưa chép 2 dòng `SERVICE_TICKET_MANAGER_*` vào `.env`, hoặc chưa khởi động lại `pnpm dev`                 |
-| Script deploy báo ví không có quyền Admin               | Dùng đúng ví (keystore) đã deploy PartyRegistry                                                            |
-| Báo "MetaMask đang chọn ví khác…"                       | Mở MetaMask, chọn đúng tài khoản đã liên kết với tài khoản trung tâm rồi bấm lại                           |
-| Bấm mở/đóng phiếu xong cứ chờ "block finalized" lâu     | Worker đang bắt kịp chain sau thời gian tắt máy; xem `/system/status`, chờ Indexer chạy tới block hiện tại |
-| "Sản phẩm đang có một phiếu sửa chữa chưa đóng"         | Đóng phiếu đang mở trước khi tiếp nhận yêu cầu mới của cùng sản phẩm                                       |
+| Hiện tượng                                              | Cách xử lý                                                                                                                                              |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trang Bảo hành báo "chưa cấu hình ServiceTicketManager" | Chưa chép 2 dòng `SERVICE_TICKET_MANAGER_*` vào `.env`, hoặc chưa khởi động lại `pnpm dev`                                                              |
+| Script deploy báo ví không có quyền Admin               | Dùng đúng ví (keystore) đã deploy PartyRegistry                                                                                                         |
+| Báo "MetaMask đang chọn ví khác…"                       | Mở MetaMask, chọn đúng tài khoản đã liên kết với tài khoản trung tâm rồi bấm lại                                                                        |
+| Bấm mở/đóng phiếu xong cứ chờ "block finalized" lâu     | Worker đang bắt kịp chain sau thời gian tắt máy (khoảng 3 phút cho mỗi ngày tắt); log Worker báo còn bao nhiêu block, chờ `/system/status` hết báo chậm |
+| "Sản phẩm đang có một phiếu sửa chữa chưa đóng"         | Đóng phiếu đang mở trước khi tiếp nhận yêu cầu mới của cùng sản phẩm                                                                                    |

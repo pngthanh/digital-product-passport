@@ -7,6 +7,10 @@ import {
 } from '../application/index-chain-events.use-case.js';
 
 const INTERVAL_NAME = 'chain-indexer';
+/** Chậm hơn số block này thì coi là đang bắt kịp và báo tiến độ trong log. */
+const CATCH_UP_THRESHOLD_BLOCKS = 1_000n;
+/** Báo tiến độ bắt kịp tối đa 30 giây một lần. */
+const PROGRESS_LOG_INTERVAL_MS = 30_000;
 
 /**
  * Tác nhân Scheduler (Worker): quét log theo chu kỳ INDEXER_POLL_INTERVAL_MS.
@@ -17,6 +21,8 @@ export class ChainIndexerScheduler implements OnApplicationBootstrap {
   private readonly logger = new Logger(ChainIndexerScheduler.name);
   private running = false;
   private behindWarned = false;
+  /** Lần báo tiến độ trước, để tính tốc độ và thời gian còn lại. */
+  private lastProgress: { at: number; remaining: bigint } | null = null;
 
   constructor(
     private readonly indexer: IndexChainEvents,
@@ -46,6 +52,7 @@ export class ChainIndexerScheduler implements OnApplicationBootstrap {
         );
       }
       this.warnIfBehind(summary.behind);
+      this.reportProgress(summary.remainingBlocks);
     } catch (error) {
       this.logger.warn(
         `Indexer chưa quét được: ${error instanceof Error ? error.message : String(error)}`,
@@ -53,6 +60,30 @@ export class ChainIndexerScheduler implements OnApplicationBootstrap {
     } finally {
       this.running = false;
     }
+  }
+
+  /** Máy tắt lâu thì Worker phải quét bù nhiều block: báo còn bao nhiêu và ước tính bao lâu. */
+  private reportProgress(remaining: bigint): void {
+    const now = Date.now();
+    if (remaining <= CATCH_UP_THRESHOLD_BLOCKS) {
+      if (this.lastProgress) {
+        this.lastProgress = null;
+        this.logger.log('Indexer đã bắt kịp chain');
+      }
+      return;
+    }
+    const previous = this.lastProgress;
+    if (previous && now - previous.at < PROGRESS_LOG_INTERVAL_MS) {
+      return;
+    }
+    const done = previous ? Number(previous.remaining - remaining) : 0;
+    const perSecond = previous && done > 0 ? done / ((now - previous.at) / 1000) : 0;
+    const eta =
+      perSecond > 0 ? `, khoảng ${Math.ceil(Number(remaining) / perSecond / 60)} phút nữa` : '';
+    this.logger.log(
+      `Indexer đang bắt kịp chain: còn ${formatBlocks(remaining)} block${eta}. Thao tác mới chỉ hiện trên web sau khi bắt kịp.`,
+    );
+    this.lastProgress = { at: now, remaining };
   }
 
   private warnIfBehind(contracts: readonly string[]): void {
@@ -68,4 +99,9 @@ export class ChainIndexerScheduler implements OnApplicationBootstrap {
       );
     }
   }
+}
+
+/** 3155733n → "3.155.733". */
+function formatBlocks(blocks: bigint): string {
+  return blocks.toLocaleString('vi-VN');
 }

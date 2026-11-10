@@ -60,6 +60,8 @@ export class FakeChain implements ChainReader {
   finalized: bigint | null = 100n;
   /** Số block tối đa mỗi lần eth_getLogs; `null` là không giới hạn. */
   maxLogRange: number | null = null;
+  /** Lỗi RPC giả cho lần gọi eth_getLogs kế tiếp chứa block này (mô phỏng node RPC trục trặc). */
+  failLogsAt: bigint | null = null;
   readonly getLogsCalls: LogFilter[] = [];
 
   async getTransaction(txHash: string) {
@@ -87,10 +89,18 @@ export class FakeChain implements ChainReader {
     if (this.maxLogRange !== null && blocks > this.maxLogRange) {
       throw new LogRangeTooLargeError(blocks);
     }
+    const failAt = this.failLogsAt;
+    if (failAt !== null && failAt >= filter.fromBlock && failAt <= filter.toBlock) {
+      this.failLogsAt = null;
+      throw Object.assign(new Error('could not coalesce error'), {
+        code: 'UNKNOWN_ERROR',
+        error: { code: -32603, message: 'Internal error: error getting block header' },
+      });
+    }
     this.getLogsCalls.push(filter);
     return this.logs.filter(
       (log) =>
-        log.address === filter.address &&
+        filter.addresses.includes(log.address) &&
         log.blockNumber >= filter.fromBlock &&
         log.blockNumber <= filter.toBlock,
     );
@@ -103,10 +113,11 @@ export class FakeChain implements ChainReader {
     txHash: string;
     logIndex?: number;
     from?: string;
+    address?: string;
   }): void {
     const block = this.blockAt(input.blockNumber);
     this.logs.push({
-      address: REGISTRY,
+      address: input.address ?? REGISTRY,
       topics: [input.event],
       data: '0x',
       logIndex: input.logIndex ?? 0,

@@ -77,12 +77,12 @@ pnpm build
 
 ## 5. Lỗi thường gặp
 
-| Hiện tượng                                                          | Cách xử lý                                                                                                 |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Typecheck báo `evidence-files.ts` hoặc `service-flows.spec.ts` lỗi  | Chưa xoá 3 file M7 đã chuyển chỗ (mục 1)                                                                   |
-| API báo lỗi bảng `inspection_requests` không tồn tại                | Chưa chạy `pnpm db:deploy` (và `pnpm --filter @dpp/api db:deploy:test` cho test e2e)                       |
-| Trang Kiểm định báo "chưa cấu hình InspectionRegistry"              | Chưa chép 2 dòng `INSPECTION_REGISTRY_*` vào `.env`, hoặc chưa khởi động lại `pnpm dev`                    |
-| Script deploy báo ProductPassport không dùng PARTY_REGISTRY_ADDRESS | `.env` đang trộn địa chỉ của hai lần deploy khác nhau; kiểm tra lại hai dòng đó                            |
-| Báo "MetaMask đang chọn ví khác…"                                   | Mở MetaMask, chọn đúng tài khoản đã liên kết với tài khoản đơn vị kiểm định rồi bấm lại                    |
-| Ghi kết quả xong cứ chờ "block finalized" lâu                       | Worker đang bắt kịp chain sau thời gian tắt máy; xem `/system/status`, chờ Indexer chạy tới block hiện tại |
-| Báo "Người gửi không còn quyền yêu cầu kiểm định sản phẩm này"      | Sản phẩm đã đổi chủ hoặc bị thu hồi sau khi gửi yêu cầu; từ chối yêu cầu đó kèm lý do                      |
+| Hiện tượng                                                          | Cách xử lý                                                                                                                                              |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typecheck báo `evidence-files.ts` hoặc `service-flows.spec.ts` lỗi  | Chưa xoá 3 file M7 đã chuyển chỗ (mục 1)                                                                                                                |
+| API báo lỗi bảng `inspection_requests` không tồn tại                | Chưa chạy `pnpm db:deploy` (và `pnpm --filter @dpp/api db:deploy:test` cho test e2e)                                                                    |
+| Trang Kiểm định báo "chưa cấu hình InspectionRegistry"              | Chưa chép 2 dòng `INSPECTION_REGISTRY_*` vào `.env`, hoặc chưa khởi động lại `pnpm dev`                                                                 |
+| Script deploy báo ProductPassport không dùng PARTY_REGISTRY_ADDRESS | `.env` đang trộn địa chỉ của hai lần deploy khác nhau; kiểm tra lại hai dòng đó                                                                         |
+| Báo "MetaMask đang chọn ví khác…"                                   | Mở MetaMask, chọn đúng tài khoản đã liên kết với tài khoản đơn vị kiểm định rồi bấm lại                                                                 |
+| Ghi kết quả xong cứ chờ "block finalized" lâu                       | Worker đang bắt kịp chain sau thời gian tắt máy (khoảng 3 phút cho mỗi ngày tắt); log Worker báo còn bao nhiêu block, chờ `/system/status` hết báo chậm |
+| Báo "Người gửi không còn quyền yêu cầu kiểm định sản phẩm này"      | Sản phẩm đã đổi chủ hoặc bị thu hồi sau khi gửi yêu cầu; từ chối yêu cầu đó kèm lý do                                                                   |

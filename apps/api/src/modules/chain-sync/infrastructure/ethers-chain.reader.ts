@@ -100,7 +100,7 @@ export class EthersChainReader implements ChainReader {
     try {
       const { result: logs } = await this.chain.withFailover((provider) =>
         provider.getLogs({
-          address: filter.address,
+          address: [...filter.addresses],
           fromBlock: filter.fromBlock,
           toBlock: filter.toBlock,
         }),
