@@ -22,6 +22,8 @@ export const AnomalyRule = {
   INSPECTION_REPORT_MISMATCH: 'INSPECTION_REPORT_MISMATCH',
   /** (M8) Chain ghi kết quả cho yêu cầu vừa bị huỷ hoặc từ chối; yêu cầu vẫn thành đã có kết quả. */
   INSPECTION_CONFLICT: 'INSPECTION_CONFLICT',
+  /** (M9) Event chuyển nhượng không khớp sản phẩm, Party hay yêu cầu đang mở trong CSDL. */
+  TRANSFER_UNKNOWN: 'TRANSFER_UNKNOWN',
 } as const;
 
 export type AnomalyRule = (typeof AnomalyRule)[keyof typeof AnomalyRule];

@@ -1,5 +1,6 @@
 import {
   INSPECTION_REGISTRY_ABI,
+  OWNERSHIP_TRANSFER_ABI,
   PARTY_REGISTRY_ABI,
   SERVICE_TICKET_MANAGER_ABI,
 } from '@dpp/shared';
@@ -103,6 +104,31 @@ describe('AbiContractCatalog', () => {
       eventName: 'InspectionRecorded',
       args: { inspectionId: inspectionId.toLowerCase(), result: 3, reportHash },
       correlationKey: inspectionId.toLowerCase(),
+      chainProductId: productId.toLowerCase(),
+    });
+  });
+
+  it('M9: requestId (uint256) thành chuỗi thập phân làm correlation, ghi productId', () => {
+    const address = '0xa513E6E4b8f2a923D98304ec87F64353C4D5C853';
+    const transfers = new AbiContractCatalog(
+      createTestConfig({ OWNERSHIP_TRANSFER_ADDRESS: address }),
+    );
+    const productId = `0x${'5E'.repeat(32)}`;
+    const encoded = new Interface(OWNERSHIP_TRANSFER_ABI).encodeEventLog('TransferRequested', [
+      12n,
+      productId,
+      `0x${'6f'.repeat(32)}`,
+      `0x${'70'.repeat(32)}`,
+      1_900_000_000n,
+    ]);
+
+    expect(
+      transfers.decodeLog({ address: address.toLowerCase(), ...encoded, logIndex: 0 }),
+    ).toMatchObject({
+      contractName: 'OwnershipTransfer',
+      eventName: 'TransferRequested',
+      args: { requestId: '12', expiresAt: '1900000000' },
+      correlationKey: '12',
       chainProductId: productId.toLowerCase(),
     });
   });

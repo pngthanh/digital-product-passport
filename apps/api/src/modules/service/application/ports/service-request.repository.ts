@@ -54,6 +54,13 @@ export interface ServiceRequestRepository {
   countsForCenter(serviceCenterOrgId: string): Promise<Record<ServiceTicketFilter, number>>;
   /** REQUESTED thành CANCELLED; `false` nếu yêu cầu không còn ở REQUESTED. */
   cancel(id: string, at: Date): Promise<boolean>;
+  /** (M9) Huỷ yêu cầu REQUESTED của chủ cũ khi sản phẩm đổi chủ; trả số yêu cầu đã huỷ. */
+  cancelRequestedBy(
+    productId: string,
+    requestedByPartyId: string,
+    at: Date,
+    scope: TransactionScope,
+  ): Promise<number>;
   /**
    * Huỷ các yêu cầu REQUESTED khác của sản phẩm (trừ `exceptId`), khi chain đã mở phiếu cho một yêu
    * cầu mà chủ sở hữu vừa huỷ; trả số dòng đã huỷ.

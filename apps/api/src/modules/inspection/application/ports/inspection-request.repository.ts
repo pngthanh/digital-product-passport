@@ -46,6 +46,13 @@ export interface InspectionRequestRepository {
   countsForInspector(inspectorOrgId: string): Promise<Record<InspectionFilter, number>>;
   /** REQUESTED thành CANCELLED; `false` nếu yêu cầu không còn chờ. */
   cancel(id: string, at: Date): Promise<boolean>;
+  /** (M9) Huỷ yêu cầu REQUESTED của chủ cũ khi sản phẩm đổi chủ; trả số yêu cầu đã huỷ. */
+  cancelRequestedBy(
+    productId: string,
+    requestedByPartyId: string,
+    at: Date,
+    scope: TransactionScope,
+  ): Promise<number>;
   /** REQUESTED thành DECLINED kèm lý do; `false` nếu yêu cầu không còn chờ. */
   decline(id: string, reason: string, at: Date): Promise<boolean>;
   /**

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import {
   INSPECTION_REGISTRY_ABI,
   INSPECTION_REGISTRY_CONTRACT_NAME,
+  OWNERSHIP_TRANSFER_ABI,
+  OWNERSHIP_TRANSFER_CONTRACT_NAME,
   PARTY_REGISTRY_ABI,
   PARTY_REGISTRY_CONTRACT_NAME,
   PRODUCT_PASSPORT_ABI,
@@ -87,6 +89,14 @@ export class AbiContractCatalog implements ContractCatalog {
         correlationArg: 'inspectionId',
         productArg: 'productId',
         startBlock: config.inspectionRegistryDeployBlock,
+      },
+      {
+        name: OWNERSHIP_TRANSFER_CONTRACT_NAME,
+        address: config.ownershipTransferAddress,
+        abi: OWNERSHIP_TRANSFER_ABI,
+        correlationArg: 'requestId',
+        productArg: 'productId',
+        startBlock: config.ownershipTransferDeployBlock,
       },
     ];
     this.entries = definitions.flatMap(({ address, abi, ...rest }) =>

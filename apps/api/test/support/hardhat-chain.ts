@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { fileURLToPath } from 'node:url';
-import { PRODUCT_CONTRACT_ROLE, SERVICE_CONTRACT_ROLE } from '@dpp/shared';
+import { PRODUCT_CONTRACT_ROLE, SERVICE_CONTRACT_ROLE, TRANSFER_CONTRACT_ROLE } from '@dpp/shared';
 import { Contract, ContractFactory, JsonRpcProvider, parseEther } from 'ethers';
 
 const CONTRACTS_DIR = fileURLToPath(new URL('../../../../packages/contracts/', import.meta.url));
@@ -12,6 +12,7 @@ const PARTY_REGISTRY_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/registry/Pa
 const PRODUCT_PASSPORT_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/product/ProductPassport.sol/ProductPassport.json`;
 const WARRANTY_MANAGER_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/warranty/WarrantyManager.sol/WarrantyManager.json`;
 const SERVICE_TICKET_MANAGER_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/service/ServiceTicketManager.sol/ServiceTicketManager.json`;
+const OWNERSHIP_TRANSFER_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/transfer/OwnershipTransfer.sol/OwnershipTransfer.json`;
 const INSPECTION_REGISTRY_ARTIFACT = `${CONTRACTS_DIR}artifacts/contracts/inspection/InspectionRegistry.sol/InspectionRegistry.json`;
 const STARTUP_TIMEOUT_MS = 60_000;
 
@@ -42,6 +43,12 @@ export interface LocalChain {
   deployInspectionRegistry(contracts: {
     partyRegistry: string;
     productPassport: string;
+  }): Promise<string>;
+  /** (M9) OwnershipTransfer; ví 0 (Admin) cấp TRANSFER_CONTRACT_ROLE như script deploy-transfers. */
+  deployOwnershipTransfer(contracts: {
+    partyRegistry: string;
+    productPassport: string;
+    serviceTicketManager: string;
   }): Promise<string>;
   mine(): Promise<void>;
   stop(): Promise<void>;
@@ -169,6 +176,27 @@ export async function startHardhatNode(): Promise<LocalChain> {
       const contract = await factory.deploy(contracts.partyRegistry, contracts.productPassport);
       await contract.waitForDeployment();
       return contract.getAddress();
+    },
+    async deployOwnershipTransfer(contracts) {
+      const deployer = await provider.getSigner(0);
+      const factory = ContractFactory.fromSolidity(
+        await artifactOf(OWNERSHIP_TRANSFER_ARTIFACT),
+        deployer,
+      );
+      const contract = await factory.deploy(
+        contracts.partyRegistry,
+        contracts.productPassport,
+        contracts.serviceTicketManager,
+      );
+      await contract.waitForDeployment();
+      const address = await contract.getAddress();
+      const registry = new Contract(
+        contracts.partyRegistry,
+        ['function grantRole(bytes32 role, address account)'],
+        deployer,
+      );
+      await (await registry.getFunction('grantRole')(TRANSFER_CONTRACT_ROLE, address)).wait();
+      return address;
     },
     async mine() {
       await provider.send('evm_mine', []);

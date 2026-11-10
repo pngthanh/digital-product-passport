@@ -52,6 +52,12 @@ export class OrganizationDirectory {
       .toSorted((left, right) => left.name.localeCompare(right.name, 'vi'));
   }
 
+  /** (M9) Tổ chức theo mã số thuế, để chuyển nhượng cho doanh nghiệp; `null` nếu không có. */
+  async findByTaxCode(taxCode: string): Promise<OrganizationRef | null> {
+    const record = await this.organizations.findByTaxCode(taxCode);
+    return record && toRef(record);
+  }
+
   async describe(ids: readonly string[]): Promise<Map<string, OrganizationRef>> {
     const records = await this.organizations.findManyByIds([...new Set(ids)]);
     return new Map(records.map((record) => [record.id, toRef(record)]));

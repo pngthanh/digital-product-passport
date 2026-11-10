@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { InspectionRequesterRole } from '@dpp/shared';
-import { type AuthenticatedUser, IdentityDirectory } from '../../identity/index.js';
+import type { AuthenticatedUser } from '../../identity/index.js';
 import { OrganizationDirectory, type OrganizationRef } from '../../organizations/index.js';
-import { ProductDirectory, type ProductRef } from '../../products/index.js';
+import { OwnerParties, ProductDirectory, type ProductRef } from '../../products/index.js';
 import { InspectionProductNotFoundError } from '../domain/inspection.errors.js';
 
 /** Bên gửi yêu cầu kiểm định cho một sản phẩm. */
@@ -22,7 +22,7 @@ export interface RequesterContext {
 @Injectable()
 export class InspectionRequesterAccess {
   constructor(
-    private readonly identity: IdentityDirectory,
+    private readonly owners: OwnerParties,
     private readonly organizations: OrganizationDirectory,
     private readonly products: ProductDirectory,
   ) {}
@@ -37,21 +37,19 @@ export class InspectionRequesterAccess {
     return { role: 'MANUFACTURER', partyId: organization.id, product, organization };
   }
 
+  /** Chủ sở hữu hiện tại: Party cá nhân, hoặc (M9) tổ chức người dùng đại diện. */
   async owner(user: AuthenticatedUser, productId: string): Promise<RequesterContext> {
-    const actor = await this.identity.actorOf(user.id);
-    const product = actor ? await this.products.findById(productId) : null;
-    if (!actor || !product || product.currentOwnerPartyId !== actor.partyId) {
+    const { partyIds } = await this.owners.of(user.id);
+    const product = partyIds.length > 0 ? await this.products.findById(productId) : null;
+    const ownerPartyId = product?.currentOwnerPartyId;
+    if (!product || !ownerPartyId || !partyIds.includes(ownerPartyId)) {
       throw new InspectionProductNotFoundError();
     }
-    return { role: 'OWNER', partyId: actor.partyId, product, organization: null };
+    return { role: 'OWNER', partyId: ownerPartyId, product, organization: null };
   }
 
   /** Các Party người dùng được đứng tên: Party cá nhân và tổ chức đang đại diện (nếu có). */
   async partiesOf(user: AuthenticatedUser): Promise<string[]> {
-    const [actor, organization] = await Promise.all([
-      this.identity.actorOf(user.id),
-      this.organizations.representedBy(user.id),
-    ]);
-    return [actor?.partyId, organization?.id].filter((id): id is string => !!id);
+    return (await this.owners.of(user.id)).partyIds;
   }
 }

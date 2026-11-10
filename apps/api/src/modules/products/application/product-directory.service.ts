@@ -56,6 +56,14 @@ export class ProductDirectory {
     return product && toRef(product);
   }
 
+  /** (M9) Gắn lần đổi chủ vừa chiếu với yêu cầu chuyển nhượng; dùng trong Worker. */
+  linkOwnershipTransfer(
+    link: { productId: string; toPartyId: string; txHash: string; transferRequestId: string },
+    scope: TransactionScope,
+  ): Promise<boolean> {
+    return this.products.linkOwnershipTransfer(link, scope);
+  }
+
   /** Theo mã QR công khai (tra cứu không cần đăng nhập, M8 kiểm định). */
   async findByPublicCode(publicCode: string): Promise<ProductRef | null> {
     const product = await this.products.findByPublicCode(publicCode);

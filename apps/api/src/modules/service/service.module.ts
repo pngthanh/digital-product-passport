@@ -23,6 +23,7 @@ import { GetServiceTicket, ListServiceTickets } from './application/service-tick
 import { ServiceViews } from './application/service-views.js';
 import { OwnerServiceController } from './presentation/owner-service.controller.js';
 import { ServiceTicketsController } from './presentation/service-tickets.controller.js';
+import { ServiceOwnerChange } from './application/service-owner-change.js';
 import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
 
 /**
@@ -43,6 +44,7 @@ import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
   providers: [
     ...SERVICE_PORT_PROVIDERS,
     ServiceCenterAccess,
+    ServiceOwnerChange,
     ProductOwnerAccess,
     ServiceViews,
     GetOwnedProductService,
@@ -55,5 +57,6 @@ import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
     RecordServiceTransaction,
     GetServiceEvidence,
   ],
+  exports: [ServiceOwnerChange],
 })
 export class ServiceModule {}

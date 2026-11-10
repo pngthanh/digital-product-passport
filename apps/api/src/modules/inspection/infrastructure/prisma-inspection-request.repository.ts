@@ -133,6 +133,19 @@ export class PrismaInspectionRequestRepository implements InspectionRequestRepos
     return count === 1;
   }
 
+  async cancelRequestedBy(
+    productId: string,
+    requestedByPartyId: string,
+    at: Date,
+    scope: TransactionScope,
+  ): Promise<number> {
+    const { count } = await prismaFrom(this.prisma, scope).inspectionRequest.updateMany({
+      where: { productId, requestedByPartyId, requestState: 'REQUESTED' },
+      data: { requestState: 'CANCELLED', closedAt: at },
+    });
+    return count;
+  }
+
   async decline(id: string, reason: string, at: Date): Promise<boolean> {
     const { count } = await this.prisma.inspectionRequest.updateMany({
       where: { id, requestState: 'REQUESTED' },

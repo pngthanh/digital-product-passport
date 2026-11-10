@@ -30,6 +30,7 @@ import {
 } from './application/record-product-transaction.use-case.js';
 import { RegisterProducts } from './application/register-products.use-case.js';
 import { RetryProductRegistration } from './application/retry-product-registration.use-case.js';
+import { OwnerParties } from './application/owner-parties.service.js';
 import { PRODUCT_PORT_PROVIDERS } from './products.providers.js';
 import { InventoryController } from './presentation/inventory.controller.js';
 import { MyProductsController } from './presentation/my-products.controller.js';
@@ -59,6 +60,7 @@ import { PublicProductsController } from './presentation/public-products.control
   providers: [
     ...PRODUCT_PORT_PROVIDERS,
     ManufacturerAccess,
+    OwnerParties,
     RetailerAccess,
     PartyLabels,
     ProductAuthorizer,
@@ -80,6 +82,6 @@ import { PublicProductsController } from './presentation/public-products.control
     GetWorkspace,
     ProductDirectory,
   ],
-  exports: [ProductDirectory],
+  exports: [ProductDirectory, OwnerParties],
 })
 export class ProductsModule {}

@@ -1,36 +1,39 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { MyWorkspace, OwnedProduct, OwnedProductDetail } from '@dpp/shared';
-import { type AuthenticatedUser, IdentityDirectory } from '../../identity/index.js';
-import { OrganizationDirectory } from '../../organizations/index.js';
+import type { AuthenticatedUser } from '../../identity/index.js';
 import { ProductNotFoundError } from '../domain/products.errors.js';
+import { OwnerParties } from './owner-parties.service.js';
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
 import { presentProduct, ProductViews } from './product-views.js';
 
-/** Sản phẩm người dùng đang sở hữu (sau DST-03), kèm bảo hành. */
+/**
+ * Sản phẩm người dùng đang sở hữu (sau DST-03), kèm bảo hành; (M9) gồm cả sản phẩm của tổ chức người
+ * dùng đại diện.
+ */
 @Injectable()
 export class ListOwnedProducts {
   constructor(
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
-    private readonly identity: IdentityDirectory,
+    private readonly owners: OwnerParties,
     private readonly views: ProductViews,
   ) {}
 
   async execute(user: AuthenticatedUser): Promise<OwnedProduct[]> {
-    const actor = await this.identity.actorOf(user.id);
-    if (!actor) {
+    const { actor, partyIds } = await this.owners.of(user.id);
+    if (partyIds.length === 0) {
       return [];
     }
-    const items = await this.products.listOwned(actor.partyId);
+    const items = await this.products.listOwned(partyIds);
     const [warranties, acquired] = await Promise.all([
       this.views.warranties(items),
       this.products.acquiredAt(
-        actor.partyId,
+        partyIds,
         items.map((item) => item.id),
       ),
     ]);
     const labels = await this.views.labels(
       items,
-      actor.partyId,
+      actor?.partyId ?? null,
       [...warranties.values()].map((warranty) => warranty.activatedByPartyId),
     );
     return items.map((item) => ({
@@ -47,21 +50,21 @@ export class ListOwnedProducts {
 export class GetOwnedProduct {
   constructor(
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
-    private readonly identity: IdentityDirectory,
+    private readonly owners: OwnerParties,
     private readonly views: ProductViews,
   ) {}
 
   async execute(user: AuthenticatedUser, productId: string): Promise<OwnedProductDetail> {
-    const actor = await this.identity.actorOf(user.id);
-    const product = actor ? await this.products.findById(productId) : null;
-    if (!actor || !product || product.currentOwnerPartyId !== actor.partyId) {
+    const { actor, partyIds } = await this.owners.of(user.id);
+    const product = partyIds.length > 0 ? await this.products.findById(productId) : null;
+    if (!product?.currentOwnerPartyId || !partyIds.includes(product.currentOwnerPartyId)) {
       throw new ProductNotFoundError();
     }
-    const timeline = await this.views.timeline(product, actor.partyId);
+    const timeline = await this.views.timeline(product, actor?.partyId ?? null);
     const issuer = timeline.labels.issuer(product.issuerOrgId);
     const [proof, acquired] = await Promise.all([
       this.views.proof(product, issuer.partyId),
-      this.products.acquiredAt(actor.partyId, [product.id]),
+      this.products.acquiredAt(partyIds, [product.id]),
     ]);
     return {
       ...presentProduct(product, timeline.labels),
@@ -81,15 +84,11 @@ export class GetOwnedProduct {
 export class GetWorkspace {
   constructor(
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
-    private readonly identity: IdentityDirectory,
-    private readonly organizations: OrganizationDirectory,
+    private readonly owners: OwnerParties,
   ) {}
 
   async execute(user: AuthenticatedUser): Promise<MyWorkspace> {
-    const [organization, actor] = await Promise.all([
-      this.organizations.representedBy(user.id),
-      this.identity.actorOf(user.id),
-    ]);
+    const { organization, partyIds } = await this.owners.of(user.id);
     return {
       organization: organization
         ? {
@@ -99,7 +98,7 @@ export class GetWorkspace {
             authStatus: organization.authStatus,
           }
         : null,
-      ownedProducts: actor ? await this.products.countOwned(actor.partyId) : 0,
+      ownedProducts: partyIds.length > 0 ? await this.products.countOwned(partyIds) : 0,
     };
   }
 }

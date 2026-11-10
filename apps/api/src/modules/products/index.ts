@@ -6,4 +6,5 @@ export {
   type ProductRef,
   type WarrantyRef,
 } from './application/product-directory.service.js';
+export { OwnerParties, type OwnerPartySet } from './application/owner-parties.service.js';
 export { maskEmail } from './application/prepare-product-sale.use-case.js';

@@ -18,6 +18,7 @@ import { TEST_REGISTRAR_KEY, TestClock } from '../../../../test/support/test-con
 import { IdentityDirectory } from '../../identity/application/identity-directory.service.js';
 import type { AuthenticatedUser } from '../../identity/index.js';
 import { OrganizationDirectory } from '../../organizations/application/organization-directory.service.js';
+import { OwnerParties } from './owner-parties.service.js';
 import {
   BuyerNotFoundError,
   ManufacturerRequiredError,
@@ -134,8 +135,8 @@ async function setup() {
     inStock,
     prepareSale: new PrepareProductSale(products, chain, clock, retailerAccess, identity, audit),
     inventory: new ListMyInventory(products, chain, retailerAccess, views),
-    owned: new ListOwnedProducts(products, identity, views),
-    workspace: new GetWorkspace(products, identity, directory),
+    owned: new ListOwnedProducts(products, new OwnerParties(identity, directory), views),
+    workspace: new GetWorkspace(products, new OwnerParties(identity, directory)),
     retailers: new ListRetailers(directory, new ManufacturerAccess(directory, identity)),
     passport: new GetPublicPassport(products, directory, views),
   };

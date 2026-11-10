@@ -104,10 +104,22 @@ export interface ProductRepository {
   findForRetailer(retailerPartyId: string, id: string): Promise<ProductRecord | null>;
   /** Lúc nhà bán lẻ giao hàng cho người mua, theo productId. */
   soldAtBy(retailerPartyId: string, productIds: readonly string[]): Promise<Map<string, Date>>;
-  listOwned(ownerPartyId: string): Promise<ProductRecord[]>;
-  countOwned(ownerPartyId: string): Promise<number>;
+  /** Sản phẩm thuộc một trong các Party (M9: cá nhân và tổ chức người dùng đại diện). */
+  listOwned(ownerPartyIds: readonly string[]): Promise<ProductRecord[]>;
+  countOwned(ownerPartyIds: readonly string[]): Promise<number>;
   /** Lúc chủ hiện tại nhận quyền sở hữu, theo productId. */
-  acquiredAt(ownerPartyId: string, productIds: readonly string[]): Promise<Map<string, Date>>;
+  acquiredAt(
+    ownerPartyIds: readonly string[],
+    productIds: readonly string[],
+  ): Promise<Map<string, Date>>;
+  /**
+   * (M9) Gắn dòng ownership_records do giao dịch `txHash` tạo ra với yêu cầu chuyển nhượng; `false`
+   * nếu chưa có dòng đó.
+   */
+  linkOwnershipTransfer(
+    link: { productId: string; toPartyId: string; txHash: string; transferRequestId: string },
+    scope: TransactionScope,
+  ): Promise<boolean>;
 
   // ----- Bảo hành (warranties) -----
   findWarranties(productIds: readonly string[]): Promise<Map<string, WarrantyRecord>>;

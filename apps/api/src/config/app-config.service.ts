@@ -30,6 +30,12 @@ export interface InspectionChainConfig {
   readonly inspectionRegistryAddress: string;
 }
 
+/** Cấu hình OwnershipTransfer (M9). */
+export interface TransferChainConfig {
+  readonly registrarPrivateKey: string;
+  readonly ownershipTransferAddress: string;
+}
+
 /** Cấu hình ProductPassport (M5). */
 export interface ProductChainConfig {
   readonly registrarPrivateKey: string;
@@ -170,6 +176,25 @@ export class AppConfigService {
     const inspectionRegistryAddress = this.inspectionRegistryAddress;
     return registrarPrivateKey && inspectionRegistryAddress
       ? { registrarPrivateKey, inspectionRegistryAddress }
+      : null;
+  }
+
+  get ownershipTransferAddress(): string | null {
+    return this.config.get('OWNERSHIP_TRANSFER_ADDRESS', { infer: true }) ?? null;
+  }
+
+  /** Block lúc deploy OwnershipTransfer; `null` nếu chưa khai báo. */
+  get ownershipTransferDeployBlock(): bigint | null {
+    const block = this.config.get('OWNERSHIP_TRANSFER_DEPLOY_BLOCK', { infer: true });
+    return block === undefined ? null : BigInt(block);
+  }
+
+  /** OwnershipTransfer cùng khoá registrar ký giấy phép tạo yêu cầu; `null` khi thiếu một trong hai. */
+  get transferChain(): TransferChainConfig | null {
+    const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });
+    const ownershipTransferAddress = this.ownershipTransferAddress;
+    return registrarPrivateKey && ownershipTransferAddress
+      ? { registrarPrivateKey, ownershipTransferAddress }
       : null;
   }
 

@@ -25,8 +25,8 @@ import { FILE_STORAGE, type FileStorage } from '../../../common/files/file-stora
 import { CLOCK, type Clock } from '../../../common/time/clock.js';
 import { AuditAction, AuditTrail } from '../../audit/index.js';
 import { TRANSACTION_TRACKING, type TransactionTracking } from '../../chain-sync/index.js';
-import { type AuthenticatedUser, IdentityDirectory } from '../../identity/index.js';
-import { ProductDirectory } from '../../products/index.js';
+import type { AuthenticatedUser } from '../../identity/index.js';
+import { OwnerParties, ProductDirectory } from '../../products/index.js';
 import { type ServiceRequestRecord, ticketIdOf } from '../domain/service-request.js';
 import {
   ServiceChainNotConfiguredError,
@@ -277,7 +277,7 @@ export class GetServiceEvidence {
     @Inject(SERVICE_REQUEST_REPOSITORY) private readonly requests: ServiceRequestRepository,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
     private readonly access: ServiceCenterAccess,
-    private readonly identity: IdentityDirectory,
+    private readonly owners: OwnerParties,
   ) {}
 
   async execute(user: AuthenticatedUser, requestId: string): Promise<EvidenceDownload> {
@@ -285,12 +285,12 @@ export class GetServiceEvidence {
     if (!request) {
       throw new ServiceRequestNotFoundError();
     }
-    const [center, actor] = await Promise.all([
+    const [center, { partyIds }] = await Promise.all([
       this.access.find(user),
-      this.identity.actorOf(user.id),
+      this.owners.of(user.id),
     ]);
     const isCenter = center?.id === request.serviceCenterOrgId;
-    const isRequester = actor?.partyId === request.requestedByPartyId;
+    const isRequester = partyIds.includes(request.requestedByPartyId);
     if (!isCenter && !isRequester) {
       throw new ServiceRequestNotFoundError();
     }

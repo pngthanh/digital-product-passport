@@ -9,13 +9,9 @@ import {
 import type { ClientContext } from '../../../common/domain/client-context.js';
 import { CLOCK, type Clock } from '../../../common/time/clock.js';
 import { AuditAction, AuditTrail } from '../../audit/index.js';
-import {
-  type AuthenticatedUser,
-  IdentityDirectory,
-  type PartyActor,
-} from '../../identity/index.js';
+import type { AuthenticatedUser } from '../../identity/index.js';
 import { OrganizationDirectory } from '../../organizations/index.js';
-import { ProductDirectory, type ProductRef } from '../../products/index.js';
+import { OwnerParties, ProductDirectory, type ProductRef } from '../../products/index.js';
 import { isOpenRequest } from '../domain/service-request.js';
 import {
   ServiceCenterNotFoundError,
@@ -37,7 +33,8 @@ import {
 import { ServiceViews } from './service-views.js';
 
 interface OwnerContext {
-  actor: PartyActor;
+  /** UUID Party đang sở hữu: cá nhân, hoặc (M9) tổ chức người dùng đại diện. */
+  ownerPartyId: string;
   product: ProductRef;
 }
 
@@ -45,17 +42,23 @@ interface OwnerContext {
 @Injectable()
 export class ProductOwnerAccess {
   constructor(
-    private readonly identity: IdentityDirectory,
+    private readonly owners: OwnerParties,
     private readonly products: ProductDirectory,
   ) {}
 
   async require(user: AuthenticatedUser, productId: string): Promise<OwnerContext> {
-    const actor = await this.identity.actorOf(user.id);
-    const product = actor ? await this.products.findById(productId) : null;
-    if (!actor || !product || product.currentOwnerPartyId !== actor.partyId) {
+    const { partyIds } = await this.owners.of(user.id);
+    const product = partyIds.length > 0 ? await this.products.findById(productId) : null;
+    const ownerPartyId = product?.currentOwnerPartyId;
+    if (!product || !ownerPartyId || !partyIds.includes(ownerPartyId)) {
       throw new ServiceProductNotFoundError();
     }
-    return { actor, product };
+    return { ownerPartyId, product };
+  }
+
+  /** Các Party người dùng đứng tên (để huỷ yêu cầu đã gửi). */
+  async partiesOf(user: AuthenticatedUser): Promise<string[]> {
+    return (await this.owners.of(user.id)).partyIds;
   }
 }
 
@@ -83,13 +86,13 @@ export class GetOwnedProductService {
   ) {}
 
   async execute(user: AuthenticatedUser, productId: string): Promise<OwnedProductService> {
-    const { actor, product } = await this.owners.require(user, productId);
+    const { ownerPartyId, product } = await this.owners.require(user, productId);
     const [all, centers] = await Promise.all([
       this.requests.listForProduct(product.id),
       serviceCenters(this.organizations),
     ]);
     // Yêu cầu của chủ trước (nếu sản phẩm đã đổi chủ) không hiện mô tả lỗi cho chủ mới.
-    const mine = all.filter((request) => request.requestedByPartyId === actor.partyId);
+    const mine = all.filter((request) => request.requestedByPartyId === ownerPartyId);
     const requests = await this.views.present(mine, { includePending: false, verify: true });
     return {
       blockedReason: blockedReason({
@@ -149,7 +152,7 @@ export class SubmitServiceRequest {
     if (!this.chain.contractAddress) {
       throw new ServiceChainNotConfiguredError();
     }
-    const { actor, product } = await this.owners.require(user, productId);
+    const { ownerPartyId, product } = await this.owners.require(user, productId);
     if (product.productState !== 'SOLD') {
       throw new ServiceProductNotOwnedError();
     }
@@ -161,7 +164,7 @@ export class SubmitServiceRequest {
     }
     const request = await this.requests.create({
       productId: product.id,
-      requestedByPartyId: actor.partyId,
+      requestedByPartyId: ownerPartyId,
       serviceCenterOrgId: center.id,
       issueDesc: normalizeText(input.issueDesc) ?? '',
     });
@@ -187,14 +190,16 @@ export class CancelServiceRequest {
   constructor(
     @Inject(SERVICE_REQUEST_REPOSITORY) private readonly requests: ServiceRequestRepository,
     @Inject(CLOCK) private readonly clock: Clock,
-    private readonly identity: IdentityDirectory,
+    private readonly owners: ProductOwnerAccess,
     private readonly audit: AuditTrail,
   ) {}
 
   async execute(user: AuthenticatedUser, requestId: string, client: ClientContext): Promise<void> {
-    const actor = await this.identity.actorOf(user.id);
-    const request = actor ? await this.requests.findById(requestId) : null;
-    if (!actor || !request || request.requestedByPartyId !== actor.partyId) {
+    const [parties, request] = await Promise.all([
+      this.owners.partiesOf(user),
+      this.requests.findById(requestId),
+    ]);
+    if (!request || !parties.includes(request.requestedByPartyId)) {
       throw new ServiceRequestNotFoundError();
     }
     if (

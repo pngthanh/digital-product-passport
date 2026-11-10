@@ -247,22 +247,29 @@ export class InMemoryProducts implements ProductRepository {
     );
   }
 
-  async listOwned(ownerPartyId: string) {
-    return this.rows.filter((row) => row.currentOwnerPartyId === ownerPartyId);
+  async listOwned(ownerPartyIds: readonly string[]) {
+    return this.rows.filter(
+      (row) => row.currentOwnerPartyId !== null && ownerPartyIds.includes(row.currentOwnerPartyId),
+    );
   }
 
-  async countOwned(ownerPartyId: string) {
-    return (await this.listOwned(ownerPartyId)).length;
+  async countOwned(ownerPartyIds: readonly string[]) {
+    return (await this.listOwned(ownerPartyIds)).length;
   }
 
-  async acquiredAt(ownerPartyId: string, productIds: readonly string[]) {
+  async acquiredAt(ownerPartyIds: readonly string[], productIds: readonly string[]) {
     return new Map(
       this.ownership
         .filter(
-          (record) => record.toPartyId === ownerPartyId && productIds.includes(record.productId),
+          (record) =>
+            ownerPartyIds.includes(record.toPartyId) && productIds.includes(record.productId),
         )
         .map((record) => [record.productId, record.at]),
     );
+  }
+
+  async linkOwnershipTransfer() {
+    return false;
   }
 
   async findWarranties(productIds: readonly string[]) {

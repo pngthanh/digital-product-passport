@@ -10,6 +10,7 @@ import { InspectionModule } from './modules/inspection/index.js';
 import { OrganizationsModule } from './modules/organizations/index.js';
 import { ProductsModule } from './modules/products/index.js';
 import { ServiceModule } from './modules/service/index.js';
+import { TransferModule } from './modules/transfer/index.js';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -31,6 +32,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
     ProductsModule,
     ServiceModule,
     InspectionModule,
+    TransferModule,
   ],
 })
 export class AppModule implements NestModule {

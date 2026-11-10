@@ -6,7 +6,7 @@ import type {
   Product,
   Warranty,
 } from '../../../infrastructure/database/generated/client.js';
-import { prismaFrom } from '../../../infrastructure/database/prisma-scope.js';
+import { type PrismaExecutor, prismaFrom } from '../../../infrastructure/database/prisma-scope.js';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import type {
   HandoverRecord,
@@ -244,7 +244,8 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async recordOwnership(record: HandoverRecord, scope: TransactionScope): Promise<void> {
-    await prismaFrom(this.prisma, scope).ownershipRecord.createMany({
+    const db = prismaFrom(this.prisma, scope);
+    await db.ownershipRecord.createMany({
       data: [
         {
           productId: record.productId,
@@ -252,10 +253,37 @@ export class PrismaProductRepository implements ProductRepository {
           toPartyId: record.toPartyId,
           eventId: record.eventId,
           transferredAt: record.at,
+          transferRequestId: record.fromPartyId ? await this.completedTransferOf(db, record) : null,
         },
       ],
       skipDuplicates: true,
     });
+  }
+
+  /**
+   * (M9) Indexer quét từng contract riêng nên TransferAccepted (OwnershipTransfer) có thể được chiếu
+   * trước OwnershipTransferred (ProductPassport) của cùng giao dịch: khi đó nối luôn ở đây.
+   */
+  private async completedTransferOf(
+    db: PrismaExecutor,
+    record: HandoverRecord,
+  ): Promise<string | null> {
+    const event = await db.blockchainEvent.findUnique({
+      where: { id: record.eventId },
+      select: { txHash: true },
+    });
+    const transfer = event
+      ? await db.transferRequest.findFirst({
+          where: {
+            productId: record.productId,
+            toPartyId: record.toPartyId,
+            transferState: 'COMPLETED',
+            closedTxHash: event.txHash,
+          },
+          select: { id: true },
+        })
+      : null;
+    return transfer?.id ?? null;
   }
 
   async markDispatched(id: string, pendingPartyId: string, scope: TransactionScope) {
@@ -352,27 +380,45 @@ export class PrismaProductRepository implements ProductRepository {
     return new Map(rows.map((row) => [row.productId, row.transferredAt]));
   }
 
-  async listOwned(ownerPartyId: string): Promise<ProductRecord[]> {
+  async listOwned(ownerPartyIds: readonly string[]): Promise<ProductRecord[]> {
     const rows = await this.prisma.product.findMany({
-      where: { currentOwnerPartyId: ownerPartyId },
+      where: { currentOwnerPartyId: { in: [...ownerPartyIds] } },
       orderBy: [{ updatedAt: 'desc' }],
     });
     return rows.map(toRecord);
   }
 
-  countOwned(ownerPartyId: string): Promise<number> {
-    return this.prisma.product.count({ where: { currentOwnerPartyId: ownerPartyId } });
+  countOwned(ownerPartyIds: readonly string[]): Promise<number> {
+    return this.prisma.product.count({
+      where: { currentOwnerPartyId: { in: [...ownerPartyIds] } },
+    });
+  }
+
+  async linkOwnershipTransfer(
+    link: { productId: string; toPartyId: string; txHash: string; transferRequestId: string },
+    scope: TransactionScope,
+  ): Promise<boolean> {
+    const { count } = await prismaFrom(this.prisma, scope).ownershipRecord.updateMany({
+      where: {
+        productId: link.productId,
+        toPartyId: link.toPartyId,
+        transferRequestId: null,
+        event: { txHash: link.txHash },
+      },
+      data: { transferRequestId: link.transferRequestId },
+    });
+    return count > 0;
   }
 
   async acquiredAt(
-    ownerPartyId: string,
+    ownerPartyIds: readonly string[],
     productIds: readonly string[],
   ): Promise<Map<string, Date>> {
     if (productIds.length === 0) {
       return new Map();
     }
     const rows = await this.prisma.ownershipRecord.findMany({
-      where: { toPartyId: ownerPartyId, productId: { in: [...productIds] } },
+      where: { toPartyId: { in: [...ownerPartyIds] }, productId: { in: [...productIds] } },
       orderBy: { transferredAt: 'asc' },
       select: { productId: true, transferredAt: true },
     });
