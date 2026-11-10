@@ -2,18 +2,19 @@
 
 Hệ thống quản lý vòng đời, bảo hành và chuyển quyền sở hữu sản phẩm, ghi nhận các sự kiện quan trọng lên **Monad Testnet** (chain ID `10143`). Token MON chỉ dùng để kiểm thử, không có giá trị thương mại hay pháp lý.
 
-| Module | Nội dung                                       | Trạng thái    |
-| ------ | ---------------------------------------------- | ------------- |
-| M0     | Thiết kế chuẩn hoá và bảng traceability        | Xong          |
-| M1     | Foundation & Core Infrastructure               | Xong          |
-| M2     | Identity & Auth: tài khoản, ví MetaMask, Party | Xong          |
-| M3     | Indexer quét log, đối soát                     | Xong          |
-| M4     | Doanh nghiệp và phí MON, khu Quản trị          | Xong          |
-| M5     | Sản phẩm, mã QR, tra cứu                       | Xong          |
-| M6     | Phân phối và bán hàng, kích hoạt bảo hành      | Xong          |
-| M7     | Dịch vụ bảo hành (phiếu sửa chữa)              | Xong          |
-| **M8** | **Kiểm định sản phẩm**                         | **Xong**      |
-| M9–M13 | Chuyển quyền, thu hồi, tra cứu đầy đủ, ...     | Theo lộ trình |
+| Module  | Nội dung                                       | Trạng thái    |
+| ------- | ---------------------------------------------- | ------------- |
+| M0      | Thiết kế chuẩn hoá và bảng traceability        | Xong          |
+| M1      | Foundation & Core Infrastructure               | Xong          |
+| M2      | Identity & Auth: tài khoản, ví MetaMask, Party | Xong          |
+| M3      | Indexer quét log, đối soát                     | Xong          |
+| M4      | Doanh nghiệp và phí MON, khu Quản trị          | Xong          |
+| M5      | Sản phẩm, mã QR, tra cứu                       | Xong          |
+| M6      | Phân phối và bán hàng, kích hoạt bảo hành      | Xong          |
+| M7      | Dịch vụ bảo hành (phiếu sửa chữa)              | Xong          |
+| M8      | Kiểm định sản phẩm                             | Xong          |
+| **M9**  | **Chuyển nhượng quyền sở hữu**                 | **Xong**      |
+| M10–M13 | Thu hồi, báo mất, tra cứu đầy đủ, ...          | Theo lộ trình |
 
 ## M1 gồm những gì
 
@@ -103,6 +104,17 @@ Nhà sản xuất hoặc chủ sở hữu gửi yêu cầu kiểm định trên 
 - Một migration mới (`inspection_requests`). Phần kiểm tra file và kho file biên bản chuyển sang `apps/api/src/common/files` để M7 và M8 dùng chung.
 - **475 test tự động** (374 unit và contract, 101 e2e). Test e2e kiểm định chạy trọn luồng trên Hardhat node: gửi, huỷ, từ chối, ghi kết quả kèm ảnh, giấy phép không dùng được cho đơn vị hay kết quả khác, công khai và tải file, sửa biên bản thì lệch hash, ba loại cảnh báo.
 
+## M9 gồm những gì
+
+Chủ sở hữu chuyển sản phẩm cho người khác hoặc cho một doanh nghiệp. Quyền sở hữu chỉ đổi khi bên nhận bấm chấp nhận bằng ví của họ. Chi tiết quyết định D63–D70, luồng, gas và cách cập nhật từ M8: [docs/m9-transfer.md](docs/m9-transfer.md).
+
+- **TRF-01 Gửi yêu cầu** ở khung **Chuyển nhượng** trên trang **Đã mua**: nhập email tài khoản cá nhân hoặc mã số thuế doanh nghiệp đã duyệt, bấm **Kiểm tra** để thấy đúng tên, chọn thời gian chờ 1–30 ngày (mặc định 7). API ký giấy phép EIP-712 khoá bên nhận và thời hạn; ví chủ sở hữu gửi `createTransferRequest`. Mỗi sản phẩm một yêu cầu đang chờ.
+- **Chuyển nhượng** (`/transfers`, mọi người dùng): tab Gửi tới tôi, Tôi đã gửi, Đã đóng. **TRF-03 Chấp nhận** và **TRF-04 Từ chối** bằng ví bên nhận; **TRF-02 Huỷ** bằng ví bên gửi; **TRF-05** yêu cầu quá hạn không chấp nhận được, ai cũng đóng được.
+- Doanh nghiệp làm chủ được: người đại diện chấp nhận, chuyển tiếp, gửi yêu cầu bảo hành hay kiểm định thay doanh nghiệp. Cá nhân chưa liên kết ví vẫn nhận được yêu cầu, liên kết ví rồi mới chấp nhận.
+- **Bảo hành đi theo sản phẩm**; sản phẩm đang có phiếu sửa mở thì không chuyển được. Khi đổi chủ, yêu cầu bảo hành chưa tiếp nhận và yêu cầu kiểm định đang chờ của chủ cũ tự huỷ. Hộ chiếu công khai có bước **Chuyển quyền sở hữu**, không hiện tên hay email.
+- **Contract `OwnershipTransfer`** (deploy thêm, được cấp `TRANSFER_CONTRACT_ROLE` để gọi `ProductPassport.transferOwnership`). Không có migration mới.
+- **502 test tự động** (396 unit và contract, 106 e2e). Test e2e chuyển nhượng chạy trọn luồng trên Hardhat node: tạo và chấp nhận, đổi chủ và bảo hành đi theo, phiếu sửa chặn chuyển, tổ chức từ chối rồi chấp nhận, chủ huỷ, quá hạn.
+
 ---
 
 ## 1. Chuẩn bị
@@ -168,6 +180,11 @@ pnpm --filter @dpp/contracts deploy:services:monad
 #     chép INSPECTION_REGISTRY_ADDRESS, INSPECTION_REGISTRY_DEPLOY_BLOCK vào .env
 pnpm --filter @dpp/contracts deploy:inspections:monad
 
+# 7e. (M9) Deploy OwnershipTransfer (cần PARTY_REGISTRY_ADDRESS, PRODUCT_PASSPORT_ADDRESS,
+#     SERVICE_TICKET_MANAGER_ADDRESS; ví deploy là Admin), chép OWNERSHIP_TRANSFER_ADDRESS,
+#     OWNERSHIP_TRANSFER_DEPLOY_BLOCK vào .env
+pnpm --filter @dpp/contracts deploy:transfers:monad
+
 # 8. Chạy toàn bộ: API (cổng 4000), Worker và Web (cổng 3000)
 pnpm dev
 
@@ -175,7 +192,7 @@ pnpm dev
 pnpm --filter @dpp/api admin:grant <email-admin>
 ```
 
-Máy đã chạy M4 chỉ cần `pnpm install`, `pnpm db:deploy`, `pnpm --filter @dpp/api db:deploy:test` và bước 7b, **không** làm mới CSDL (xem [docs/m5-products.md](docs/m5-products.md) mục 8). Máy đã chạy M6 chỉ cần `pnpm install` và bước 7c (xem [docs/m7-service.md](docs/m7-service.md) mục 6). Máy đã chạy M7 cần `pnpm install`, `pnpm db:deploy`, `pnpm --filter @dpp/api db:deploy:test` và bước 7d (xem [docs/m8-inspection.md](docs/m8-inspection.md) mục 6).
+Máy đã chạy M4 chỉ cần `pnpm install`, `pnpm db:deploy`, `pnpm --filter @dpp/api db:deploy:test` và bước 7b, **không** làm mới CSDL (xem [docs/m5-products.md](docs/m5-products.md) mục 8). Máy đã chạy M6 chỉ cần `pnpm install` và bước 7c (xem [docs/m7-service.md](docs/m7-service.md) mục 6). Máy đã chạy M7 cần `pnpm install`, `pnpm db:deploy`, `pnpm --filter @dpp/api db:deploy:test` và bước 7d (xem [docs/m8-inspection.md](docs/m8-inspection.md) mục 6). Máy đã chạy M8 chỉ cần `pnpm install` và bước 7e (xem [docs/m9-transfer.md](docs/m9-transfer.md) mục 6).
 
 Mở trình duyệt:
 
@@ -186,9 +203,10 @@ Mở trình duyệt:
 - http://localhost:3000/products — (M5) sản phẩm của nhà sản xuất: thêm từng cái hoặc nhập CSV, tải QR, in tem. Chỉ hiện khi tài khoản đại diện nhà sản xuất đã duyệt.
 - http://localhost:3000/lookup — (M5) tra cứu công khai bằng mã, camera hoặc ảnh tem; hộ chiếu ở `/p/<mã>`, không cần đăng nhập.
 - http://localhost:3000/inventory — (M6) kho hàng của nhà bán lẻ: nhận hoặc từ chối hàng, bán và kích hoạt bảo hành.
-- http://localhost:3000/owned — (M6) sản phẩm người mua đang sở hữu và bảo hành; (M7, M8) trang chi tiết có khung gửi yêu cầu bảo hành và yêu cầu kiểm định.
+- http://localhost:3000/owned — (M6) sản phẩm người mua (hoặc doanh nghiệp mình đại diện) đang sở hữu và bảo hành; (M7, M8, M9) trang chi tiết có khung gửi yêu cầu bảo hành, yêu cầu kiểm định và chuyển nhượng.
 - http://localhost:3000/service — (M7) phiếu sửa chữa của trung tâm bảo hành: tiếp nhận, mở phiếu, ghi biên bản, đóng phiếu.
 - http://localhost:3000/inspection — (M8) yêu cầu kiểm định gửi tới đơn vị kiểm định: ghi kết quả hoặc từ chối.
+- http://localhost:3000/transfers — (M9) yêu cầu chuyển nhượng gửi tới bạn, bạn đã gửi và đã đóng: chấp nhận, từ chối, huỷ.
 - Quét QR bằng điện thoại cùng Wi-Fi: đặt `PUBLIC_WEB_URL` bằng địa chỉ `Network: http://192.168.x.x:3000` mà `pnpm dev` in ra, rồi khởi động lại `pnpm dev`.
 - http://localhost:3000/system/status — trạng thái CSDL, blockchain và Indexer (mở từ khu Quản trị).
 - http://localhost:4000/api/v1/health/ready — báo cáo JSON (trả 503 khi chưa sẵn sàng).
@@ -200,7 +218,7 @@ Mở trình duyệt:
 pnpm --filter @dpp/contracts node
 ```
 
-Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`; tiếp theo `pnpm --filter @dpp/contracts deploy:products:local`, chép `PRODUCT_PASSPORT_ADDRESS`, `PRODUCT_PASSPORT_DEPLOY_BLOCK` và `WARRANTY_MANAGER_ADDRESS`; tiếp theo `pnpm --filter @dpp/contracts deploy:services:local`, chép `SERVICE_TICKET_MANAGER_ADDRESS` và `SERVICE_TICKET_MANAGER_DEPLOY_BLOCK`; tiếp theo `pnpm --filter @dpp/contracts deploy:inspections:local`, chép `INSPECTION_REGISTRY_ADDRESS` và `INSPECTION_REGISTRY_DEPLOY_BLOCK`; rồi `pnpm dev`.
+Sửa `.env`: `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=` (để trống). Ở cửa sổ 2 chạy `pnpm --filter @dpp/contracts deploy:local`, chép `PARTY_REGISTRY_ADDRESS` và `PARTY_REGISTRY_DEPLOY_BLOCK` vào `.env`; tiếp theo `pnpm --filter @dpp/contracts deploy:products:local`, chép `PRODUCT_PASSPORT_ADDRESS`, `PRODUCT_PASSPORT_DEPLOY_BLOCK` và `WARRANTY_MANAGER_ADDRESS`; tiếp theo `pnpm --filter @dpp/contracts deploy:services:local`, chép `SERVICE_TICKET_MANAGER_ADDRESS` và `SERVICE_TICKET_MANAGER_DEPLOY_BLOCK`; tiếp theo `pnpm --filter @dpp/contracts deploy:inspections:local`, chép `INSPECTION_REGISTRY_ADDRESS` và `INSPECTION_REGISTRY_DEPLOY_BLOCK`; tiếp theo `pnpm --filter @dpp/contracts deploy:transfers:local`, chép `OWNERSHIP_TRANSFER_ADDRESS` và `OWNERSHIP_TRANSFER_DEPLOY_BLOCK`; rồi `pnpm dev`.
 
 Để thử liên kết ví với mạng cục bộ: trong MetaMask thêm mạng RPC `http://127.0.0.1:8545`, chain ID `31337`, ký hiệu `ETH`; import một tài khoản thử từ danh sách Hardhat node in ra (khoá công khai, **chỉ dùng cục bộ**). Mỗi lần khởi động lại Hardhat node, contract phải deploy lại, CSDL cần làm mới bằng `pnpm --filter @dpp/api db:reset` (mốc quét của Indexer thuộc chain cũ), và MetaMask cần xoá lịch sử giao dịch của tài khoản (Settings → Advanced → Clear activity tab data) để không lệch nonce.
 
@@ -237,14 +255,15 @@ dpp/
 │   │   │       ├── products/        # M5: PRD-01..03, mã QR, hộ chiếu công khai; M6: DST-01..03, kho hàng, đã mua, bảo hành
 │   │   │       ├── service/         # M7: SVC-01..04, phiếu sửa chữa, biên bản (file trong UPLOAD_DIR), projector ServiceTicketManager
 │   │   │       ├── inspection/      # M8: INS-01..04, yêu cầu và kết quả kiểm định, projector InspectionRegistry
+│   │   │       ├── transfer/        # M9: TRF-01..06, chuyển nhượng quyền sở hữu, projector OwnershipTransfer
 │   │   │       └── audit/           # ghi audit_logs, anomaly_alerts (màn hình xem ở M12)
 │   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar, cấp quyền Admin
-│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm, bảo hành, kiểm định
+│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm, bảo hành, kiểm định, chuyển nhượng
 │   └── web/                         # Next.js 16 + Tailwind 4
 │       └── src/
-│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /products, /inventory, /owned, /service, /inspection, /lookup, /p/[code], /system/status
+│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /products, /inventory, /owned, /service, /inspection, /transfers, /lookup, /p/[code], /system/status
 │           ├── components/          # ui/ (button, badge, field, tabs, step-list, ...), layout/
-│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, distribution, warranty, service, inspection, lookup, passport, ...
+│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, distribution, warranty, service, inspection, transfer, lookup, passport, ...
 │           └── lib/                 # env, format, nhãn trạng thái; wallet/ (MetaMask, gửi giao dịch)
 ├── packages/
 │   ├── contracts/                   # Hardhat 3 + OpenZeppelin 5
@@ -254,15 +273,16 @@ dpp/
 │   │   ├── contracts/warranty/      # M6: WarrantyManager.sol
 │   │   ├── contracts/service/       # M7: ServiceTicketManager.sol
 │   │   ├── contracts/inspection/    # M8: InspectionRegistry.sol
+│   │   ├── contracts/transfer/      # M9: OwnershipTransfer.sol
 │   │   ├── contracts/test/          # contract chỉ dùng trong test
 │   │   ├── ignition/modules/        # module deploy (Hardhat Ignition)
-│   │   ├── scripts/                 # deploy-identity.ts, deploy-products.ts, deploy-services.ts, deploy-inspections.ts, grant-admin-role.ts, export-abi.ts
+│   │   ├── scripts/                 # deploy-identity.ts, deploy-products.ts, deploy-services.ts, deploy-inspections.ts, deploy-transfers.ts, grant-admin-role.ts, export-abi.ts
 │   │   ├── test/                    # mocha + ethers
 │   │   └── hardhat.config.ts        # mạng monadTestnet, verify
 │   └── shared/                      # dùng chung cho API, Web, test contract
 │       └── src/
 │           ├── abi/                 # ABI sinh từ artifact (không sửa tay)
-│           ├── chain/               # thông số mạng, EIP-712 của PartyRegistry, ProductPassport, ServiceTicketManager, InspectionRegistry, hạn bảo hành
+│           ├── chain/               # thông số mạng, EIP-712 của PartyRegistry, ProductPassport, ServiceTicketManager, InspectionRegistry, OwnershipTransfer, hạn bảo hành
 │           ├── domain/              # enum, 4 state machine, role, enum on-chain, hash hồ sơ sản phẩm, hash biên bản sửa chữa và kiểm định, mã QR
 │           ├── api/                 # hợp đồng dữ liệu API ↔ Web
 │           └── utils/               # chuẩn hoá địa chỉ, hash, MON
@@ -338,7 +358,7 @@ Mỗi model trong `schema.prisma` ghi rõ loại và các cột [P].
 
 ### Thêm migration mới
 
-Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Migration của M4: `20261029000000_organization_representative` (thêm `organizations.representative_user_id` và `status_reason`). Migration của M5: `20261030000000_organization_applications` (bảng lịch sử nộp đơn, tự dựng lại từ `blockchain_events`) và `20261030010000_product_registration` (serial theo nhà sản xuất, ngày sản xuất, bảo hành). M6, M7 không có migration mới. Migration của M8: `20261107000000_inspection_requests` (bảng yêu cầu kiểm định, `inspections.request_id`). Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`; riêng M4 phải deploy lại PartyRegistry nên làm mới CSDL bằng `db:reset` (xem [docs/m4-organizations.md](docs/m4-organizations.md) mục 5); M6 deploy ProductPassport mới nên chỉ dọn sản phẩm bằng `products:reset` (xem [docs/m6-distribution.md](docs/m6-distribution.md) mục 6).
+Migration của M2: `20261028000000_identity_auth` (thêm `users.session_version` và `ux_wallet_one_pending_personal`). Migration của M3: `20261028120000_drop_custodial_keys` (bỏ bảng `custodial_keys`). Migration của M4: `20261029000000_organization_representative` (thêm `organizations.representative_user_id` và `status_reason`). Migration của M5: `20261030000000_organization_applications` (bảng lịch sử nộp đơn, tự dựng lại từ `blockchain_events`) và `20261030010000_product_registration` (serial theo nhà sản xuất, ngày sản xuất, bảo hành). M6, M7 không có migration mới. Migration của M8: `20261107000000_inspection_requests` (bảng yêu cầu kiểm định, `inspections.request_id`). M9 không có migration mới (bảng `transfer_requests` có từ đầu). Máy đã chạy module trước chỉ cần `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`; riêng M4 phải deploy lại PartyRegistry nên làm mới CSDL bằng `db:reset` (xem [docs/m4-organizations.md](docs/m4-organizations.md) mục 5); M6 deploy ProductPassport mới nên chỉ dọn sản phẩm bằng `products:reset` (xem [docs/m6-distribution.md](docs/m6-distribution.md) mục 6).
 
 ```bash
 # 1. Sửa apps/api/prisma/schema.prisma
@@ -365,6 +385,7 @@ pnpm db:migrate
 - Deploy ProductPassport và WarrantyManager (M6): `pnpm --filter @dpp/contracts deploy:products:monad` (hoặc `deploy:products:local`). Hai contract đọc quyền tổ chức từ PartyRegistry nên phải deploy sau PartyRegistry; script kiểm tra `PARTY_REGISTRY_ADDRESS` có contract, ví deploy còn quyền Admin (để cấp `PRODUCT_CONTRACT_ROLE` cho ProductPassport) rồi in ba dòng cần chép vào `.env`.
 - Deploy ServiceTicketManager (M7): `pnpm --filter @dpp/contracts deploy:services:monad` (hoặc `deploy:services:local`). Script đọc `PARTY_REGISTRY_ADDRESS`, `PRODUCT_PASSPORT_ADDRESS`, `WARRANTY_MANAGER_ADDRESS`, kiểm tra ví deploy còn quyền Admin (để cấp `SERVICE_CONTRACT_ROLE`) rồi in hai dòng cần chép vào `.env`.
 - Deploy InspectionRegistry (M8): `pnpm --filter @dpp/contracts deploy:inspections:monad` (hoặc `deploy:inspections:local`). Script đọc `PARTY_REGISTRY_ADDRESS`, `PRODUCT_PASSPORT_ADDRESS`, kiểm tra ProductPassport trỏ đúng PartyRegistry rồi in hai dòng cần chép vào `.env`. Không cần quyền Admin.
+- Deploy OwnershipTransfer (M9): `pnpm --filter @dpp/contracts deploy:transfers:monad` (hoặc `deploy:transfers:local`). Script đọc `PARTY_REGISTRY_ADDRESS`, `PRODUCT_PASSPORT_ADDRESS`, `SERVICE_TICKET_MANAGER_ADDRESS`, kiểm tra ví deploy còn quyền Admin (để cấp `TRANSFER_CONTRACT_ROLE`) rồi in hai dòng cần chép vào `.env`.
 - Sau khi sửa contract: `pnpm --filter @dpp/contracts abi:export` để cập nhật ABI trong `@dpp/shared` (test báo đỏ nếu quên).
 - Xác minh mã nguồn: `pnpm --filter @dpp/contracts exec hardhat verify <địa_chỉ> --network monadTestnet`. Sourcify của MonadVision không cần API key; Monadscan cần `ETHERSCAN_API_KEY`.
 - Nếu mạng chặn tải trình biên dịch Solidity, đặt `SOLC_PATH` tới `soljson.js` (gói npm `solc`) hoặc file solc native.
@@ -422,6 +443,8 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 | `apps/api/test/service/service.e2e-spec.ts`                             | (M7) SVC-01..04 thật trên Hardhat node, biên bản kèm ảnh khớp hash, sửa biên bản thì lệch |
 | `packages/contracts/test/inspection/inspection-registry.test.ts`        | (M8) Ghi kết quả, quyền người gửi, giấy phép khoá kết quả và hash, mọi revert             |
 | `apps/api/test/inspection/inspection.e2e-spec.ts`                       | (M8) INS-01..04 thật trên Hardhat node, công khai trên hộ chiếu, cảnh báo, ràng buộc CSDL |
+| `packages/contracts/test/transfer/ownership-transfer.test.ts`           | (M9) Tạo, chấp nhận, từ chối, huỷ, quá hạn; tổ chức làm chủ; phiếu sửa chặn; mọi revert   |
+| `apps/api/test/transfer/transfer.e2e-spec.ts`                           | (M9) TRF-01..06 thật trên Hardhat node, đổi chủ, bảo hành đi theo, dọn yêu cầu chủ cũ     |
 
 Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự động mỗi lần chạy CI, nên một bên đổi mà quên bên kia thì test sẽ đỏ.
 
@@ -449,6 +472,7 @@ Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự đ�
 | Deploy báo `HHE10120 ... reconciliation errors`              | Ignition đã có bản deploy cũ với tham số khác. Tăng `PARTY_REGISTRY_VERSION` trong `packages/contracts/scripts/deploy-identity.ts` khi contract đổi mà cần deploy mới                                                                                                                                                                    |
 | Trang Sản phẩm báo chưa cấu hình ProductPassport             | Thiếu `PRODUCT_PASSPORT_ADDRESS`: chạy `pnpm --filter @dpp/contracts deploy:products:monad`, chép hai dòng in ra vào `.env`, khởi động lại `pnpm dev`                                                                                                                                                                                    |
 | Trang Kiểm định báo chưa cấu hình InspectionRegistry         | Thiếu `INSPECTION_REGISTRY_ADDRESS`: chạy `pnpm --filter @dpp/contracts deploy:inspections:monad`, chép hai dòng in ra vào `.env`, khởi động lại `pnpm dev`                                                                                                                                                                              |
+| Khung Chuyển nhượng báo chưa cấu hình OwnershipTransfer      | Thiếu `OWNERSHIP_TRANSFER_ADDRESS`: chạy `pnpm --filter @dpp/contracts deploy:transfers:monad` bằng ví Admin, chép hai dòng in ra vào `.env`, khởi động lại `pnpm dev`                                                                                                                                                                   |
 | Không thấy mục Sản phẩm / Kho hàng trên menu                 | Sản phẩm chỉ hiện với người đại diện Nhà sản xuất, Kho hàng chỉ hiện với người đại diện Nhà bán lẻ. Đơn chưa duyệt thì mục vẫn hiện nhưng chưa thao tác được                                                                                                                                                                             |
 | Deploy sản phẩm báo ví deploy không có quyền Admin           | Ví trong keystore không phải ví đã deploy PartyRegistry, hoặc đã bị thu quyền. Dùng đúng ví đã deploy PartyRegistry                                                                                                                                                                                                                      |
 | Khung Phân phối báo chưa có nhà bán lẻ                       | Chưa có doanh nghiệp loại Nhà bán lẻ nào được Admin duyệt                                                                                                                                                                                                                                                                                |
@@ -463,7 +487,7 @@ Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự đ�
 
 ## 10. Quy trình phát triển và công cụ
 
-- Nhóm phát triển theo từng module (M1 → M13). Mỗi module có tài liệu trong `docs/` ghi lại các quyết định thiết kế (D14–D62), luồng nghiệp vụ, bảng truy vết và cách kiểm thử.
+- Nhóm phát triển theo từng module (M1 → M13). Mỗi module có tài liệu trong `docs/` ghi lại các quyết định thiết kế (D14–D71), luồng nghiệp vụ, bảng truy vết và cách kiểm thử.
 - Nhóm sử dụng trợ lý AI (Claude) để **hỗ trợ** viết mã, test và tài liệu. Nhóm chịu trách nhiệm phân tích nghiệp vụ, chọn phương án thiết kế, đọc hiểu và chỉnh sửa mã, chạy kiểm thử, deploy và vận hành hệ thống trên Monad Testnet.
 - M1–M6 được commit theo từng module. Từ M7, commit nhỏ theo từng lớp (contract → shared → API → web → docs); trước khi push lên `main` chạy đủ format, lint, typecheck, test, e2e, build trên máy, và CI trên GitHub chạy lại các bước này sau mỗi lần push.
 
