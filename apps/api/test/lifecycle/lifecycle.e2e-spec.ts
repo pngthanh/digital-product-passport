@@ -90,6 +90,7 @@ describe('RCL-01, LIF-01, LIF-02: thu hồi, báo mất, ngừng sử dụng (e2
   let centerOrgId: string;
   const productIds: Record<string, string> = {};
   const chainIds: Record<string, string> = {};
+  let deployBlockNumber = 0n;
   const publicCodes: Record<string, string> = {};
 
   async function register(email: string, fullName: string): Promise<TestAgent> {
@@ -229,6 +230,7 @@ describe('RCL-01, LIF-01, LIF-02: thu hồi, báo mất, ngừng sử dụng (e2
     transfers = new Contract(transferAddress, OWNERSHIP_TRANSFER_ABI, chain.provider);
     lifecycle = new Contract(lifecycleAddress, PRODUCT_LIFECYCLE_ABI, chain.provider);
     const deployBlock = String(await chain.provider.getBlockNumber());
+    deployBlockNumber = BigInt(deployBlock);
     const config = createTestConfig({
       DATABASE_URL: process.env.DATABASE_URL ?? '',
       JWT_SECRET: process.env.JWT_SECRET ?? '',
@@ -616,5 +618,50 @@ describe('RCL-01, LIF-01, LIF-02: thu hồi, báo mất, ngừng sử dụng (e2
     expect((await notificationsOf(owner)).items[0]?.readAt).not.toBeNull();
     await visitor.get('/api/v1/me/notifications').expect(401);
     expect(await prisma.anomalyAlert.count()).toBe(0);
+  });
+  /** Trạng thái mọi bảng do Indexer chiếu (không gồm mốc quét). */
+  const rows = (sql: string) => prisma.$queryRawUnsafe<Record<string, unknown>[]>(sql);
+
+  async function projectedState() {
+    return {
+      events: await rows(
+        'SELECT tx_hash, log_index, finality_status, block_hash FROM blockchain_events ORDER BY tx_hash, log_index',
+      ),
+      products: await rows(
+        'SELECT id, product_state, current_custodian_party_id, pending_custodian_party_id, current_owner_party_id FROM products ORDER BY id',
+      ),
+      warranties: await rows(
+        'SELECT product_id, warranty_state, expires_at FROM warranties ORDER BY product_id',
+      ),
+      service: await rows('SELECT id, service_state FROM service_requests ORDER BY id'),
+      transfers: await rows('SELECT id, transfer_state FROM transfer_requests ORDER BY id'),
+      counts: await rows(
+        `SELECT (SELECT count(*) FROM audit_logs)::int AS audit,
+                (SELECT count(*) FROM notifications)::int AS notifications,
+                (SELECT count(*) FROM custody_records)::int AS custody,
+                (SELECT count(*) FROM ownership_records)::int AS ownership,
+                (SELECT count(*) FROM recalls)::int AS recalls,
+                (SELECT count(*) FROM anomaly_alerts)::int AS alerts`,
+      ),
+    };
+  }
+
+  it('M13: Worker quét lại từ block deploy (khôi phục sau sự cố) không tạo trùng event, nhật ký, thông báo hay lịch sử', async () => {
+    const before = await projectedState();
+    expect(before.events.length).toBeGreaterThan(30);
+
+    // Như khôi phục CSDL từ bản sao lưu cũ: mốc quét của mọi contract lùi về block deploy.
+    await prisma.indexerCheckpoint.updateMany({
+      data: {
+        lastFinalizedBlock: deployBlockNumber - 1n,
+        lastObservedBlock: deployBlockNumber - 1n,
+      },
+    });
+    await sync();
+
+    expect(await projectedState()).toEqual(before);
+    const head = BigInt(await chain.provider.send('eth_blockNumber', []));
+    const checkpoints = await prisma.indexerCheckpoint.findMany();
+    expect(checkpoints.every((checkpoint) => checkpoint.lastFinalizedBlock >= head)).toBe(true);
   });
 });

@@ -1,5 +1,5 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule, type TestingModuleBuilder } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
 import { configureHttpApp } from '../../src/common/http/configure-http-app.js';
 import { AppConfigModule } from '../../src/config/app-config.module.js';
@@ -65,7 +65,11 @@ export function sessionCookieFrom(setCookie: string[] | string | undefined): str
 /** Phần Worker cần cho test (không bật ScheduleModule): test tự gọi runOnce() đúng lúc cần. */
 export async function createWorkerContext(
   config: AppConfigService,
-  options: { chain?: object } = {},
+  options: {
+    chain?: object;
+    /** (M13) Thay thêm provider, ví dụ CHAIN_READER có finality trễ để giả lập reorg. */
+    customize?: (builder: TestingModuleBuilder) => TestingModuleBuilder;
+  } = {},
 ): Promise<TestingModule> {
   let builder = Test.createTestingModule({
     imports: [
@@ -85,6 +89,9 @@ export async function createWorkerContext(
     .useValue(config);
   if (options.chain) {
     builder = builder.overrideProvider(ChainProviderService).useValue(options.chain);
+  }
+  if (options.customize) {
+    builder = options.customize(builder);
   }
   const moduleRef = await builder.compile();
   return moduleRef.init();
