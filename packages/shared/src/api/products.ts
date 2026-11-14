@@ -95,7 +95,7 @@ export interface ProductSummary {
   pendingRetailer: OrganizationLabel | null;
 }
 
-export type ProductListFilter = 'ALL' | 'REGISTERED' | 'DRAFT';
+export type ProductListFilter = 'ALL' | 'REGISTERED' | 'DRAFT' | 'RECALLED';
 
 /** `GET /me/products`. */
 export interface MyProductList {
@@ -150,6 +150,9 @@ export const JOURNEY_STEP_KINDS = [
   'SERVICE_REPAIRED',
   'SERVICE_REJECTED',
   'INSPECTED',
+  'RECALLED',
+  'REPORTED_LOST_STOLEN',
+  'RETIRED',
 ] as const;
 export type JourneyStepKind = (typeof JOURNEY_STEP_KINDS)[number];
 

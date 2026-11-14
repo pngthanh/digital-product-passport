@@ -75,6 +75,11 @@ export interface TransferRequestView {
   state: TransferState;
   /** Còn REQUESTED nhưng đã quá hạn: không chấp nhận được, ai cũng đóng được (TRF-05). */
   expired: boolean;
+  /**
+   * (M10) Sản phẩm không còn ở trạng thái Đã bán (bị thu hồi, báo mất, ngừng sử dụng): bên nhận không
+   * chấp nhận được nữa, bên gửi chỉ còn huỷ.
+   */
+  productUnavailable: boolean;
   /** Người đang xem là bên gửi hay bên nhận. */
   direction: 'OUTGOING' | 'INCOMING';
   from: TransferParty;
