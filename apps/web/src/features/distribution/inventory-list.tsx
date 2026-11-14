@@ -9,8 +9,8 @@ import type { PassportTarget } from './distribution-flows';
 import { ReceiptActions } from './receipt-actions';
 
 /**
- * Kho của nhà bán lẻ. Chờ nhận: xác nhận hoặc từ chối ngay trên dòng; Đang bán: mở trang bán;
- * Đã bán: ngày giao cho người mua.
+ * Kho của nhà bán lẻ. Chờ nhận: xác nhận hoặc từ chối ngay trên dòng; Đang bán: mở trang bán (hàng
+ * bị thu hồi chỉ hiện nhãn, không bán được); Đã bán: ngày giao cho người mua.
  */
 export function InventoryList({
   items,
@@ -54,7 +54,7 @@ export function InventoryList({
                   compact
                   target={{ ...target, productId: item.id, chainProductId: item.chainProductId }}
                 />
-              ) : filter === 'IN_STOCK' ? (
+              ) : filter === 'IN_STOCK' && item.productState === 'AT_RETAIL' ? (
                 <ButtonLink href={`/inventory/${item.id}`} size="sm">
                   <ShoppingBag aria-hidden className="size-4" />
                   Bán

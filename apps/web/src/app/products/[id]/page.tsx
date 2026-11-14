@@ -10,6 +10,8 @@ import { ChainLog } from '@/features/chain-log/chain-log';
 import { DispatchPanel } from '@/features/distribution/dispatch-panel';
 import { productInspectionSchema } from '@/features/inspection/inspection.schema';
 import { InspectionRequesterPanel } from '@/features/inspection/requester-panel';
+import { publicLifecycleSchema } from '@/features/lifecycle/lifecycle.schema';
+import { LifecycleNoticeBanner } from '@/features/lifecycle/lifecycle-notice';
 import { PassportHistory } from '@/features/passport/passport-history';
 import { ProofList } from '@/features/passport/proof-list';
 import { DraftActions } from '@/features/products/draft-actions';
@@ -67,9 +69,12 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       ? ((await serverGet('/me/retailers', retailerOptionsSchema)) ?? [])
       : [];
   const location = locationText(product);
-  const inspection = registered
-    ? await serverGet(`/me/products/${id}/inspection`, productInspectionSchema)
-    : null;
+  const [inspection, lifecycle] = registered
+    ? await Promise.all([
+        serverGet(`/me/products/${id}/inspection`, productInspectionSchema),
+        serverGet(`/public/products/${product.publicCode}/lifecycle`, publicLifecycleSchema),
+      ])
+    : [null, null];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -87,6 +92,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
       </div>
       <p className="mt-1 font-mono text-sm break-all text-muted">{product.serialNumber}</p>
       {location ? <p className="mt-1 text-sm">{location}</p> : null}
+      {lifecycle?.notice ? (
+        <LifecycleNoticeBanner
+          notice={lifecycle.notice}
+          chainId={chainId}
+          audience="manufacturer"
+          className="mt-6"
+        />
+      ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="grid min-w-0 content-start gap-6">
@@ -208,6 +221,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 Bảo hành
               </h2>
               <WarrantySummary
+                productState={product.productState}
                 warranty={product.warranty}
                 warrantyMonths={product.warrantyMonths}
                 chainId={chainId}

@@ -1,7 +1,7 @@
 'use client';
 
 import { formatPublicCode, type ProductSummary } from '@dpp/shared';
-import { Printer, RotateCw } from 'lucide-react';
+import { Ban, Printer, RotateCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,6 +11,8 @@ import { StepList } from '@/components/ui/step-list';
 import { formatDate } from '@/lib/format';
 import { describeWalletError } from '@/lib/wallet/wallet-errors';
 import { FormAlert } from '../auth/form-alert';
+import { isRecallable } from '../lifecycle/lifecycle-flows';
+import { RecallForm } from '../lifecycle/recall-form';
 import {
   REGISTER_STEPS,
   type RegisterStep,
@@ -20,8 +22,8 @@ import {
 import { locationText, productStatusLabel, warrantyLabel } from './product-status';
 
 /**
- * Danh sách sản phẩm của nhà sản xuất. Chọn nhiều dòng để in tem QR (sản phẩm đã lên blockchain)
- * hoặc gửi lại bản nháp trong một giao dịch.
+ * Danh sách sản phẩm của nhà sản xuất. Chọn nhiều dòng để in tem QR (sản phẩm đã lên blockchain),
+ * gửi lại bản nháp trong một giao dịch, hoặc thu hồi (M10, tối đa 50 sản phẩm mỗi lần).
  */
 export function ProductTable({
   items,
@@ -38,6 +40,8 @@ export function ProductTable({
   const chosen = items.filter((item) => selected.has(item.id));
   const registered = chosen.filter((item) => item.syncStatus === 'CONFIRMED');
   const drafts = chosen.filter((item) => item.syncStatus === 'PENDING');
+  const recallable = registered.filter((item) => isRecallable(item.productState));
+  const [recalling, setRecalling] = useState(false);
   const allSelected = items.length > 0 && selected.size === items.length;
 
   function toggle(id: string) {
@@ -99,7 +103,24 @@ export function ProductTable({
             Ghi {drafts.length} bản nháp lên blockchain
           </Button>
         ) : null}
+        {recallable.length > 0 && !recalling ? (
+          <Button size="sm" variant="secondary" onClick={() => setRecalling(true)}>
+            <Ban aria-hidden className="size-4" />
+            Thu hồi ({recallable.length})
+          </Button>
+        ) : null}
       </div>
+      {recalling && recallable.length > 0 ? (
+        <RecallForm
+          products={recallable}
+          onCancel={() => setRecalling(false)}
+          onDone={() => {
+            setRecalling(false);
+            setSelected(new Set());
+            router.refresh();
+          }}
+        />
+      ) : null}
       {step ? (
         <StepList
           label="Tiến trình gửi lại bản nháp"

@@ -9,6 +9,8 @@ import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
 import { ReceiptActions } from '@/features/distribution/receipt-actions';
 import { SaleForm } from '@/features/distribution/sale-form';
+import { publicLifecycleSchema } from '@/features/lifecycle/lifecycle.schema';
+import { LifecycleNoticeBanner } from '@/features/lifecycle/lifecycle-notice';
 import { PassportHistory } from '@/features/passport/passport-history';
 import { ProofList } from '@/features/passport/proof-list';
 import { inventoryDetailSchema } from '@/features/products/product.schema';
@@ -49,6 +51,10 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
   if (!product) {
     notFound();
   }
+  const lifecycle =
+    product.productState === 'RECALLED'
+      ? await serverGet(`/public/products/${product.publicCode}/lifecycle`, publicLifecycleSchema)
+      : null;
   const chainId = serverChainId();
   const status = productStatusLabel(product);
   const wallet = identity.wallets.find((candidate) => candidate.status === 'ACTIVE')?.address;
@@ -73,7 +79,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
             filter:
               product.productState === 'IN_DISTRIBUTION'
                 ? 'INCOMING'
-                : product.productState === 'AT_RETAIL'
+                : product.productState === 'AT_RETAIL' || product.productState === 'RECALLED'
                   ? 'IN_STOCK'
                   : 'SOLD',
           },
@@ -90,6 +96,14 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
       </div>
       <p className="mt-1 font-mono text-sm break-all text-muted">{product.serialNumber}</p>
       {location ? <p className="mt-1 text-sm">{location}</p> : null}
+      {lifecycle?.notice ? (
+        <LifecycleNoticeBanner
+          notice={lifecycle.notice}
+          chainId={chainId}
+          audience="retailer"
+          className="mt-6"
+        />
+      ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="grid min-w-0 content-start gap-6">
@@ -168,6 +182,7 @@ export default async function InventoryItemPage({ params }: { params: Promise<{ 
               Bảo hành
             </h2>
             <WarrantySummary
+              productState={product.productState}
               warranty={product.warranty}
               warrantyMonths={product.warrantyMonths}
               chainId={chainId}

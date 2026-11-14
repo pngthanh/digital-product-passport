@@ -11,6 +11,7 @@ const REQUEST: TransferRequestView = {
   requestId: '3',
   state: 'REQUESTED',
   expired: false,
+  productUnavailable: false,
   direction: 'INCOMING',
   from: { kind: 'PERSON', fullName: 'Trần Thị B', maskedEmail: 'b***@example.com', isYou: false },
   to: {
@@ -94,5 +95,13 @@ describe('nút thao tác theo vai và hạn', () => {
   it('quá hạn chỉ còn đóng yêu cầu, đã đóng thì không còn nút', () => {
     expect(transferActionsFor({ ...REQUEST, expired: true })).toEqual(['expireTransfer']);
     expect(transferActionsFor({ ...REQUEST, state: 'COMPLETED' })).toEqual([]);
+  });
+
+  it('(M10) sản phẩm đã thu hồi, báo mất: bên nhận không chấp nhận được, bên gửi chỉ huỷ', () => {
+    const unavailable = { ...REQUEST, productUnavailable: true };
+    expect(transferActionsFor(unavailable)).toEqual([]);
+    expect(transferActionsFor({ ...unavailable, direction: 'OUTGOING' })).toEqual([
+      'cancelTransfer',
+    ]);
   });
 });

@@ -21,6 +21,7 @@ const FILTERS: readonly { id: ProductListFilter; label: string }[] = [
   { id: 'ALL', label: 'Tất cả' },
   { id: 'REGISTERED', label: 'Đã ghi lên blockchain' },
   { id: 'DRAFT', label: 'Bản nháp' },
+  { id: 'RECALLED', label: 'Đã thu hồi' },
 ];
 
 function readFilter(value: string | string[] | undefined): ProductListFilter {
@@ -80,7 +81,7 @@ export default async function ProductsPage({
       </div>
       <p className="mt-2 max-w-2xl text-muted">
         Mỗi sản phẩm có một mã QR riêng trỏ tới hộ chiếu công khai. Hồ sơ đã ghi lên blockchain thì
-        không sửa hay xoá được.
+        không sửa hay xoá được; sản phẩm lỗi thì chọn rồi bấm Thu hồi.
       </p>
 
       {view === null ? (

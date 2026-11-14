@@ -37,7 +37,7 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
     'Giấy phép cấp cho nhà sản xuất khác với ví đang chọn. Tải lại trang rồi thử lại.',
   ProductAlreadyRegistered:
     'Có sản phẩm đã được ghi lên blockchain trước đó, hệ thống đang đồng bộ. Tải lại trang sau ít giây.',
-  InvalidBatchSize: 'Mỗi giao dịch ghi từ 1 đến 50 sản phẩm.',
+  InvalidBatchSize: 'Mỗi giao dịch từ 1 đến 50 sản phẩm.',
   LengthMismatch: 'Giấy phép không hợp lệ. Bắt đầu lại để nhận giấy phép mới.',
   WarrantyTooLong: 'Số tháng bảo hành tối đa 120.',
   ProductNotFound: 'Sản phẩm chưa có trên ProductPassport đang dùng. Tải lại trang.',
@@ -69,7 +69,7 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   RequesterNotAllowed:
     'Người gửi không còn quyền yêu cầu kiểm định sản phẩm này (đã đổi chủ). Tải lại trang.',
   ProductNotSold:
-    'Sản phẩm không còn ở trạng thái đã có chủ (đã thu hồi, báo mất hoặc ngừng sử dụng) nên không chuyển nhượng được.',
+    'Sản phẩm không còn ở trạng thái đã có chủ (đã thu hồi, báo mất hoặc ngừng sử dụng). Tải lại trang.',
   NotProductOwner:
     'Ví đang chọn không thuộc chủ sở hữu hiện tại của sản phẩm (có thể vừa đổi chủ). Tải lại trang.',
   InvalidRecipient:
@@ -78,7 +78,7 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   TransferAlreadyActive:
     'Sản phẩm đang có một yêu cầu chuyển nhượng chờ bên nhận. Tải lại trang để xem yêu cầu đó.',
   ProductUnderRepair:
-    'Sản phẩm đang có phiếu sửa chữa mở nên chưa chuyển nhượng được. Chờ trung tâm bảo hành đóng phiếu.',
+    'Sản phẩm đang có phiếu sửa chữa mở. Chờ trung tâm bảo hành đóng phiếu rồi thử lại.',
   RequestNotOpen: 'Yêu cầu chuyển nhượng đã được đóng. Tải lại trang để xem trạng thái mới.',
   NotSender: 'Chỉ bên gửi (chủ sở hữu) mới huỷ được yêu cầu này. Kiểm tra ví MetaMask.',
   NotRecipient:
@@ -86,6 +86,11 @@ const REVERT_MESSAGES: Readonly<Record<string, string>> = {
   RequestExpired:
     'Yêu cầu đã quá hạn nên không chấp nhận được nữa. Bên gửi có thể gửi lại yêu cầu mới.',
   RequestNotExpired: 'Yêu cầu chưa hết hạn. Tải lại trang để xem hạn chấp nhận.',
+  NotIssuer: 'Có sản phẩm không do doanh nghiệp của bạn phát hành. Tải lại trang rồi chọn lại.',
+  ProductNotRecallable:
+    'Có sản phẩm vừa bị thu hồi, báo mất hoặc ngừng sử dụng nên không thu hồi được. Tải lại trang.',
+  CallerNotAuthorized:
+    'Contract chưa được cấp quyền gọi ProductPassport. Kiểm tra lại bước deploy (cấp role cho contract).',
 };
 
 /** Mã lỗi EIP-1193 thường gặp từ MetaMask. */

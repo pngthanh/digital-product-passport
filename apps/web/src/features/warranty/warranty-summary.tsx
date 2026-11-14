@@ -1,4 +1,4 @@
-import type { WarrantyView } from '@dpp/shared';
+import type { ProductState, WarrantyView } from '@dpp/shared';
 import { Badge } from '@/components/ui/badge';
 import { ChainLink } from '@/components/ui/chain-link';
 import { formatDate } from '@/lib/format';
@@ -15,15 +15,25 @@ export function daysLeft(expiresAt: string, now = new Date()): number {
  * Bảo hành đọc từ WarrantyManager (qua Indexer): trạng thái đã tính hết hạn theo giờ hiện tại,
  * thời hạn theo lịch Việt Nam, bên kích hoạt và giao dịch kích hoạt.
  */
+const ENDED_BY: Partial<Record<ProductState, string>> = {
+  RECALLED: 'sản phẩm đã bị thu hồi',
+  LOST_STOLEN: 'sản phẩm đã được báo mất',
+  RETIRED: 'sản phẩm đã ngừng sử dụng',
+};
+
 export function WarrantySummary({
   warranty,
   warrantyMonths,
   chainId,
+  productState = null,
 }: {
   warranty: WarrantyView | null;
   warrantyMonths: number;
   chainId: number;
+  /** (M10) Trạng thái cuối thì bảo hành không còn áp dụng dù thời hạn chưa hết. */
+  productState?: ProductState | null;
 }) {
+  const ended = productState ? ENDED_BY[productState] : undefined;
   if (!warranty) {
     return (
       <p className="text-sm text-muted">
@@ -37,14 +47,18 @@ export function WarrantySummary({
   const remaining = daysLeft(warranty.expiresAt);
   return (
     <dl className="grid gap-3 text-sm">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={state.tone} dot>
-          {state.label}
-        </Badge>
-        {warranty.state === 'ACTIVE' ? (
-          <span className="text-muted">còn {remaining} ngày</span>
-        ) : null}
-      </div>
+      {ended ? (
+        <p className="text-muted">Bảo hành không còn áp dụng: {ended}.</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={state.tone} dot>
+            {state.label}
+          </Badge>
+          {warranty.state === 'ACTIVE' ? (
+            <span className="text-muted">còn {remaining} ngày</span>
+          ) : null}
+        </div>
+      )}
       <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5">
         <dt className="text-muted">Thời hạn</dt>
         <dd>{warranty.months} tháng</dd>

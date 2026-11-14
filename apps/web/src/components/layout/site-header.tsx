@@ -1,9 +1,10 @@
 import { getNetwork } from '@dpp/shared';
-import { CircleUserRound } from 'lucide-react';
+import { Bell, CircleUserRound } from 'lucide-react';
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/button';
 import { getIdentity } from '@/features/auth/get-identity';
 import { SignOutButton } from '@/features/auth/sign-out-button';
+import { notificationSummarySchema } from '@/features/lifecycle/lifecycle.schema';
 import { workspaceSchema } from '@/features/products/product.schema';
 import { serverChainId } from '@/lib/env';
 import { serverGet } from '@/lib/server-api';
@@ -17,7 +18,13 @@ export async function SiteHeader() {
   // Menu theo vai trò: nhà sản xuất có Sản phẩm, nhà bán lẻ có Kho hàng, trung tâm bảo hành có Bảo
   // hành, đơn vị kiểm định có Kiểm định; người không đại diện tổ chức nào (hoặc đã mua hàng) có Đã mua.
   // Ai cũng có Chuyển nhượng vì ai cũng có thể là bên nhận.
-  const workspace = identity ? await serverGet('/me/workspace', workspaceSchema) : null;
+  const [workspace, notifications] = identity
+    ? await Promise.all([
+        serverGet('/me/workspace', workspaceSchema),
+        serverGet('/me/notifications/summary', notificationSummarySchema),
+      ])
+    : [null, null];
+  const unread = notifications?.unread ?? 0;
   const orgType = workspace?.organization?.orgType;
   const showOwned = !!workspace && (workspace.ownedProducts > 0 || !workspace.organization);
   const navItems: NavItem[] = [
@@ -65,6 +72,18 @@ export async function SiteHeader() {
           </span>
           {identity ? (
             <>
+              <Link
+                href="/notifications"
+                aria-label={unread > 0 ? `Thông báo, ${unread} chưa đọc` : 'Thông báo'}
+                className="relative flex items-center rounded-control p-2 text-muted hover:bg-tint hover:text-ink"
+              >
+                <Bell aria-hidden className="size-4" />
+                {unread > 0 ? (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-4 rounded-full bg-bad px-1 text-center text-[11px] leading-4 font-semibold text-white tabular-nums">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                ) : null}
+              </Link>
               <Link
                 href="/account"
                 aria-label={`Tài khoản của ${identity.account.fullName}`}

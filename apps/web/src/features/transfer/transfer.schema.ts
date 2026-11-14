@@ -39,6 +39,7 @@ export const transferRequestViewSchema: z.ZodType<TransferRequestView> = z.objec
   requestId: z.string().regex(/^\d+$/),
   state: z.enum(Object.values(TransferState)),
   expired: z.boolean(),
+  productUnavailable: z.boolean(),
   direction: z.enum(['OUTGOING', 'INCOMING']),
   from: partySchema,
   to: partySchema,

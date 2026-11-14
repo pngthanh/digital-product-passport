@@ -7,7 +7,7 @@ import { formatDate, formatTime } from '@/lib/format';
 import { INSPECTION_RESULT_LABELS } from '@/lib/state-labels';
 import { partyText } from '../products/product-status';
 
-type Category = 'distribution' | 'service' | 'inspection' | 'ownership';
+type Category = 'distribution' | 'service' | 'inspection' | 'ownership' | 'lifecycle';
 type TabId = 'all' | Category;
 
 /** Tiêu đề, mô tả và nhóm của từng bước; lần bán đầu thuộc cả Phân phối lẫn Chuyển nhượng. */
@@ -81,6 +81,21 @@ const STEPS: Readonly<
     describe: (step) =>
       `${partyText(step.from)}: ${step.inspectionResult ? INSPECTION_RESULT_LABELS[step.inspectionResult].label : 'đã ghi kết quả'}, biên bản đã ghi hash`,
   },
+  RECALLED: {
+    title: 'Nhà sản xuất thu hồi',
+    categories: ['lifecycle'],
+    describe: (step) => `${partyText(step.from)} thu hồi, lý do đã ghi hash`,
+  },
+  REPORTED_LOST_STOLEN: {
+    title: 'Báo mất hoặc bị trộm',
+    categories: ['lifecycle'],
+    describe: (step) => `${partyText(step.from)} báo mất`,
+  },
+  RETIRED: {
+    title: 'Ngừng sử dụng',
+    categories: ['lifecycle'],
+    describe: (step) => `${partyText(step.from)} ngừng sử dụng`,
+  },
 };
 
 const TABS: readonly { id: TabId; label: string; empty: string }[] = [
@@ -89,6 +104,11 @@ const TABS: readonly { id: TabId; label: string; empty: string }[] = [
   { id: 'service', label: 'Bảo hành', empty: 'Chưa có lần kích hoạt bảo hành hay sửa chữa nào.' },
   { id: 'inspection', label: 'Kiểm định', empty: 'Chưa có kết quả kiểm định nào.' },
   { id: 'ownership', label: 'Chuyển nhượng', empty: 'Chưa có lần đổi chủ nào.' },
+  {
+    id: 'lifecycle',
+    label: 'Thu hồi, báo mất',
+    empty: 'Sản phẩm chưa bị thu hồi, báo mất hay ngừng sử dụng.',
+  },
 ];
 
 function stepsOf(steps: readonly JourneyStep[], tab: TabId) {
@@ -97,7 +117,7 @@ function stepsOf(steps: readonly JourneyStep[], tab: TabId) {
 
 /**
  * Hành trình đã ghi trên blockchain (mới nhất trước), chia tab Phân phối, Bảo hành, Kiểm định,
- * Chuyển nhượng;
+ * Chuyển nhượng, Thu hồi và báo mất;
  * mỗi bước mở được giao dịch trên explorer. Người mua không hiện tên.
  */
 export function PassportHistory({

@@ -8,7 +8,17 @@ import { partyText, warrantyLabel } from '../products/product-status';
 import { PassportHistory } from './passport-history';
 
 /** Bảo hành trên hộ chiếu: chưa bán thì nói rõ tính từ ngày bán; đã bán thì trạng thái và hạn. */
+const ENDED_BY: Partial<Record<PublicPassportView['productState'], string>> = {
+  RECALLED: 'Không còn áp dụng: sản phẩm đã bị thu hồi',
+  LOST_STOLEN: 'Không còn áp dụng: sản phẩm đã được báo mất',
+  RETIRED: 'Không còn áp dụng: sản phẩm đã ngừng sử dụng',
+};
+
 function warrantyText(passport: PublicPassportView): string {
+  const ended = ENDED_BY[passport.productState];
+  if (ended) {
+    return ended;
+  }
   if (passport.warranty) {
     const state = WARRANTY_STATE_LABELS[passport.warranty.state].label;
     return `${state} · ${warrantyLabel(passport.warranty.months)}, đến ${formatDate(passport.warranty.expiresAt)}`;

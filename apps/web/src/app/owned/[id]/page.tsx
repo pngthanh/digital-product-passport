@@ -9,6 +9,9 @@ import { Panel } from '@/components/ui/panel';
 import { getIdentity } from '@/features/auth/get-identity';
 import { productInspectionSchema } from '@/features/inspection/inspection.schema';
 import { InspectionRequesterPanel } from '@/features/inspection/requester-panel';
+import { ownedProductLifecycleSchema } from '@/features/lifecycle/lifecycle.schema';
+import { LifecycleNoticeBanner } from '@/features/lifecycle/lifecycle-notice';
+import { OwnerLifecyclePanel } from '@/features/lifecycle/owner-lifecycle-panel';
 import { PassportHistory } from '@/features/passport/passport-history';
 import { ProofList } from '@/features/passport/proof-list';
 import { ownedProductDetailSchema } from '@/features/products/product.schema';
@@ -48,11 +51,12 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
   if (!UUID_PATTERN.test(id)) {
     notFound();
   }
-  const [product, service, inspection, transfer] = await Promise.all([
+  const [product, service, inspection, transfer, lifecycle] = await Promise.all([
     serverGet(`/me/owned-products/${id}`, ownedProductDetailSchema),
     serverGet(`/me/owned-products/${id}/service`, ownedProductServiceSchema),
     serverGet(`/me/owned-products/${id}/inspection`, productInspectionSchema),
     serverGet(`/me/owned-products/${id}/transfer`, ownedProductTransferSchema),
+    serverGet(`/me/owned-products/${id}/lifecycle`, ownedProductLifecycleSchema),
   ]);
   if (!product) {
     notFound();
@@ -75,6 +79,14 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
         </Badge>
       </div>
       <p className="mt-1 font-mono text-sm break-all text-muted">{product.serialNumber}</p>
+      {lifecycle?.notice ? (
+        <LifecycleNoticeBanner
+          notice={lifecycle.notice}
+          chainId={chainId}
+          audience="owner"
+          className="mt-6"
+        />
+      ) : null}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="grid min-w-0 content-start gap-6">
@@ -144,6 +156,18 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
               <p className="text-sm text-bad">Không tải được phần chuyển nhượng từ API.</p>
             )}
           </Panel>
+          {lifecycle && !lifecycle.notice ? (
+            <Panel className="px-5 py-5" aria-labelledby="bao-mat">
+              <h2 id="bao-mat" className="font-semibold">
+                Báo mất hoặc ngừng sử dụng
+              </h2>
+              <p className="mt-1 mb-4 text-sm text-muted">
+                Ghi lên blockchain bằng ví của bạn để hộ chiếu cảnh báo người khác. Đây là trạng
+                thái cuối, không hoàn tác được.
+              </p>
+              <OwnerLifecyclePanel productId={product.id} lifecycle={lifecycle} />
+            </Panel>
+          ) : null}
           <Panel className="py-1" aria-labelledby="hanh-trinh">
             <h2 id="hanh-trinh" className="sr-only">
               Hành trình
@@ -163,6 +187,7 @@ export default async function OwnedProductPage({ params }: { params: Promise<{ i
               Bảo hành
             </h2>
             <WarrantySummary
+              productState={product.productState}
               warranty={product.warranty}
               warrantyMonths={product.warrantyMonths}
               chainId={chainId}

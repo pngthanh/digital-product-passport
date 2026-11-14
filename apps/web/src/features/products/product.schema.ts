@@ -124,7 +124,12 @@ export const myProductListSchema: z.ZodType<MyProductList> = z.object({
   total: z.number().int().nonnegative(),
   page: z.number().int().positive(),
   pageSize: z.number().int().positive(),
-  counts: z.object({ ALL: z.number(), REGISTERED: z.number(), DRAFT: z.number() }),
+  counts: z.object({
+    ALL: z.number(),
+    REGISTERED: z.number(),
+    DRAFT: z.number(),
+    RECALLED: z.number(),
+  }),
 });
 
 const detailShape = {

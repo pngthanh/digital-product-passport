@@ -58,9 +58,16 @@ export function TransferActions({
   const [step, setStep] = useState<CloseStep | null>(null);
   const [error, setError] = useState<string | null>(null);
   const actions = transferActionsFor(request);
+  const unavailableNote =
+    request.state === 'REQUESTED' && request.productUnavailable ? (
+      <p className="text-sm text-warn">
+        Sản phẩm đã bị thu hồi, báo mất hoặc ngừng sử dụng nên yêu cầu này không chấp nhận được nữa.
+        {request.direction === 'OUTGOING' ? ' Huỷ yêu cầu để đóng lại.' : ''}
+      </p>
+    ) : null;
 
   if (actions.length === 0 || !contract) {
-    return null;
+    return unavailableNote;
   }
   if (!wallet) {
     return (
@@ -98,6 +105,7 @@ export function TransferActions({
 
   return (
     <div className="grid gap-3">
+      {unavailableNote}
       {running && step ? (
         <StepList
           label="Tiến trình giao dịch"

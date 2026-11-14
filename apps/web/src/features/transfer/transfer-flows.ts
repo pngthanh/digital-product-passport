@@ -86,13 +86,17 @@ export type TransferAction = Extract<
   'acceptTransfer' | 'rejectTransfer' | 'cancelTransfer' | 'expireTransfer'
 >;
 
-/** Các nút người xem dùng được với một yêu cầu, theo vai (bên gửi, bên nhận) và hạn. */
+/** Các nút người xem dùng được với một yêu cầu, theo vai (bên gửi, bên nhận), hạn và sản phẩm. */
 export function transferActionsFor(request: TransferRequestView): readonly TransferAction[] {
   if (request.state !== 'REQUESTED') {
     return [];
   }
   if (request.expired) {
     return ['expireTransfer'];
+  }
+  // M10: sản phẩm đã thu hồi, báo mất hay ngừng sử dụng thì không nhận được nữa, bên gửi chỉ còn huỷ.
+  if (request.productUnavailable) {
+    return request.direction === 'OUTGOING' ? ['cancelTransfer'] : [];
   }
   return request.direction === 'INCOMING'
     ? ['acceptTransfer', 'rejectTransfer']
