@@ -99,18 +99,7 @@ REQUESTED ──openTicket──▶ IN_REPAIR ──closeTicket(true)──▶ R
 
 `actionCode`: `REPAIR`, `REPLACE_PART`, `SOFTWARE_UPDATE`, `CLEANING`, `INSPECTION_ONLY`, `OTHER`. Báo txHash sai vai trò (nhà bán lẻ báo giao dịch của trung tâm) bị từ chối với 403.
 
-## 6. Cài đặt khi cập nhật từ M6
-
-M7 **không có migration mới** (bảng `service_requests`, `service_records` đã có từ M1). Tài khoản, doanh nghiệp, sản phẩm, bảo hành giữ nguyên; chỉ deploy thêm một contract.
-
-1. Tắt `pnpm dev`. Giải nén đè lên thư mục dự án, `pnpm install`.
-2. `pnpm --filter @dpp/contracts deploy:services:monad` (nhập mật khẩu keystore). Ví deploy phải còn quyền Admin trên PartyRegistry (đúng ví đã deploy PartyRegistry) vì script cấp `SERVICE_CONTRACT_ROLE` cho ServiceTicketManager. Script đọc ba địa chỉ `PARTY_REGISTRY_ADDRESS`, `PRODUCT_PASSPORT_ADDRESS`, `WARRANTY_MANAGER_ADDRESS` trong `.env`, deploy vào thư mục Ignition `chain-10143-services-v1` rồi in hai dòng `SERVICE_TICKET_MANAGER_ADDRESS`, `SERVICE_TICKET_MANAGER_DEPLOY_BLOCK` để chép vào `.env`.
-3. `pnpm dev`. Worker bắt đầu quét ServiceTicketManager từ block deploy.
-4. Tạo thêm một doanh nghiệp loại **Trung tâm bảo hành** (tài khoản khác, ví MetaMask khác, Admin duyệt). Các bước bấm tay để xác nhận M7: [m7-kiem-thu-tay.md](m7-kiem-thu-tay.md).
-
-Chạy cục bộ: sau `deploy:products:local` chạy `deploy:services:local`, chép hai dòng in ra. File biên bản lưu ở `apps/api/storage/uploads` (đổi bằng `UPLOAD_DIR`), thư mục này đã nằm trong `.gitignore`.
-
-## 7. Gas
+## 6. Gas
 
 Đo trên Hardhat (Monad định giá opcode khác; số liệu chính thức ở M13). Web đặt gas limit bằng ước lượng cộng 10%.
 
@@ -123,7 +112,7 @@ Chạy cục bộ: sau `deploy:products:local` chạy `deploy:services:local`, c
 
 Mở phiếu tốn hơn các bước M6 vì kiểm tra chữ ký EIP-712, đọc ProductPassport và WarrantyManager qua lời gọi ngoài, và lưu phiếu (4 ô bytes32 cộng một ô gói thời gian, trạng thái, cờ bảo hành).
 
-## 8. Test chứng minh
+## 7. Test chứng minh
 
 | Test                                                                          | Chứng minh                                                                                                                                                                                                                                                                                              |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -134,7 +123,7 @@ Mở phiếu tốn hơn các bước M6 vì kiểm tra chữ ký EIP-712, đọc
 | `apps/api/test/service/service.e2e-spec.ts`                                   | Trọn luồng trên Hardhat node: gửi, huỷ, gửi lại, trung tâm khác không thấy, mở phiếu (bảo hành SUSPENDED), file giả bị chặn, biên bản kèm ảnh, đóng phiếu (ACTIVE lại), tải file đúng quyền, hành trình và hộ chiếu không lộ, sản phẩm không bảo hành, sửa biên bản thì lệch hash, hash lạ thì cảnh báo |
 | `apps/web/src/lib/evidence-file.spec.ts` (M8 chuyển từ `features/service`)    | Web chặn file sai loại, rỗng, quá 5 MB trước khi tải lên                                                                                                                                                                                                                                                |
 
-## 9. Giới hạn
+## 8. Giới hạn
 
 - File biên bản lưu trên ổ đĩa máy chủ API; triển khai nhiều máy chủ cần chuyển sang kho đối tượng (S3, MinIO) bằng cổng `FileStorage` (M8 dùng chung cho biên bản sửa chữa và kiểm định).
 - Mỗi phiếu một biên bản; chưa có nhiều lần cập nhật tiến độ trong lúc sửa.

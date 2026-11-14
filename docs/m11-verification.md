@@ -92,15 +92,7 @@ Các mục máy chủ đối chiếu (bảng `VERIFICATION_CHECKS` trong `packag
 | GET         | `/public/products/:code`              | Công khai | (Đổi ở M11) `history` đã lọc thông tin cá nhân; `pendingRetailer` có thêm `partyId`                |
 | *           | `/public/*`                           | Công khai | (Đổi ở M11) Giới hạn chung theo IP; quá giới hạn thì trả 429                                       |
 
-## 6. Cài đặt khi cập nhật từ M10
-
-M11 không có contract mới, không có migration, không cần deploy.
-
-1. Tắt `pnpm dev`. Giải nén đè lên thư mục dự án rồi chạy `pnpm install` (lệnh này build lại `@dpp/shared`).
-2. (Tuỳ chọn) Thêm `PUBLIC_RATE_LIMIT_PER_MINUTE=120` vào `.env`. Không thêm thì API dùng mặc định 120.
-3. `pnpm dev`.
-
-## 7. Hiệu năng và tải RPC
+## 6. Hiệu năng và tải RPC
 
 Số đo trên Hardhat node, máy phát triển, chế độ `pnpm dev`. M13 đo lại trên Monad Testnet.
 
@@ -109,7 +101,7 @@ Số đo trên Hardhat node, máy phát triển, chế độ `pnpm dev`. M13 đo
 | Mở `/p/<mã>` (4 request API song song)                 | 3 `eth_call` để đối chiếu (giữ 15 giây) + 1 `eth_call` của khung mã | 0,9–1,6 giây      |
 | Tự kiểm tra bằng trình duyệt (sản phẩm có 4 giao dịch) | 1 chain ID + 4 `eth_call` + 4 biên nhận                             | 0,25–0,3 giây     |
 
-## 8. Test chứng minh
+## 7. Test chứng minh
 
 | Test                                                                 | Chứng minh                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -119,7 +111,7 @@ Số đo trên Hardhat node, máy phát triển, chế độ `pnpm dev`. M13 đo
 | `apps/api/test/verification/public-rate-limit.e2e-spec.ts`           | Quá 4 lần một phút (gộp 4 đường dẫn công khai) thì 429 kèm thông báo tiếng Việt; IP khác có bộ đếm riêng; đăng nhập không bị giới hạn tra cứu chặn                                                                                                                                                                                                                                                                                                            |
 | `apps/web/src/features/verification/verification.spec.ts`            | Tự kiểm: mọi mục khớp; sửa một chữ trong hồ sơ hay trạng thái khác chain thì lệch; giao dịch của contract lạ không được tính; sai mạng thì dừng; doanh nghiệp giữ hàng và hàng đang giao; khung đối chiếu ghi đúng giá trị trên blockchain                                                                                                                                                                                                                    |
 
-## 9. Giới hạn
+## 8. Giới hạn
 
 - Khi web chạy thẳng ra Internet (không qua Nginx hay Caddy), người dùng tự gửi được header `X-Forwarded-For` giả để né giới hạn theo IP. Next.js không có cách lấy IP thật trong trường hợp này. Khi triển khai thật, đặt reverse proxy ghi đè `X-Forwarded-For`. RPC vẫn được bảo vệ nhờ bộ nhớ đệm 15 giây (D82).
 - Bộ đếm giới hạn nằm trong bộ nhớ của tiến trình API: khởi động lại thì đếm lại từ đầu, và nhiều tiến trình API thì mỗi tiến trình đếm riêng.

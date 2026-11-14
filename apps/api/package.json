@@ -26,7 +26,6 @@
     "registrar:new": "node scripts/generate-secret.mjs registrar",
     "admin:grant": "node scripts/grant-admin.mjs grant",
     "admin:revoke": "node scripts/grant-admin.mjs revoke",
-    "products:reset": "node scripts/reset-products.mjs",
     "bench:baseline": "node scripts/benchmark-baseline.mjs",
     "demo:seed": "node scripts/demo-seed.mjs",
     "demo:reverts": "node scripts/demo-reverts.mjs"

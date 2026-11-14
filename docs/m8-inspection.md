@@ -115,19 +115,7 @@ REQUESTED ──recordInspection──▶ COMPLETED
 | GET         | `/public/products/:code/inspections`                  | Không cần đăng nhập             | Kết quả đã ghi on-chain của sản phẩm, đối chiếu hash                                       |
 | GET         | `/public/inspections/:id/report`                      | Không cần đăng nhập             | File biên bản đã ghi on-chain                                                              |
 
-## 6. Cài đặt khi cập nhật từ M7
-
-M8 có **một migration mới** (`20261107000000_inspection_requests`: bảng `inspection_requests`, cột `inspections.request_id`, các ràng buộc ở mục 3). Bảng `inspections` chưa có dữ liệu nên migration chạy thẳng, không cần làm mới CSDL. Tài khoản, doanh nghiệp, sản phẩm, bảo hành và phiếu sửa chữa giữ nguyên.
-
-1. Tắt `pnpm dev`. Giải nén đè lên thư mục dự án và xoá hai file M7 đã chuyển sang `common/files` (lệnh ở [m8-kiem-thu-tay.md](m8-kiem-thu-tay.md) mục 1), rồi chạy `pnpm install`.
-2. `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`.
-3. `pnpm --filter @dpp/contracts deploy:inspections:monad` (nhập mật khẩu keystore). Script đọc `PARTY_REGISTRY_ADDRESS` và `PRODUCT_PASSPORT_ADDRESS` trong `.env`, kiểm tra ProductPassport trỏ đúng PartyRegistry, deploy vào thư mục Ignition `chain-10143-inspections-v1`, rồi in hai dòng `INSPECTION_REGISTRY_ADDRESS` và `INSPECTION_REGISTRY_DEPLOY_BLOCK` để chép vào `.env`. Không cần quyền Admin, chỉ cần MON trả gas.
-4. `pnpm dev`. Worker bắt đầu quét InspectionRegistry từ block deploy.
-5. Tạo thêm một doanh nghiệp loại **Đơn vị kiểm định** (tài khoản khác, ví MetaMask khác, Admin duyệt).
-
-Chạy cục bộ: sau `deploy:services:local` chạy `deploy:inspections:local` rồi chép hai dòng in ra.
-
-## 7. Gas
+## 6. Gas
 
 Đo trên Hardhat (Monad định giá opcode khác; số liệu chính thức ở M13). Web đặt gas limit bằng ước lượng cộng 10%.
 
@@ -138,7 +126,7 @@ Chạy cục bộ: sau `deploy:services:local` chạy `deploy:inspections:local`
 
 Phần lớn chi phí đến từ việc kiểm tra chữ ký EIP-712, hai lời gọi ngoài (PartyRegistry, ProductPassport) và lưu bản ghi (4 ô bytes32 cộng một ô gói thời gian và kết quả). Lần sau rẻ hơn vì ô `latestInspectionOf` của sản phẩm đã có giá trị.
 
-## 8. Test chứng minh
+## 7. Test chứng minh
 
 | Test                                                                          | Chứng minh                                                                                                                                                                                                                                                                                                                                          |
 | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -152,7 +140,7 @@ Phần lớn chi phí đến từ việc kiểm tra chữ ký EIP-712, hai lời
 | `apps/api/test/inspection/inspection.e2e-spec.ts`                             | 7 ca trọn luồng trên Hardhat node: phân quyền xem; gửi, huỷ, gửi lại; đơn vị khác không thấy; file giả bị chặn; giấy phép không dùng được cho đơn vị khác hay kết quả khác; ghi on-chain thì công khai, tải file, hành trình có bước Kiểm định; từ chối kèm lý do; Không đạt giữ SOLD; sửa biên bản thì lệch hash; ba loại cảnh báo; ràng buộc CSDL |
 | `apps/web/src/features/inspection/inspection.schema.spec.ts`                  | Web kiểm tra dữ liệu kết quả công khai và chặn giấy phép có mã kết quả lạ                                                                                                                                                                                                                                                                           |
 
-## 9. Giới hạn
+## 8. Giới hạn
 
 - Kết quả kiểm định không có thời hạn hiệu lực (bảng `inspections` không có cột hết hạn). Hộ chiếu hiện mọi lần kiểm định theo thứ tự thời gian.
 - Không đạt không tự thu hồi hay chặn bán sản phẩm (D60); thu hồi làm ở M10.

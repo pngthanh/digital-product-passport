@@ -13,7 +13,7 @@ M6 nối nhà sản xuất với nhà bán lẻ và người mua: nhà sản xu�
 
 | Mã  | Quyết định                                                                                                                                                                                                                                                                                                                                                                                                                                        | Lý do                                                                                                 |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| D38 | **Deploy ProductPassport phiên bản 2** thay cho bản M5 (contract đã deploy không thêm hàm được). Một contract giữ cả định danh, trạng thái, bên giữ hàng và chủ sở hữu như bảng traceability M0. Bản M5 vẫn nằm trên chain và trong thư mục Ignition `chain-10143-products-v1`; sản phẩm test của M5 được dọn bằng `products:reset` rồi nhập lại. EIP-712 đổi phiên bản thành `"2"`.                                                              | Theo lựa chọn của nhóm: đúng M0, có sẵn chỗ cho M7, M9, M10 nên không phải deploy lại nữa.            |
+| D38 | **Deploy ProductPassport phiên bản 2** thay cho bản M5 (contract đã deploy không thêm hàm được). Một contract giữ cả định danh, trạng thái, bên giữ hàng và chủ sở hữu như bảng traceability M0. Bản M5 vẫn nằm trên chain và trong thư mục Ignition `chain-10143-products-v1`; sản phẩm test của M5 được dọn khỏi CSDL rồi nhập lại. EIP-712 đổi phiên bản thành `"2"`.                                                                          | Theo lựa chọn của nhóm: đúng M0, có sẵn chỗ cho M7, M9, M10 nên không phải deploy lại nữa.            |
 | D39 | **Giao hàng 2 bước, từng sản phẩm** (D7): gửi → IN_DISTRIBUTION, chờ nhà bán lẻ; bên giữ hàng chỉ đổi khi nhà bán lẻ xác nhận (AT_RETAIL). Nhà sản xuất **huỷ** được khi bên kia chưa nhận (gửi nhầm), nhà bán lẻ **từ chối** được nếu không đúng hàng; cả hai đưa sản phẩm về CREATED, lịch sử giữ đủ event.                                                                                                                                     | Theo lựa chọn của nhóm; tránh sản phẩm kẹt ở "Đang vận chuyển".                                       |
 | D40 | **Người mua là tài khoản web, chưa cần ví**: nhà bán lẻ nhập email, backend ký giấy phép EIP-712 `ProductSale(productId, retailerId, buyerId, deadline)` gắn đúng partyId của tài khoản đó. Contract còn từ chối bán cho Party là tổ chức. Ví của người mua chỉ cần khi họ tự làm giao dịch (chuyển nhượng M9, bảo hành M7).                                                                                                                      | Bán tại quầy không bắt khách cài MetaMask; quyền sở hữu vẫn gắn với danh tính có thật trong hệ thống. |
 | D41 | **Số tháng bảo hành khoá on-chain lúc đăng ký**: `registerProducts` nhận thêm `warrantyMonths[]` (nằm trong giấy phép EIP-712 và hash hồ sơ). Khi bán, contract tự dùng con số này; nhà bán lẻ không đổi được. 0 tháng thì không kích hoạt bảo hành.                                                                                                                                                                                              | Theo lựa chọn của nhóm: bảo hành do nhà sản xuất cam kết.                                             |
@@ -100,19 +100,7 @@ CREATED ──dispatch──▶ IN_DISTRIBUTION ──confirm──▶ AT_RETAIL
 
 Báo txHash sai vai trò (nhà bán lẻ báo giao dịch gửi hàng của nhà sản xuất) bị từ chối với 422.
 
-## 6. Cài đặt khi cập nhật từ M5
-
-M6 **không có migration mới** (các bảng `custody_records`, `ownership_records`, `warranties` đã có từ M1). Tài khoản, ví, doanh nghiệp giữ nguyên; chỉ sản phẩm test của M5 phải nhập lại vì thuộc ProductPassport cũ.
-
-1. Tắt `pnpm dev`. Giải nén, `pnpm install`.
-2. `pnpm --filter @dpp/contracts deploy:products:monad` (nhập mật khẩu keystore). Ví deploy phải còn quyền Admin trên PartyRegistry (đúng ví đã deploy PartyRegistry) vì script cấp `PRODUCT_CONTRACT_ROLE` cho ProductPassport mới. Deploy vào thư mục Ignition `chain-10143-products-v2`, in ba dòng: **thay** `PRODUCT_PASSPORT_ADDRESS`, `PRODUCT_PASSPORT_DEPLOY_BLOCK` và **thêm** `WARRANTY_MANAGER_ADDRESS` trong `.env`.
-3. `pnpm --filter @dpp/api products:reset` để xem số dòng sẽ xoá, rồi `pnpm --filter @dpp/api products:reset --yes`. Lệnh xoá sản phẩm và dữ liệu đi kèm (custody, ownership, bảo hành, cảnh báo của sản phẩm); `blockchain_events` và `audit_logs` giữ làm hồ sơ (event của contract cũ không hiện lẫn vào lịch sử sản phẩm mới).
-4. `pnpm dev`, nhập lại sản phẩm (CSV).
-5. Tạo thêm một doanh nghiệp loại **Nhà bán lẻ** (tài khoản khác, ví MetaMask khác, Admin duyệt) và một tài khoản người mua (không cần liên kết ví).
-
-Chạy cục bộ: sau `deploy:local` chạy `deploy:products:local`, chép ba dòng in ra.
-
-## 7. Gas
+## 6. Gas
 
 Đo trên Hardhat (Monad định giá opcode khác; số liệu chính thức ở M13). Web đặt gas limit bằng ước lượng cộng 10%.
 
@@ -128,7 +116,7 @@ Chạy cục bộ: sau `deploy:local` chạy `deploy:products:local`, chép ba d
 
 Đăng ký tăng khoảng 2.000 gas mỗi lô so với M5 vì lưu thêm số tháng bảo hành; bên giữ hàng không ghi lúc đăng ký (lưu 0, hàm view trả nhà sản xuất) để không tốn thêm một ô lưu trữ mỗi sản phẩm.
 
-## 8. Test chứng minh
+## 7. Test chứng minh
 
 | Test                                                                     | Chứng minh                                                                                                                                                |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -140,7 +128,7 @@ Chạy cục bộ: sau `deploy:local` chạy `deploy:products:local`, chép ba d
 | `apps/api/test/products/distribution.e2e-spec.ts`                        | Trọn luồng trên Hardhat node: gửi → từ chối → gửi → huỷ → gửi → nhận → bán → bảo hành → hành trình 9 bước                                                 |
 | `packages/shared/src/chain/warranty-manager.spec.ts`                     | Cộng tháng theo giờ Việt Nam, ngày cuối tháng, năm nhuận                                                                                                  |
 
-## 9. Giới hạn
+## 8. Giới hạn
 
 - Gửi, nhận và bán từng sản phẩm một (theo lựa chọn của nhóm); lô lớn cần nhiều giao dịch.
 - Từ chối nhận hàng chưa kèm lý do; lịch sử chỉ ghi ai từ chối và lúc nào.

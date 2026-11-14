@@ -16,7 +16,7 @@ M5 cũng sửa hai điểm của M4 theo góp ý khi chạy thử (mục 4): l�
 | Mã  | Quyết định                                                                                                                                                                                                                                                                                                                                                                              | Lý do                                                                                                                                                       |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | D31 | **Serial duy nhất trong từng nhà sản xuất**, không duy nhất toàn hệ thống: `UNIQUE (issuer_org_id, serial_number)`, so khớp không phân biệt hoa thường (lưu chữ in hoa). On-chain `productId = keccak256(abi.encode(issuerPartyId, serial))`, nên hai hãng trùng serial vẫn ra hai `productId` khác nhau. Thay cho `serial_number UNIQUE` + `serialHash` của M0.                        | Theo lựa chọn của nhóm: mỗi hãng tự đặt quy tắc serial, hai hãng có thể trùng định dạng.                                                                    |
-| D32 | **Một hàm `registerProducts`** cho cả PRD-01 và PRD-02 (1–50 sản phẩm mỗi giao dịch), phát `ProductRegistered` cho từng sản phẩm. Thay cho cặp `createProduct` / `batchCreateProducts` và event `ProductCreated` + `CustodyTransferred` của M0; dòng custody đầu tiên (nhà sản xuất giữ hàng) do Worker ghi từ `ProductRegistered`.                                                     | Một đường code, một bộ test; lô 50 sản phẩm tốn khoảng 3,5 triệu gas (mục 9), nằm xa dưới giới hạn gas mỗi giao dịch của Monad. Bớt một event mỗi sản phẩm. |
+| D32 | **Một hàm `registerProducts`** cho cả PRD-01 và PRD-02 (1–50 sản phẩm mỗi giao dịch), phát `ProductRegistered` cho từng sản phẩm. Thay cho cặp `createProduct` / `batchCreateProducts` và event `ProductCreated` + `CustodyTransferred` của M0; dòng custody đầu tiên (nhà sản xuất giữ hàng) do Worker ghi từ `ProductRegistered`.                                                     | Một đường code, một bộ test; lô 50 sản phẩm tốn khoảng 3,5 triệu gas (mục 8), nằm xa dưới giới hạn gas mỗi giao dịch của Monad. Bớt một event mỗi sản phẩm. |
 | D33 | Contract chỉ nhận lô có **giấy phép EIP-712 `ProductRegistration`** do khoá registrar ký, và `msg.sender` phải là ví đại diện của một nhà sản xuất **đã duyệt** (`PartyRegistry.authorizedOrganizationOf(msg.sender, MANUFACTURER_ROLE)`). Giấy phép gắn `metadataHash` = keccak256 của JSON hồ sơ đã chuẩn hoá (serial, model, mô tả, ngày sản xuất, số tháng bảo hành, nhà sản xuất). | Ví chỉ ghi được đúng hồ sơ đã lưu trong CSDL; sửa hồ sơ sau khi ghi là lộ ngay vì hash lệch. Doanh nghiệp bị khoá thì mất quyền ngay trên contract.         |
 | D34 | Hồ sơ lưu thành **bản nháp** trước khi ví ký (`sync_status = PENDING`, `product_state = NULL`). Ví từ chối hoặc mất mạng thì bản nháp vẫn còn: gửi lại với giấy phép mới, hoặc xoá nếu nhập nhầm. Sản phẩm đã lên chain thì không xoá được.                                                                                                                                             | Không mất dữ liệu đã nhập (nhất là lô CSV), không tạo trùng khi gửi lại.                                                                                    |
 | D35 | **Mã QR là đường dẫn `/p/<public_code>`**, `public_code` 12 ký tự lấy từ 32 ký tự không gây nhầm (bỏ `I`, `O`, `0`, `1`), hiển thị theo nhóm 4 (`K7M2-PQ9X-RT4W`). Ảnh QR sinh ở trình duyệt (PNG, SVG, trang in tem), không lưu ảnh, không đưa mã lên chain.                                                                                                                           | Theo D9: QR thuộc Main Flow của Create Product, Export QR Labels chỉ là in nhãn. Đọc mã bằng tay cũng không nhầm.                                           |
@@ -63,7 +63,7 @@ Worker đối chiếu từng `ProductRegistered` với CSDL: sản phẩm không
 - Trang **Tra cứu** (`/lookup`) nhận ba cách: gõ mã (có gạch nối, chữ thường đều được), **quét bằng camera** (điện thoại hoặc webcam) và **tải ảnh chụp tem**. Ba cách đều ra trang hộ chiếu `/p/<mã>`.
 - Trang hộ chiếu `/p/<mã>` không cần đăng nhập: thông tin sản phẩm, nhà sản xuất (tên, mã số thuế, trạng thái duyệt), bên đang giữ hàng, kết quả đối chiếu hash và đọc trực tiếp trên chain, lịch sử event có txHash.
 
-Mã QR chứa địa chỉ web đầy đủ. Mặc định là địa chỉ đang mở trên trình duyệt (`http://localhost:3000`), điện thoại không mở được; muốn quét bằng điện thoại trong cùng Wi-Fi thì đặt `PUBLIC_WEB_URL` (mục 8, bước 4). Ô gõ mã vẫn chạy khi trang chưa tải xong JavaScript: form gửi `?code=` và server chuyển thẳng tới hộ chiếu.
+Mã QR chứa địa chỉ web đầy đủ. Mặc định là địa chỉ đang mở trên trình duyệt (`http://localhost:3000`), điện thoại không mở được; muốn quét bằng điện thoại trong cùng Wi-Fi thì đặt `PUBLIC_WEB_URL` bằng địa chỉ `Network: http://192.168.x.x:3000` mà `pnpm dev` in ra rồi khởi động lại `pnpm dev`. Ô gõ mã vẫn chạy khi trang chưa tải xong JavaScript: form gửi `?code=` và server chuyển thẳng tới hộ chiếu.
 
 ## 4. Sửa M4: lịch sử nộp đơn và hồ sơ đầy đủ cho Admin
 
@@ -113,19 +113,7 @@ Trang **Thêm sản phẩm → Nhập từ file CSV** có nút tải file mẫu.
 
 Lỗi hiện theo từng dòng (thiếu tên, ngày sai, serial có khoảng trắng, serial trùng trong file); serial đã có trong hệ thống thì API báo đúng serial đó. Hết lỗi mới bấm ghi được, cả file đi trong một giao dịch.
 
-## 8. Cài đặt khi cập nhật từ M4
-
-PartyRegistry **giữ nguyên**, chỉ deploy thêm ProductPassport, nên **không làm mới CSDL**:
-
-1. `pnpm install` (thêm `qrcode` và `jsqr` cho web).
-2. `pnpm db:deploy` và `pnpm --filter @dpp/api db:deploy:test`. Hai migration mới: `20261030000000_organization_applications` (kèm dựng lại lịch sử nộp đơn) và `20261030010000_product_registration`.
-3. `pnpm --filter @dpp/contracts deploy:products:monad` (nhập mật khẩu keystore). Script đọc `PARTY_REGISTRY_ADDRESS` trong `.env`, deploy vào thư mục Ignition `chain-10143-products-v1` và in hai dòng `PRODUCT_PASSPORT_ADDRESS`, `PRODUCT_PASSPORT_DEPLOY_BLOCK`: thêm vào `.env`, mỗi biến một dòng.
-4. (Tuỳ chọn) quét QR bằng điện thoại cùng Wi-Fi: `pnpm dev` in ra dòng `Network: http://192.168.x.x:3000`; đặt `PUBLIC_WEB_URL` bằng địa chỉ đó trong `.env` rồi khởi động lại `pnpm dev`. Biến này vừa đổi địa chỉ in trong QR, vừa cho máy chủ dev của Next.js nhận trang mở từ điện thoại (thiếu thì trang hiện nhưng nút bấm không chạy). Windows hỏi tường lửa cho Node.js thì chọn cho phép mạng Private. Camera trong trang Tra cứu chỉ bật được qua HTTPS hoặc `localhost`; trên điện thoại dùng ứng dụng camera có sẵn để quét tem, hoặc chụp tem rồi tải ảnh lên.
-5. Khởi động lại `pnpm dev`. Mục **Sản phẩm** hiện trên menu khi tài khoản đại diện một nhà sản xuất.
-
-Chạy cục bộ trên Hardhat node: sau `deploy:local` chạy `pnpm --filter @dpp/contracts deploy:products:local`.
-
-## 9. Gas
+## 8. Gas
 
 Đo trên Hardhat node khi chạy thử giao diện (Monad định giá opcode khác; số liệu chính thức đo trên testnet ở M13). Web đặt gas limit bằng ước lượng cộng 10%.
 
@@ -137,7 +125,7 @@ Chạy cục bộ trên Hardhat node: sau `deploy:local` chạy `pnpm --filter @
 
 Gửi theo lô rẻ hơn khoảng 38% mỗi sản phẩm so với gửi lẻ, và chỉ cần ký một lần.
 
-## 10. Test chứng minh
+## 9. Test chứng minh
 
 | Test                                                                     | Chứng minh                                                                                                                    |
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -151,13 +139,13 @@ Gửi theo lô rẻ hơn khoảng 38% mỗi sản phẩm so với gửi lẻ, v�
 | `packages/shared/src/domain/product-metadata.spec.ts`                    | productId theo hãng, hash hồ sơ ổn định, đọc mã QR từ mã trần hoặc đường dẫn                                                  |
 | `apps/web/src/features/products/product-csv.spec.ts`                     | Đọc CSV của Excel, báo lỗi theo dòng, giới hạn 50 dòng                                                                        |
 
-## 11. Giới hạn
+## 10. Giới hạn
 
 - Sản phẩm đã ghi lên blockchain không sửa hồ sơ được (hash đã khoá); nhập sai thì cần nghiệp vụ thu hồi ở M10.
 - Mỗi giao dịch tối đa 50 sản phẩm; file lớn hơn thì chia nhiều file.
 - Tra cứu công khai chưa giới hạn số lần gọi và chưa có timeline đầy đủ (phân phối, bảo hành, chuyển quyền): làm ở M11 khi các module đó có dữ liệu.
 - Quét camera trên trình duyệt cần HTTPS hoặc `localhost` (quy định của trình duyệt).
 
-## 12. Cập nhật ở M6
+## 11. Cập nhật ở M6
 
-M6 deploy **ProductPassport phiên bản 2** (thêm gửi hàng, nhận hàng, bán) cùng WarrantyManager; `registerProducts` nhận thêm mảng số tháng bảo hành để khoá on-chain, phiên bản EIP-712 thành `"2"`. Bản ở mục này vẫn nằm trên chain (thư mục Ignition `chain-10143-products-v1`), sản phẩm test của nó được dọn bằng `products:reset`. Chi tiết: [m6-distribution.md](m6-distribution.md).
+M6 deploy **ProductPassport phiên bản 2** (thêm gửi hàng, nhận hàng, bán) cùng WarrantyManager; `registerProducts` nhận thêm mảng số tháng bảo hành để khoá on-chain, phiên bản EIP-712 thành `"2"`. Bản ở mục này vẫn nằm trên chain (thư mục Ignition `chain-10143-products-v1`), sản phẩm test của nó đã được dọn khỏi CSDL. Chi tiết: [m6-distribution.md](m6-distribution.md).

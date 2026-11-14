@@ -101,19 +101,11 @@ Mọi đường dẫn cần phiên đăng nhập của Admin (`SessionGuard` + `
 | GET         | `/admin/alerts/:id`                                                      | Một cảnh báo kèm sản phẩm, bên liên quan và kết quả xử lý                                                                        |
 | POST        | `/admin/alerts/:id/review`                                               | `{ decision: ACKNOWLEDGED \| DISMISSED, note }` → 200 cảnh báo đã chốt; 400 ghi chú ngắn hoặc dài quá; 404 không có; 409 đã chốt |
 
-## 7. Cài đặt khi cập nhật từ M11
-
-M12 không có contract mới, không có migration, không cần deploy.
-
-1. Tắt `pnpm dev`. Giải nén đè lên thư mục dự án rồi chạy `pnpm install` (lệnh này build lại `@dpp/shared`).
-2. (Tuỳ chọn) Thêm `ANOMALY_SCAN_INTERVAL_MINUTES=5` vào `.env`. Khi kiểm thử tay có thể đặt `1` để không phải đợi lâu.
-3. `pnpm dev`. Đường dẫn cũ `/admin` giờ là trang Tổng quan; trang duyệt doanh nghiệp ở **Quản trị → Doanh nghiệp**.
-
-## 8. Hiệu năng
+## 7. Hiệu năng
 
 Đo trên Hardhat node, máy phát triển, `pnpm dev`, dữ liệu demo (4 tài khoản, 2 doanh nghiệp, 3 sản phẩm, khoảng 80 dòng nhật ký): `GET /admin/dashboard` 10–33 ms (gồm 1 lời gọi RPC), `GET /admin/audit-logs` và `GET /admin/alerts` dưới 5 ms. Mỗi lần quét luật nền tốn 2 lời gọi RPC (block finalized và block đã chiếu); các luật còn lại chỉ đọc CSDL.
 
-## 9. Test chứng minh
+## 8. Test chứng minh
 
 | Test                                                             | Chứng minh                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

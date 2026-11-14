@@ -5,7 +5,7 @@ Theo Mục 22 của tài liệu phân tích: 13 bước, từ duyệt doanh nghi
 - **Hardhat local** (mục 1): một lệnh dựng sẵn bước 1–6, bước 7–13 làm trực tiếp trên web. Không cần Internet, không tốn MON, làm lại được bao nhiêu lần cũng được. Nên dùng khi trình bày.
 - **Monad Testnet** (mục 2): làm cả 13 bước bằng MetaMask trên mạng thật, mở từng giao dịch trên MonadVision. Dùng khi hội đồng muốn xem mạng thật, hoặc quay video trước.
 
-Tên và email trong kịch bản là dữ liệu giả. Không dùng ví hay khoá thật cho demo local.
+Tên và email trong kịch bản là dữ liệu giả. Không dùng ví hay khoá thật cho demo local. Muốn kiểm thử mọi chức năng (không chỉ 13 bước demo) thì dùng [kịch bản kiểm thử toàn hệ thống](kich-ban-kiem-thu.md).
 
 ## 1. Demo trên Hardhat local
 
@@ -19,7 +19,7 @@ Copy-Item .env .env.monad
 pnpm --filter @dpp/contracts node
 ```
 
-Ở cửa sổ 2, làm đúng phần "Chạy với blockchain cục bộ" của README: sửa `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=`; chạy 6 lệnh `deploy:*:local` và chép địa chỉ, block deploy vào `.env`. Sau đó:
+Ở cửa sổ 2, làm đúng phần [Chạy với blockchain cục bộ](../README.md#chạy-với-blockchain-cục-bộ) của README: sửa `CHAIN_ID=31337`, `RPC_URL=http://127.0.0.1:8545`, `RPC_FALLBACK_URL=`; chạy 6 lệnh `deploy:*:local` và chép địa chỉ, block deploy vào `.env`. Sau đó:
 
 ```powershell
 # Làm sạch CSDL dev (mốc quét của Indexer phải bắt đầu từ chain mới)
@@ -71,7 +71,7 @@ Nên mở sẵn hai cửa sổ trình duyệt: cửa sổ thường đăng nhậ
 | 12   | Tài khoản giả                     | Đăng nhập `taikhoan.gia@…`: menu không có mục bảo hành; mở `/service` thấy "Chỉ người đại diện của trung tâm bảo hành mới có trang này". Chỉ thêm kết quả `demo:reverts` (dòng bước 12) | `NotAuthorizedServiceCenter`: contract từ chối ví không thuộc trung tâm bảo hành đã duyệt                                                                                                                                                                      |
 | 13   | Trang công khai                   | Tải lại hộ chiếu công khai; bấm một txHash; mở **Nhật ký giao dịch on-chain**                                                                                                           | Thêm dòng "Chuyển quyền sở hữu", tab Chuyển nhượng có 2 mục; vẫn Khớp blockchain; ví của doanh nghiệp hiện, ví người dùng cá nhân không hiện                                                                                                                   |
 
-Phần thêm nếu còn thời gian: Admin mở **Quản trị → Tổng quan** (số liệu, biểu đồ event, giao dịch theo hàm), **Nhật ký** (lọc "Chuyển nhượng"), **Cảnh báo** (thử đăng nhập sai 10 lần một email rồi chờ Worker quét, xem [m12-kiem-thu-tay.md](m12-kiem-thu-tay.md)).
+Phần thêm nếu còn thời gian: Admin mở **Quản trị → Tổng quan** (số liệu, biểu đồ event, giao dịch theo hàm), **Nhật ký** (lọc "Chuyển nhượng"), **Cảnh báo** (thử đăng nhập sai 10 lần một email rồi chờ Worker quét, như bước 11.7–11.9 của [kịch bản kiểm thử](kich-ban-kiem-thu.md)).
 
 ### 1.4. Sau demo
 
