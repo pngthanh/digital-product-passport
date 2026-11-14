@@ -275,12 +275,16 @@ export interface PublicPassportView {
   };
   /** Bên đang giữ hàng. */
   holder: PartyLabel | null;
-  /** Nhà bán lẻ đang được giao tới (chỉ khi IN_DISTRIBUTION). */
-  pendingRetailer: { name: string } | null;
+  /** Nhà bán lẻ đang được giao tới (chỉ khi IN_DISTRIBUTION); `partyId` để tự đối chiếu (M11). */
+  pendingRetailer: { name: string; partyId: string } | null;
   /** Đã bán cho người dùng cuối; không trả thông tin người mua. */
   hasOwner: boolean;
   warranty: WarrantyView | null;
   proof: ProductProof;
   journey: JourneyStep[];
+  /**
+   * (M11) Event đã chốt, cũ nhất trước. Mã bên (bytes32) của người dùng cá nhân bị bỏ khỏi `args`;
+   * ví gửi chỉ giữ khi người gửi là người đại diện của doanh nghiệp có tên trong giao dịch đó.
+   */
   history: ChainEventView[];
 }
