@@ -25,6 +25,7 @@ import { OwnerServiceController } from './presentation/owner-service.controller.
 import { ServiceTicketsController } from './presentation/service-tickets.controller.js';
 import { ServiceOwnerChange } from './application/service-owner-change.js';
 import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
+import { SERVICE_STATISTICS } from './application/ports/service-statistics.reader.js';
 
 /**
  * Service (tiến trình API). M7: SVC-01 chủ sở hữu gửi yêu cầu bảo hành, SVC-02 huỷ khi chưa tiếp
@@ -57,6 +58,6 @@ import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
     RecordServiceTransaction,
     GetServiceEvidence,
   ],
-  exports: [ServiceOwnerChange],
+  exports: [ServiceOwnerChange, SERVICE_STATISTICS],
 })
 export class ServiceModule {}

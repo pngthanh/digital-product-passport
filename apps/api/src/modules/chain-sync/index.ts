@@ -17,3 +17,10 @@ export { IndexedChainState } from './application/indexed-chain-state.query.js';
 export { ChainEventHistory, presentChainEvent } from './application/chain-event-history.query.js';
 export type { ChainEvent, ChainEventArg, RecordedChainEvent } from './domain/chain-event.js';
 export type { TrackedTxStatus } from './domain/transaction-confirmation.js';
+export {
+  CHAIN_ACTIVITY,
+  type ChainActivity,
+  type RevertBurst,
+  type StuckTransaction,
+  type TransactionStatusCounts,
+} from './application/chain-activity.reader.js';

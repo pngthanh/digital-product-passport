@@ -43,6 +43,8 @@ export const AuditAction = {
   PRODUCT_RECALLED: 'PRODUCT_RECALLED',
   PRODUCT_REPORTED_LOST_STOLEN: 'PRODUCT_REPORTED_LOST_STOLEN',
   PRODUCT_RETIRED: 'PRODUCT_RETIRED',
+  /** (M12) Admin xử lý cảnh báo bất thường (đã xử lý hoặc báo nhầm), kèm ghi chú. */
+  ALERT_REVIEWED: 'ALERT_REVIEWED',
 } as const;
 
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

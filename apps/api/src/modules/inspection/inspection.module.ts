@@ -30,6 +30,7 @@ import { INSPECTION_PORT_PROVIDERS } from './inspection.providers.js';
 import { InspectionsController } from './presentation/inspections.controller.js';
 import { PublicInspectionsController } from './presentation/public-inspections.controller.js';
 import { RequesterInspectionController } from './presentation/requester-inspection.controller.js';
+import { INSPECTION_STATISTICS } from './application/ports/inspection-statistics.reader.js';
 
 /**
  * Inspection (tiến trình API). M8: INS-02 nhà sản xuất hoặc chủ sở hữu gửi yêu cầu kiểm định,
@@ -48,6 +49,7 @@ import { RequesterInspectionController } from './presentation/requester-inspecti
     NotifierModule,
   ],
   controllers: [RequesterInspectionController, InspectionsController, PublicInspectionsController],
+  exports: [INSPECTION_STATISTICS],
   providers: [
     ...INSPECTION_PORT_PROVIDERS,
     InspectorAccess,

@@ -21,6 +21,7 @@ import { TransferModule } from './modules/transfer/index.js';
 import { LifecycleModule } from './modules/lifecycle/index.js';
 import { NotificationsModule } from './modules/notifications/index.js';
 import { VerificationModule } from './modules/verification/index.js';
+import { MonitoringModule } from './modules/monitoring/index.js';
 
 /** Module gốc của tiến trình API (HTTP). Mỗi module nghiệp vụ mới được thêm vào `imports`. */
 @Module({
@@ -56,6 +57,7 @@ import { VerificationModule } from './modules/verification/index.js';
     LifecycleModule,
     NotificationsModule,
     VerificationModule,
+    MonitoringModule,
   ],
 })
 export class AppModule implements NestModule {

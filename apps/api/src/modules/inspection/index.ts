@@ -2,3 +2,9 @@
 export { InspectionModule } from './inspection.module.js';
 export { InspectionWorkerModule } from './inspection-worker.module.js';
 export { InspectionOwnerChange } from './application/inspection-owner-change.js';
+export {
+  INSPECTION_STATISTICS,
+  type InspectionStatistics,
+  type InspectionSummary,
+  type WaitingInspectionRequest,
+} from './application/ports/inspection-statistics.reader.js';

@@ -9,6 +9,7 @@ import { ChainSyncWorkerModule } from '../../src/modules/chain-sync/index.js';
 import { IdentityWorkerModule } from '../../src/modules/identity/index.js';
 import { InspectionWorkerModule } from '../../src/modules/inspection/index.js';
 import { LifecycleWorkerModule } from '../../src/modules/lifecycle/index.js';
+import { MonitoringWorkerModule } from '../../src/modules/monitoring/index.js';
 import { TransferWorkerModule } from '../../src/modules/transfer/index.js';
 import { OrganizationsWorkerModule } from '../../src/modules/organizations/index.js';
 import { ProductsWorkerModule } from '../../src/modules/products/index.js';
@@ -62,8 +63,11 @@ export function sessionCookieFrom(setCookie: string[] | string | undefined): str
 }
 
 /** Phần Worker cần cho test (không bật ScheduleModule): test tự gọi runOnce() đúng lúc cần. */
-export async function createWorkerContext(config: AppConfigService): Promise<TestingModule> {
-  const moduleRef = await Test.createTestingModule({
+export async function createWorkerContext(
+  config: AppConfigService,
+  options: { chain?: object } = {},
+): Promise<TestingModule> {
+  let builder = Test.createTestingModule({
     imports: [
       AppConfigModule,
       ChainSyncWorkerModule,
@@ -74,10 +78,14 @@ export async function createWorkerContext(config: AppConfigService): Promise<Tes
       InspectionWorkerModule,
       TransferWorkerModule,
       LifecycleWorkerModule,
+      MonitoringWorkerModule,
     ],
   })
     .overrideProvider(AppConfigService)
-    .useValue(config)
-    .compile();
+    .useValue(config);
+  if (options.chain) {
+    builder = builder.overrideProvider(ChainProviderService).useValue(options.chain);
+  }
+  const moduleRef = await builder.compile();
   return moduleRef.init();
 }

@@ -87,6 +87,8 @@ export const envSchema = z.object({
   // RPC công khai của Monad Testnet giới hạn eth_getLogs 100 block mỗi lần.
   INDEXER_BLOCK_RANGE: z.coerce.number().int().min(1).max(10_000).default(100),
   RECONCILE_INTERVAL_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
+  // (M12) Chu kỳ Worker chạy các luật phát hiện bất thường (AUD-03).
+  ANOMALY_SCAN_INTERVAL_MINUTES: z.coerce.number().int().min(1).max(1440).default(5),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -6,9 +6,11 @@ import { ChainSyncWorkerModule, EventProjectorRegistry } from '../chain-sync/ind
 import { IdentityWorkerModule } from '../identity/index.js';
 import { NotifierModule } from '../notifications/index.js';
 import { ExpireWarranties } from './application/expire-warranties.use-case.js';
+import { PRODUCT_STATISTICS } from './application/ports/product-statistics.reader.js';
 import { ProductDirectory } from './application/product-directory.service.js';
 import { ProductPassportProjector } from './application/product-passport.projector.js';
 import { WarrantyManagerProjector } from './application/warranty-manager.projector.js';
+import { PrismaProductStatistics } from './infrastructure/prisma-product-statistics.reader.js';
 import { PRODUCT_PORT_PROVIDERS } from './products.providers.js';
 import { WarrantyExpiryScheduler } from './presentation/warranty-expiry.scheduler.js';
 
@@ -29,8 +31,9 @@ import { WarrantyExpiryScheduler } from './presentation/warranty-expiry.schedule
     ExpireWarranties,
     WarrantyExpiryScheduler,
     ProductDirectory,
+    { provide: PRODUCT_STATISTICS, useClass: PrismaProductStatistics },
   ],
-  exports: [ExpireWarranties, ProductDirectory],
+  exports: [ExpireWarranties, ProductDirectory, PRODUCT_STATISTICS],
 })
 export class ProductsWorkerModule implements OnModuleInit {
   constructor(

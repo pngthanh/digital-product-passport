@@ -6,9 +6,12 @@ import { LocalFileStorage } from '../../infrastructure/storage/local-file.storag
 import { SERVICE_TICKET_CHAIN } from './application/ports/service-ticket-chain.port.js';
 import { EthersServiceTicketChain } from './infrastructure/ethers-service-ticket.chain.js';
 import { PrismaServiceRequestRepository } from './infrastructure/prisma-service-request.repository.js';
+import { SERVICE_STATISTICS } from './application/ports/service-statistics.reader.js';
+import { PrismaServiceStatistics } from './infrastructure/prisma-service-statistics.reader.js';
 
 /** Nối cổng của tầng application với hiện thực infrastructure; dùng cho API và Worker. */
 export const SERVICE_PORT_PROVIDERS: Provider[] = [
+  { provide: SERVICE_STATISTICS, useClass: PrismaServiceStatistics },
   { provide: CLOCK, useValue: SYSTEM_CLOCK },
   { provide: SERVICE_REQUEST_REPOSITORY, useClass: PrismaServiceRequestRepository },
   { provide: SERVICE_TICKET_CHAIN, useClass: EthersServiceTicketChain },

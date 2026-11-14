@@ -14,6 +14,8 @@ import { PrepareAdminDecision } from './application/prepare-admin-decision.use-c
 import { RecordAdminTransaction } from './application/record-admin-transaction.use-case.js';
 import { RecordOrganizationTransaction } from './application/record-organization-transaction.use-case.js';
 import { SubmitOrganizationApplication } from './application/submit-organization-application.use-case.js';
+import { ORGANIZATION_STATISTICS } from './application/ports/organization-statistics.reader.js';
+import { PrismaOrganizationStatistics } from './infrastructure/prisma-organization-statistics.reader.js';
 import { ORGANIZATION_PORT_PROVIDERS } from './organizations.providers.js';
 import { AdminController } from './presentation/admin.controller.js';
 import { MyOrganizationController } from './presentation/my-organization.controller.js';
@@ -34,7 +36,8 @@ import { MyOrganizationController } from './presentation/my-organization.control
     PrepareAdminDecision,
     RecordAdminTransaction,
     OrganizationDirectory,
+    { provide: ORGANIZATION_STATISTICS, useClass: PrismaOrganizationStatistics },
   ],
-  exports: [OrganizationDirectory],
+  exports: [OrganizationDirectory, ORGANIZATION_STATISTICS],
 })
 export class OrganizationsModule {}

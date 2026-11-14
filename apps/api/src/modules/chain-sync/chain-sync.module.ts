@@ -5,6 +5,7 @@ import { DatabaseModule } from '../../infrastructure/database/database.module.js
 import { CHAIN_EVENT_READER, ChainEventHistory } from './application/chain-event-history.query.js';
 import { CHAIN_READER } from './application/chain-reader.port.js';
 import { CHAIN_TRANSACTION_REPOSITORY } from './application/chain-transaction.repository.js';
+import { CHAIN_ACTIVITY } from './application/chain-activity.reader.js';
 import { CONTRACT_CATALOG } from './application/contract-catalog.port.js';
 import { EVENT_STORE } from './application/event-store.port.js';
 import { IndexedChainState } from './application/indexed-chain-state.query.js';
@@ -17,6 +18,7 @@ import {
 import { AbiContractCatalog } from './infrastructure/abi-contract.catalog.js';
 import { EthersChainReader } from './infrastructure/ethers-chain.reader.js';
 import { PrismaChainEventReader } from './infrastructure/prisma-chain-event.reader.js';
+import { PrismaChainActivity } from './infrastructure/prisma-chain-activity.reader.js';
 import { PrismaChainTransactionRepository } from './infrastructure/prisma-chain-transaction.repository.js';
 import { PrismaEventStore } from './infrastructure/prisma-event.store.js';
 import { PrismaIndexerCheckpointRepository } from './infrastructure/prisma-indexer-checkpoint.repository.js';
@@ -27,6 +29,8 @@ const PORTS = [
   { provide: CHAIN_TRANSACTION_REPOSITORY, useClass: PrismaChainTransactionRepository },
   { provide: INDEXER_CHECKPOINT_REPOSITORY, useClass: PrismaIndexerCheckpointRepository },
   { provide: CHAIN_EVENT_READER, useClass: PrismaChainEventReader },
+  // (M12) Số liệu giao dịch, event cho dashboard Admin và luật phát hiện bất thường.
+  { provide: CHAIN_ACTIVITY, useClass: PrismaChainActivity },
   // (M11) Đọc event sau mốc Indexer để đối chiếu hộ chiếu công khai; API không ghi event.
   { provide: EVENT_STORE, useClass: PrismaEventStore },
   { provide: CLOCK, useValue: SYSTEM_CLOCK },
@@ -47,6 +51,7 @@ const PORTS = [
     IndexedChainState,
   ],
   exports: [
+    CHAIN_ACTIVITY,
     TRANSACTION_TRACKING,
     CHAIN_READER,
     CONTRACT_CATALOG,

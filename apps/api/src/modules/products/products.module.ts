@@ -32,6 +32,8 @@ import {
 import { RegisterProducts } from './application/register-products.use-case.js';
 import { RetryProductRegistration } from './application/retry-product-registration.use-case.js';
 import { OwnerParties } from './application/owner-parties.service.js';
+import { PRODUCT_STATISTICS } from './application/ports/product-statistics.reader.js';
+import { PrismaProductStatistics } from './infrastructure/prisma-product-statistics.reader.js';
 import { PRODUCT_PORT_PROVIDERS } from './products.providers.js';
 import { InventoryController } from './presentation/inventory.controller.js';
 import { MyProductsController } from './presentation/my-products.controller.js';
@@ -59,6 +61,7 @@ import { PublicProductsController } from './presentation/public-products.control
     PublicProductsController,
   ],
   providers: [
+    { provide: PRODUCT_STATISTICS, useClass: PrismaProductStatistics },
     ...PRODUCT_PORT_PROVIDERS,
     ManufacturerAccess,
     OwnerParties,
@@ -84,6 +87,6 @@ import { PublicProductsController } from './presentation/public-products.control
     GetWorkspace,
     ProductDirectory,
   ],
-  exports: [ProductDirectory, OwnerParties],
+  exports: [ProductDirectory, OwnerParties, PRODUCT_STATISTICS],
 })
 export class ProductsModule {}

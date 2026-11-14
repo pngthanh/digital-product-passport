@@ -7,6 +7,7 @@ import { ProductsWorkerModule } from '../products/index.js';
 import { ServiceOwnerChange } from './application/service-owner-change.js';
 import { ServiceTicketProjector } from './application/service-ticket.projector.js';
 import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
+import { SERVICE_STATISTICS } from './application/ports/service-statistics.reader.js';
 
 /** Phần chạy trong Worker: chiếu event ServiceTicketManager sang service_requests, service_records. */
 @Module({
@@ -18,7 +19,7 @@ import { SERVICE_PORT_PROVIDERS } from './service.providers.js';
     NotifierModule,
   ],
   providers: [...SERVICE_PORT_PROVIDERS, ServiceTicketProjector, ServiceOwnerChange],
-  exports: [ServiceOwnerChange],
+  exports: [ServiceOwnerChange, SERVICE_STATISTICS],
 })
 export class ServiceWorkerModule implements OnModuleInit {
   constructor(

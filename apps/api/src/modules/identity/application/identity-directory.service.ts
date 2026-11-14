@@ -85,6 +85,11 @@ export class IdentityDirectory {
     return users;
   }
 
+  /** (M12) Party sở hữu ví (kể cả ví cũ); `null` khi ví lạ. */
+  async partyOfWallet(address: string): Promise<string | null> {
+    return (await this.wallets.findByAddress(address.toLowerCase()))?.partyId ?? null;
+  }
+
   createOrganizationParty(organizationId: string, scope: TransactionScope): Promise<void> {
     return this.directory.createOrganizationParty(organizationId, scope);
   }

@@ -12,7 +12,9 @@ import { RegisterAccount } from './application/register-account.use-case.js';
 import { ResolveSession } from './application/resolve-session.use-case.js';
 import { SignIn } from './application/sign-in.use-case.js';
 import { SignOut } from './application/sign-out.use-case.js';
+import { IDENTITY_STATISTICS } from './application/ports/identity-statistics.reader.js';
 import { IDENTITY_PORT_PROVIDERS } from './identity.providers.js';
+import { PrismaIdentityStatistics } from './infrastructure/prisma-identity-statistics.reader.js';
 import { AdminGuard } from './presentation/admin.guard.js';
 import { AuthController } from './presentation/auth.controller.js';
 import { SessionGuard } from './presentation/session.guard.js';
@@ -35,7 +37,8 @@ import { WalletLinksController } from './presentation/wallet-links.controller.js
     IdentityDirectory,
     SessionGuard,
     AdminGuard,
+    { provide: IDENTITY_STATISTICS, useClass: PrismaIdentityStatistics },
   ],
-  exports: [SessionGuard, AdminGuard, ResolveSession, IdentityDirectory],
+  exports: [SessionGuard, AdminGuard, ResolveSession, IdentityDirectory, IDENTITY_STATISTICS],
 })
 export class IdentityModule {}

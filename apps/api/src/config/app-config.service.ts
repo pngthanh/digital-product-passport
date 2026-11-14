@@ -55,6 +55,8 @@ export interface IndexerConfig {
   /** Số block tối đa mỗi lần gọi eth_getLogs. */
   readonly blockRange: number;
   readonly reconcileIntervalMs: number;
+  /** (M12) Chu kỳ chạy luật phát hiện bất thường. */
+  readonly anomalyScanIntervalMs: number;
 }
 
 export interface ChainConfig {
@@ -245,6 +247,8 @@ export class AppConfigService {
       pollIntervalMs: this.config.get('INDEXER_POLL_INTERVAL_MS', { infer: true }),
       blockRange: this.config.get('INDEXER_BLOCK_RANGE', { infer: true }),
       reconcileIntervalMs: this.config.get('RECONCILE_INTERVAL_MINUTES', { infer: true }) * 60_000,
+      anomalyScanIntervalMs:
+        this.config.get('ANOMALY_SCAN_INTERVAL_MINUTES', { infer: true }) * 60_000,
     };
   }
 

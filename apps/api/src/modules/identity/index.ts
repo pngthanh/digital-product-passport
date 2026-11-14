@@ -15,3 +15,8 @@ export {
   ReconcilePartyWallets,
   type ReconciliationSummary,
 } from './application/reconcile-party-wallets.use-case.js';
+export {
+  IDENTITY_STATISTICS,
+  type AccountStatistics,
+  type IdentityStatistics,
+} from './application/ports/identity-statistics.reader.js';

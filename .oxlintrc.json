@@ -16,6 +16,12 @@
         "case": "kebabCase"
       }
     ],
+    "no-underscore-dangle": [
+      "warn",
+      {
+        "allow": ["_count", "_all"]
+      }
+    ],
     "typescript/no-extraneous-class": [
       "warn",
       {

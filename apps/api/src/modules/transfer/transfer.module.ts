@@ -20,6 +20,7 @@ import { TransferViews } from './application/transfer-views.js';
 import { OwnerTransferController } from './presentation/owner-transfer.controller.js';
 import { TransfersController } from './presentation/transfers.controller.js';
 import { TRANSFER_PORT_PROVIDERS } from './transfer.providers.js';
+import { TRANSFER_STATISTICS } from './application/ports/transfer-statistics.reader.js';
 
 /**
  * Transfer (tiến trình API). M9: TRF-01 chủ sở hữu tạo yêu cầu chuyển nhượng (giấy phép registrar),
@@ -37,6 +38,7 @@ import { TRANSFER_PORT_PROVIDERS } from './transfer.providers.js';
     ServiceModule,
   ],
   controllers: [OwnerTransferController, TransfersController],
+  exports: [TRANSFER_STATISTICS],
   providers: [
     ...TRANSFER_PORT_PROVIDERS,
     TransferOwnerAccess,

@@ -2,7 +2,7 @@ import type { NewAnomalyAlert } from '../domain/anomaly-alert.js';
 
 /** Cổng ghi anomaly_alerts. */
 export interface AnomalyAlertWriter {
-  /** Bỏ qua nếu đã có cảnh báo OPEN cùng luật và cùng đối tượng; trả `true` khi tạo mới. */
+  /** Bỏ qua cảnh báo trùng (xem `NewAnomalyAlert.dedupeKey`); trả `true` khi tạo mới. */
   raiseIfNew(alert: NewAnomalyAlert): Promise<boolean>;
 }
 

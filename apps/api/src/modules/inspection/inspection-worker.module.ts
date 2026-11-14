@@ -7,6 +7,7 @@ import { ProductsWorkerModule } from '../products/index.js';
 import { InspectionOwnerChange } from './application/inspection-owner-change.js';
 import { InspectionProjector } from './application/inspection.projector.js';
 import { INSPECTION_PORT_PROVIDERS } from './inspection.providers.js';
+import { INSPECTION_STATISTICS } from './application/ports/inspection-statistics.reader.js';
 
 /** Phần chạy trong Worker: chiếu event InspectionRegistry sang inspection_requests, inspections. */
 @Module({
@@ -18,7 +19,7 @@ import { INSPECTION_PORT_PROVIDERS } from './inspection.providers.js';
     NotifierModule,
   ],
   providers: [...INSPECTION_PORT_PROVIDERS, InspectionProjector, InspectionOwnerChange],
-  exports: [InspectionOwnerChange],
+  exports: [InspectionOwnerChange, INSPECTION_STATISTICS],
 })
 export class InspectionWorkerModule implements OnModuleInit {
   constructor(

@@ -31,6 +31,20 @@ export const AnomalyRule = {
    * nghiệp, trạng thái, bên giữ hàng, chủ sở hữu hoặc bảo hành).
    */
   PUBLIC_VERIFICATION_MISMATCH: 'PUBLIC_VERIFICATION_MISMATCH',
+  /** (M12) Giao dịch web đã báo quá 15 phút mà chưa chốt (treo, nonce kẹt, RPC mất giao dịch). */
+  TRANSACTION_STUCK: 'TRANSACTION_STUCK',
+  /** (M12) Một ví bị revert từ 5 lần trong 1 giờ (thử sai quyền, dò lỗi contract). */
+  WALLET_REPEATED_REVERTS: 'WALLET_REPEATED_REVERTS',
+  /** (M12) Indexer không tiến lên quá 10 phút trong khi chain vẫn có block mới. */
+  INDEXER_LAGGING: 'INDEXER_LAGGING',
+  /** (M12) Một email bị đăng nhập sai từ 10 lần trong 15 phút (dò mật khẩu). */
+  SIGN_IN_BRUTE_FORCE: 'SIGN_IN_BRUTE_FORCE',
+  /** (M12) Một sản phẩm đổi chủ từ 3 lần trong 7 ngày (dấu hiệu tiêu thụ hàng gian). */
+  RAPID_OWNERSHIP_CHANGES: 'RAPID_OWNERSHIP_CHANGES',
+  /** (M12) Phiếu sửa chữa mở quá 30 ngày chưa đóng. */
+  SERVICE_TICKET_OVERDUE: 'SERVICE_TICKET_OVERDUE',
+  /** (M12) Yêu cầu bảo hành hoặc kiểm định chờ quá 14 ngày chưa ai xử lý. */
+  REQUEST_STALE: 'REQUEST_STALE',
 } as const;
 
 export type AnomalyRule = (typeof AnomalyRule)[keyof typeof AnomalyRule];
@@ -45,4 +59,12 @@ export interface NewAnomalyAlert {
   partyId?: string;
   productId?: string;
   details: Readonly<Record<string, AnomalyDetailValue>>;
+  /**
+   * (M12) Khoá chống trùng của luật chạy nền (mã giao dịch, mã yêu cầu, email…), lưu vào
+   * `details.dedupeKey`. Có khoá thì bỏ qua khi đã từng có cảnh báo cùng luật, cùng khoá; không có
+   * khoá thì bỏ qua khi còn cảnh báo OPEN cùng luật, cùng đối tượng.
+   */
+  dedupeKey?: string;
+  /** Với `dedupeKey`: sau bấy nhiêu giờ kể từ lần báo trước (đã xử lý) thì được báo lại. */
+  repeatAfterHours?: number;
 }
