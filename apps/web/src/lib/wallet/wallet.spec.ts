@@ -1,9 +1,14 @@
-import { HARDHAT_LOCAL, MONAD_TESTNET } from '@dpp/shared';
-import { makeError } from 'ethers';
+import {
+  HARDHAT_LOCAL,
+  MONAD_TESTNET,
+  PARTY_REGISTRY_ABI,
+  PRODUCT_PASSPORT_ABI,
+} from '@dpp/shared';
+import { AbiCoder, Interface, makeError, ZeroAddress } from 'ethers';
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '@/lib/api-error';
 import { addEthereumChainParams } from './chain-params';
-import { describeWalletError, WalletFlowError } from './wallet-errors';
+import { describeWalletError, WalletFlowError, withRevertReason } from './wallet-errors';
 
 describe('addEthereumChainParams', () => {
   it('Monad Testnet: chain ID dạng hex, MON 18 chữ số, có explorer', () => {
@@ -49,6 +54,41 @@ describe('describeWalletError', () => {
       revert: { name: 'WalletAlreadyUsed', signature: 'WalletAlreadyUsed(address)', args: [] },
     });
     expect(describeWalletError(error)).toContain('đã từng được liên kết');
+  });
+
+  it('giải mã custom error khi ước lượng gas bằng ABI của contract', () => {
+    const registry = new Interface(PARTY_REGISTRY_ABI);
+    const partyId = `0x${'ab'.repeat(32)}`;
+    const raw = AbiCoder.getBuiltinCallException(
+      'estimateGas',
+      { to: ZeroAddress, data: '0x' },
+      registry.encodeErrorResult('InvalidOrganizationStatus', [partyId, 1]),
+    );
+    // ethers để revert = null với custom error nên chỉ hiện được thông báo chung.
+    expect(raw.revert).toBeNull();
+    expect(describeWalletError(withRevertReason(raw, registry))).toContain('Tải lại trang');
+
+    const passport = new Interface(PRODUCT_PASSPORT_ABI);
+    const notCustodian = AbiCoder.getBuiltinCallException(
+      'estimateGas',
+      { to: ZeroAddress, data: '0x' },
+      passport.encodeErrorResult('NotCustodian', [partyId, partyId]),
+    );
+    expect(describeWalletError(withRevertReason(notCustodian, passport))).toContain(
+      'không còn giữ',
+    );
+  });
+
+  it('custom error chưa có câu dịch thì hiện tên lỗi; lỗi khác giữ nguyên', () => {
+    const registry = new Interface(PARTY_REGISTRY_ABI);
+    const raw = AbiCoder.getBuiltinCallException(
+      'estimateGas',
+      { to: ZeroAddress, data: '0x' },
+      registry.encodeErrorResult('ZeroBytes32', []),
+    );
+    expect(describeWalletError(withRevertReason(raw, registry))).toContain('(ZeroBytes32)');
+    const other = new Error('boom');
+    expect(withRevertReason(other, registry)).toBe(other);
   });
 
   it('giữ nguyên thông báo của API và của luồng liên kết ví', () => {

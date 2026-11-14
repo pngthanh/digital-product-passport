@@ -1,7 +1,7 @@
 import { formatMon, PARTY_REGISTRY_ABI, type PartyRegistryMethod, shortenHex } from '@dpp/shared';
 import { BrowserProvider, Contract, type InterfaceAbi } from 'ethers';
 import { ensureChain, requestAccount, requireInjectedProvider } from './ethereum';
-import { WalletFlowError } from './wallet-errors';
+import { WalletFlowError, withRevertReason } from './wallet-errors';
 
 /** Monad tính phí theo gas limit, nên chỉ cộng 10% vào số ước lượng thay vì mức dư mặc định. */
 export const GAS_LIMIT_MARGIN_DIVISOR = 10n;
@@ -58,7 +58,9 @@ export async function sendContractTransaction(
   const contract = new Contract(call.contractAddress, abi, signer);
   const fn = contract.getFunction(call.method);
   // Ước lượng trước: contract revert (sai trạng thái, hết hạn giấy phép…) thì báo lỗi trước khi ví ký.
-  const estimated = await fn.estimateGas(...call.args, { value });
+  const estimated = await fn.estimateGas(...call.args, { value }).catch((error: unknown) => {
+    throw withRevertReason(error, contract.interface);
+  });
   const tx: unknown = await fn(...call.args, {
     value,
     gasLimit: estimated + estimated / GAS_LIMIT_MARGIN_DIVISOR,

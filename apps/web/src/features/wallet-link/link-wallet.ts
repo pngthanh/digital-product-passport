@@ -13,7 +13,7 @@ import {
 } from '../auth/identity.schema';
 import { ensureChain, requestAccount, requireInjectedProvider } from '@/lib/wallet/ethereum';
 import { GAS_LIMIT_MARGIN_DIVISOR } from '@/lib/wallet/send-registry-transaction';
-import { WalletFlowError } from '@/lib/wallet/wallet-errors';
+import { WalletFlowError, withRevertReason } from '@/lib/wallet/wallet-errors';
 
 export const LINK_STEPS = ['connect', 'sign', 'send', 'confirm'] as const;
 export type LinkStep = (typeof LINK_STEPS)[number];
@@ -98,7 +98,9 @@ async function sendBindingTransaction(
       ? [authorization.partyId, deadline, authorization.signature]
       : [authorization.partyId, authorization.previousWallet, deadline, authorization.signature];
   // Ước lượng trước: contract revert (ví đã dùng, giấy phép hết hạn…) thì báo lỗi trước khi ví ký.
-  const estimated = await method.estimateGas(...args);
+  const estimated = await method.estimateGas(...args).catch((error: unknown) => {
+    throw withRevertReason(error, registry.interface);
+  });
   const tx: unknown = await method(...args, {
     gasLimit: estimated + estimated / GAS_LIMIT_MARGIN_DIVISOR,
   });
