@@ -17,6 +17,7 @@ import { organizationLabel } from './party-labels.js';
 import { PRODUCT_CHAIN, type ProductChain } from './ports/product-chain.port.js';
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
 import { presentProduct, ProductViews } from './product-views.js';
+import { PublicHistory } from './public-history.js';
 
 const EMPTY_COUNTS: Record<ProductListFilter, number> = {
   ALL: 0,
@@ -144,6 +145,7 @@ export class GetPublicPassport {
     @Inject(PRODUCT_REPOSITORY) private readonly products: ProductRepository,
     private readonly organizations: OrganizationDirectory,
     private readonly views: ProductViews,
+    private readonly publicHistory: PublicHistory,
   ) {}
 
   async execute(publicCode: string): Promise<PublicPassportView> {
@@ -165,6 +167,7 @@ export class GetPublicPassport {
       throw new ProductNotFoundError();
     }
     const pendingRetailer = timeline.labels.organization(product.pendingCustodianPartyId);
+    const history = await this.publicHistory.present(timeline.history);
     return {
       publicCode: product.publicCode,
       serialNumber: product.serialNumber,
@@ -181,12 +184,14 @@ export class GetPublicPassport {
         partyId: issuer.partyId,
       },
       holder: timeline.labels.party(product.currentCustodianPartyId),
-      pendingRetailer: pendingRetailer ? { name: pendingRetailer.name } : null,
+      pendingRetailer: pendingRetailer
+        ? { name: pendingRetailer.name, partyId: pendingRetailer.partyId }
+        : null,
       hasOwner: product.currentOwnerPartyId !== null,
       warranty: timeline.warranty,
       proof,
       journey: timeline.journey,
-      history: timeline.history,
+      history,
     };
   }
 }

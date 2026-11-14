@@ -21,12 +21,19 @@ export interface ProductRef {
   currentCustodianPartyId: string | null;
   pendingCustodianPartyId: string | null;
   warrantyMonths: number;
+  /** (M11) Hash hồ sơ đã ghi on-chain, để đối chiếu công khai. */
+  metadataHash: string;
 }
 
 /** Bảo hành tại thời điểm hỏi: trạng thái đã tính hết hạn theo giờ hiện tại (D10). */
 export interface WarrantyRef {
   state: WarrantyState;
   expiresAt: Date;
+  /** (M11) Dữ liệu chiếu gốc, để đối chiếu với `WarrantyManager.warrantyOf`. */
+  activatedAt: Date;
+  activatedByPartyId: string;
+  /** Đang tạm dừng vì có phiếu sửa mở (trạng thái đã chiếu là SUSPENDED). */
+  suspended: boolean;
 }
 
 function toRef(product: ProductRecord): ProductRef | null {
@@ -45,6 +52,7 @@ function toRef(product: ProductRecord): ProductRef | null {
     currentCustodianPartyId: product.currentCustodianPartyId,
     pendingCustodianPartyId: product.pendingCustodianPartyId,
     warrantyMonths: product.warrantyMonths,
+    metadataHash: product.metadataHash,
   };
 }
 
@@ -100,7 +108,13 @@ export class ProductDirectory {
     return new Map(
       [...warranties].map(([productId, warranty]) => [
         productId,
-        { state: effectiveWarrantyState(warranty, now), expiresAt: warranty.expiresAt },
+        {
+          state: effectiveWarrantyState(warranty, now),
+          expiresAt: warranty.expiresAt,
+          activatedAt: warranty.activatedAt,
+          activatedByPartyId: warranty.activatedByPartyId,
+          suspended: warranty.warrantyState === 'SUSPENDED',
+        },
       ]),
     );
   }

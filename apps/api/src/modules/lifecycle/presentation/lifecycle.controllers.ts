@@ -12,6 +12,7 @@ import {
 import { z } from 'zod';
 import type { ClientContext } from '../../../common/domain/client-context.js';
 import { Client } from '../../../common/http/client-context.js';
+import { PublicRateLimit } from '../../../common/http/rate-limit.js';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
 import { type AuthenticatedUser, CurrentUser, SessionGuard } from '../../identity/index.js';
 import {
@@ -96,6 +97,7 @@ export class OwnerLifecycleController {
 }
 
 /** VER-01 (phần M10): cảnh báo thu hồi, báo mất, ngừng sử dụng trên hộ chiếu công khai. */
+@PublicRateLimit()
 @Controller('public/products')
 export class PublicLifecycleController {
   constructor(private readonly getLifecycle: GetPublicLifecycle) {}

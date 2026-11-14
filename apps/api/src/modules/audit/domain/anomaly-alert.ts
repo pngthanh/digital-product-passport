@@ -26,6 +26,11 @@ export const AnomalyRule = {
   TRANSFER_UNKNOWN: 'TRANSFER_UNKNOWN',
   /** (M10) Thu hồi on-chain có hash lý do khác lý do nhà sản xuất đã lưu (hoặc không lưu). */
   RECALL_REASON_MISMATCH: 'RECALL_REASON_MISMATCH',
+  /**
+   * (M11) Hộ chiếu công khai đọc contract tại block Indexer đã chốt thấy khác CSDL (hồ sơ, doanh
+   * nghiệp, trạng thái, bên giữ hàng, chủ sở hữu hoặc bảo hành).
+   */
+  PUBLIC_VERIFICATION_MISMATCH: 'PUBLIC_VERIFICATION_MISMATCH',
 } as const;
 
 export type AnomalyRule = (typeof AnomalyRule)[keyof typeof AnomalyRule];

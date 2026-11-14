@@ -13,4 +13,5 @@ process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'error';
 // Test gọi đăng nhập liên tục từ cùng một IP; giới hạn tần suất được kiểm tra riêng.
 process.env.AUTH_RATE_LIMIT_PER_MINUTE = '10000';
+process.env.PUBLIC_RATE_LIMIT_PER_MINUTE = '10000';
 process.env.JWT_SECRET ||= 'e2e-only-secret-that-is-long-enough-0123456789';

@@ -1,9 +1,9 @@
 import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
 import type { IdentitySnapshot } from '@dpp/shared';
 import type { Request, Response } from 'express';
 import type { ClientContext } from '../../../common/domain/client-context.js';
 import { Client } from '../../../common/http/client-context.js';
+import { AuthRateLimit } from '../../../common/http/rate-limit.js';
 import { ZodValidationPipe } from '../../../common/http/zod-validation.pipe.js';
 import { AppConfigService } from '../../../config/app-config.service.js';
 import { GetIdentity } from '../application/get-identity.query.js';
@@ -36,7 +36,7 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  @UseGuards(ThrottlerGuard)
+  @AuthRateLimit()
   async register(
     @Body(new ZodValidationPipe(registerSchema)) body: RegisterBody,
     @Client() client: ClientContext,
@@ -49,7 +49,7 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  @UseGuards(ThrottlerGuard)
+  @AuthRateLimit()
   async login(
     @Body(new ZodValidationPipe(signInSchema)) body: SignInBody,
     @Client() client: ClientContext,

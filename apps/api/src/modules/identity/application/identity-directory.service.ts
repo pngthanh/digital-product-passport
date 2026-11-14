@@ -65,6 +65,26 @@ export class IdentityDirectory {
     return new Map(parties.map((party) => [party.partyId, party]));
   }
 
+  /**
+   * (M11) Người dùng sở hữu từng ví (kể cả ví đã xoay hay đã gỡ), theo địa chỉ chữ thường; ví lạ
+   * hoặc không thuộc Party cá nhân thì không có trong kết quả.
+   */
+  async usersOfWallets(addresses: readonly string[]): Promise<Map<string, string>> {
+    const unique = [...new Set(addresses.map((address) => address.toLowerCase()))];
+    const wallets = (
+      await Promise.all(unique.map((address) => this.wallets.findByAddress(address)))
+    ).filter((wallet) => wallet !== null);
+    const parties = await this.describeParties(wallets.map((wallet) => wallet.partyId));
+    const users = new Map<string, string>();
+    for (const wallet of wallets) {
+      const userId = parties.get(wallet.partyId)?.userId;
+      if (userId) {
+        users.set(wallet.address, userId);
+      }
+    }
+    return users;
+  }
+
   createOrganizationParty(organizationId: string, scope: TransactionScope): Promise<void> {
     return this.directory.createOrganizationParty(organizationId, scope);
   }

@@ -55,6 +55,8 @@ export const envSchema = z.object({
     .min(32, 'cần ít nhất 32 ký tự ngẫu nhiên (tạo bằng: pnpm --filter @dpp/api secret:new)'),
   SESSION_TTL_MINUTES: z.coerce.number().int().min(5).max(43_200).default(720),
   AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(10),
+  // (M11) Mỗi IP gọi các đường dẫn /public/* tối đa bấy nhiêu lần một phút (mỗi lần mở hộ chiếu tốn 4 lần).
+  PUBLIC_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(100_000).default(120),
 
   // Để trống thì API vẫn chạy, chỉ phần liên kết ví (ACC-03/04) báo "chưa cấu hình".
   REGISTRAR_SIGNER_PRIVATE_KEY: optionalPrivateKey,

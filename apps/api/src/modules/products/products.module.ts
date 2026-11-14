@@ -24,6 +24,7 @@ import {
   ListRetailers,
 } from './application/product-queries.js';
 import { ProductViews } from './application/product-views.js';
+import { PublicHistory } from './application/public-history.js';
 import {
   RecordInventoryTransaction,
   RecordProductTransaction,
@@ -65,6 +66,7 @@ import { PublicProductsController } from './presentation/public-products.control
     PartyLabels,
     ProductAuthorizer,
     ProductViews,
+    PublicHistory,
     RegisterProducts,
     RetryProductRegistration,
     RecordProductTransaction,

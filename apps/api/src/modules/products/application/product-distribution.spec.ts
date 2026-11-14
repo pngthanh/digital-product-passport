@@ -32,6 +32,7 @@ import { PartyLabels } from './party-labels.js';
 import { maskEmail, PrepareProductSale } from './prepare-product-sale.use-case.js';
 import { GetPublicPassport, ListRetailers } from './product-queries.js';
 import { ProductViews } from './product-views.js';
+import { PublicHistory } from './public-history.js';
 
 const client = { ipAddress: '127.0.0.1', userAgent: 'vitest' };
 const WALLET = '0x2222222222222222222222222222222222222222';
@@ -138,7 +139,12 @@ async function setup() {
     owned: new ListOwnedProducts(products, new OwnerParties(identity, directory), views),
     workspace: new GetWorkspace(products, new OwnerParties(identity, directory)),
     retailers: new ListRetailers(directory, new ManufacturerAccess(directory, identity)),
-    passport: new GetPublicPassport(products, directory, views),
+    passport: new GetPublicPassport(
+      products,
+      directory,
+      views,
+      new PublicHistory(identity, directory),
+    ),
   };
 }
 

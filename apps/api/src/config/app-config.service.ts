@@ -10,6 +10,8 @@ export interface SessionConfig {
   /** Cookie chỉ gửi qua HTTPS khi web chạy HTTPS. */
   readonly secureCookie: boolean;
   readonly authRateLimitPerMinute: number;
+  /** (M11) Giới hạn chung cho mọi đường dẫn /public/* của một IP. */
+  readonly publicRateLimitPerMinute: number;
 }
 
 /** Cấu hình PartyRegistry; `null` khi chưa deploy hoặc chưa khai báo khoá ký giấy phép. */
@@ -118,6 +120,7 @@ export class AppConfigService {
       ttlMinutes: this.config.get('SESSION_TTL_MINUTES', { infer: true }),
       secureCookie: new URL(this.webOrigin).protocol === 'https:',
       authRateLimitPerMinute: this.config.get('AUTH_RATE_LIMIT_PER_MINUTE', { infer: true }),
+      publicRateLimitPerMinute: this.config.get('PUBLIC_RATE_LIMIT_PER_MINUTE', { infer: true }),
     };
   }
 

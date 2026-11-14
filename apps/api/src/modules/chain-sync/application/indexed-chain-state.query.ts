@@ -24,9 +24,14 @@ export class IndexedChainState {
 
   /** Mọi event tới block này đã chốt và chiếu; `null` khi chưa cấu hình hoặc Indexer chưa quét. */
   async indexedBlock(contractName: string): Promise<bigint | null> {
+    return (await this.indexedMark(contractName))?.block ?? null;
+  }
+
+  /** (M11) Mốc đã chốt kèm thời điểm Indexer ghi mốc đó, để trang công khai báo dữ liệu mới tới đâu. */
+  async indexedMark(contractName: string): Promise<{ block: bigint; at: Date } | null> {
     const address = this.catalog.addressOf(contractName);
     const checkpoint = address ? await this.checkpoints.find(this.reader.chainId, address) : null;
-    return checkpoint?.lastFinalizedBlock ?? null;
+    return checkpoint ? { block: checkpoint.lastFinalizedBlock, at: checkpoint.updatedAt } : null;
   }
 
   /** Đối tượng (correlation_key) có event sau `block`: dữ liệu đang thay đổi, chưa so được. */

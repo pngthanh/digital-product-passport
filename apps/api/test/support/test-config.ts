@@ -16,6 +16,8 @@ export function createTestConfig(overrides: Record<string, string> = {}): AppCon
     JWT_SECRET: 'test-secret-that-is-at-least-32-characters',
     REGISTRAR_SIGNER_PRIVATE_KEY: TEST_REGISTRAR_KEY,
     PARTY_REGISTRY_ADDRESS: TEST_PARTY_REGISTRY,
+    // Test gọi trang công khai liên tục từ cùng một IP; giới hạn được kiểm tra riêng (M11).
+    PUBLIC_RATE_LIMIT_PER_MINUTE: '10000',
     ...overrides,
   });
   return new AppConfigService(new ConfigService<Env, true>(env));

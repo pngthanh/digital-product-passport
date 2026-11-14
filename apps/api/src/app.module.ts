@@ -1,6 +1,13 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { OriginCheckMiddleware } from './common/http/origin-check.middleware.js';
+import {
+  AUTH_THROTTLER,
+  PUBLIC_THROTTLER,
+  publicThrottlerKey,
+  RATE_LIMIT_WINDOW_MS,
+  rateLimitMessage,
+} from './common/http/rate-limit.js';
 import { RequestIdMiddleware } from './common/http/request-id.middleware.js';
 import { AppConfigModule } from './config/app-config.module.js';
 import { AppConfigService } from './config/app-config.service.js';
@@ -13,19 +20,30 @@ import { ServiceModule } from './modules/service/index.js';
 import { TransferModule } from './modules/transfer/index.js';
 import { LifecycleModule } from './modules/lifecycle/index.js';
 import { NotificationsModule } from './modules/notifications/index.js';
-
-const RATE_LIMIT_WINDOW_MS = 60_000;
+import { VerificationModule } from './modules/verification/index.js';
 
 /** Module gốc của tiến trình API (HTTP). Mỗi module nghiệp vụ mới được thêm vào `imports`. */
 @Module({
   imports: [
     AppConfigModule,
-    // Giới hạn số lần thử đăng ký/đăng nhập theo IP, chống dò mật khẩu.
+    // Giới hạn theo IP: đăng ký/đăng nhập (chống dò mật khẩu) và (M11) các đường dẫn công khai.
     ThrottlerModule.forRootAsync({
       inject: [AppConfigService],
       useFactory: (config: AppConfigService) => ({
-        throttlers: [{ ttl: RATE_LIMIT_WINDOW_MS, limit: config.session.authRateLimitPerMinute }],
-        errorMessage: 'Bạn thử quá nhiều lần. Đợi một phút rồi thử lại.',
+        throttlers: [
+          {
+            name: AUTH_THROTTLER,
+            ttl: RATE_LIMIT_WINDOW_MS,
+            limit: config.session.authRateLimitPerMinute,
+          },
+          {
+            name: PUBLIC_THROTTLER,
+            ttl: RATE_LIMIT_WINDOW_MS,
+            limit: config.session.publicRateLimitPerMinute,
+            generateKey: publicThrottlerKey,
+          },
+        ],
+        errorMessage: rateLimitMessage,
       }),
     }),
     HealthModule,
@@ -37,6 +55,7 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
     TransferModule,
     LifecycleModule,
     NotificationsModule,
+    VerificationModule,
   ],
 })
 export class AppModule implements NestModule {
