@@ -11,3 +11,5 @@ apps/api/src/infrastructure/database/generated
 apps/api/prisma/migrations
 packages/shared/src/abi
 packages/contracts/ignition/deployments
+# Báo cáo do script đo hiệu năng sinh ra (M13)
+docs/benchmark

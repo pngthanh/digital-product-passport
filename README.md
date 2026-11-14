@@ -2,22 +2,22 @@
 
 Hệ thống quản lý vòng đời, bảo hành và chuyển quyền sở hữu sản phẩm, ghi nhận các sự kiện quan trọng lên **Monad Testnet** (chain ID `10143`). Token MON chỉ dùng để kiểm thử, không có giá trị thương mại hay pháp lý.
 
-| Module  | Nội dung                                       | Trạng thái    |
-| ------- | ---------------------------------------------- | ------------- |
-| M0      | Thiết kế chuẩn hoá và bảng traceability        | Xong          |
-| M1      | Foundation & Core Infrastructure               | Xong          |
-| M2      | Identity & Auth: tài khoản, ví MetaMask, Party | Xong          |
-| M3      | Indexer quét log, đối soát                     | Xong          |
-| M4      | Doanh nghiệp và phí MON, khu Quản trị          | Xong          |
-| M5      | Sản phẩm, mã QR, tra cứu                       | Xong          |
-| M6      | Phân phối và bán hàng, kích hoạt bảo hành      | Xong          |
-| M7      | Dịch vụ bảo hành (phiếu sửa chữa)              | Xong          |
-| M8      | Kiểm định sản phẩm                             | Xong          |
-| M9      | Chuyển nhượng quyền sở hữu                     | Xong          |
-| M10     | Thu hồi, báo mất, ngừng sử dụng, thông báo     | Xong          |
-| M11     | Xác minh hộ chiếu công khai                    | Xong          |
-| **M12** | **Nhật ký kiểm toán, dashboard, cảnh báo**     | **Xong**      |
-| M13     | Đo hiệu năng, kiểm thử tổng thể, demo          | Theo lộ trình |
+| Module  | Nội dung                                       | Trạng thái |
+| ------- | ---------------------------------------------- | ---------- |
+| M0      | Thiết kế chuẩn hoá và bảng traceability        | Xong       |
+| M1      | Foundation & Core Infrastructure               | Xong       |
+| M2      | Identity & Auth: tài khoản, ví MetaMask, Party | Xong       |
+| M3      | Indexer quét log, đối soát                     | Xong       |
+| M4      | Doanh nghiệp và phí MON, khu Quản trị          | Xong       |
+| M5      | Sản phẩm, mã QR, tra cứu                       | Xong       |
+| M6      | Phân phối và bán hàng, kích hoạt bảo hành      | Xong       |
+| M7      | Dịch vụ bảo hành (phiếu sửa chữa)              | Xong       |
+| M8      | Kiểm định sản phẩm                             | Xong       |
+| M9      | Chuyển nhượng quyền sở hữu                     | Xong       |
+| M10     | Thu hồi, báo mất, ngừng sử dụng, thông báo     | Xong       |
+| M11     | Xác minh hộ chiếu công khai                    | Xong       |
+| M12     | Nhật ký kiểm toán, dashboard, cảnh báo         | Xong       |
+| **M13** | **Đo hiệu năng, kiểm thử độ bền, demo**        | **Xong**   |
 
 ## M1 gồm những gì
 
@@ -150,6 +150,17 @@ Khu Quản trị có thêm trang Tổng quan, Cảnh báo và Nhật ký; Worker
 - **AUD-01 Nhật ký kiểm toán** (`/admin/audit`): mới nhất trước, lọc theo hành động, email người thực hiện, khoảng ngày.
 - Trang duyệt doanh nghiệp của M4 chuyển sang `/admin/organizations`. Không có contract mới, không có migration.
 - **583 test tự động** (458 unit và contract, 125 e2e). Test e2e M12: đăng nhập sai và giao dịch treo tạo đúng cảnh báo, quét lại không trùng, chốt với ghi chú, chốt lại thì 409, lọc nhật ký, dashboard đếm đúng khi RPC lỗi.
+
+## M13 gồm những gì
+
+Đo hiệu năng (Mục 23 tài liệu phân tích), kiểm thử độ bền (Mục 21) và công cụ demo (Mục 22). Chi tiết quyết định D97–D104, kết quả đo, bảng ánh xạ ca kiểm thử: [docs/m13-benchmark-hardening.md](docs/m13-benchmark-hardening.md). Kịch bản demo: [docs/demo-kich-ban.md](docs/demo-kich-ban.md). Kiểm thử một lượt từ máy trắng tới M13: [docs/kiem-thu-tong-the.md](docs/kiem-thu-tong-the.md).
+
+- **Benchmark contract** (`bench:local`, `bench:monad`): deploy bộ contract riêng, chạy tối đa 20 vòng nghiệp vụ trọn vẹn (11 lệnh mỗi vòng), đo gas, phí MON, độ trễ tới biên nhận và tới finalized, lô 20 sản phẩm, thông lượng. Trên Monad có giới hạn chi `BENCH_MAX_MON` và trả lại MON dư. Kết quả ghi vào `docs/benchmark/`.
+- **Đường cơ sở tập trung** (`bench:baseline`): cùng các việc trên PostgreSQL với chữ ký ECDSA, để so tốc độ và chi phí với blockchain.
+- **Kiểm thử độ bền**: reorg ở block chưa finalized trên Hardhat node thật; quét lại từ block deploy sau trọn kịch bản M10 mà không trùng dữ liệu nào; khoá trung tâm bảo hành không làm mất phiếu cũ.
+- **Demo**: `demo:seed` dựng sẵn bước 1–6 trên Hardhat local qua đúng API và contract; `demo:reverts` cho thấy contract từ chối ở bước 9, 11, 12 (chỉ gọi thử, không tốn MON).
+- Không đổi contract, không có migration, không đổi giao diện.
+- **587 test tự động** (459 unit và contract, 128 e2e). Đo trên Hardhat: một sản phẩm từ phát hành tới tay người mua tốn 455.280 gas limit (khoảng 0,046 MON trên Monad ở giá sàn 100 gwei); đăng ký theo lô rẻ hơn 37% mỗi sản phẩm.
 
 ---
 
@@ -303,8 +314,8 @@ dpp/
 │   │   │       ├── verification/    # M11: VER-01 đối chiếu hộ chiếu công khai với contract tại mốc Indexer, cảnh báo khi lệch
 │   │   │       ├── monitoring/      # M12: AUD-01..04 dashboard, nhật ký, luật phát hiện bất thường chạy nền (Worker)
 │   │   │       └── audit/           # ghi audit_logs, anomaly_alerts; M12: đọc nhật ký, chốt cảnh báo kèm ghi chú
-│   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar, cấp quyền Admin
-│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm, bảo hành, kiểm định, chuyển nhượng, thu hồi, xác minh công khai, giám sát
+│   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar, cấp quyền Admin; M13: đường cơ sở PostgreSQL, dữ liệu demo, demo contract từ chối
+│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm, bảo hành, kiểm định, chuyển nhượng, thu hồi, xác minh công khai, giám sát; M13: reorg (hardening/)
 │   └── web/                         # Next.js 16 + Tailwind 4
 │       └── src/
 │           ├── app/                 # route: /, /login, /register, /account, /organization, /admin (tổng quan, organizations, alerts, audit), /products, /inventory, /owned, /service, /inspection, /transfers, /notifications, /lookup, /p/[code], /system/status
@@ -324,7 +335,7 @@ dpp/
 │   │   ├── contracts/lifecycle/     # M10: ProductLifecycle.sol
 │   │   ├── contracts/test/          # contract chỉ dùng trong test
 │   │   ├── ignition/modules/        # module deploy (Hardhat Ignition)
-│   │   ├── scripts/                 # deploy-identity.ts, deploy-products.ts, deploy-services.ts, deploy-inspections.ts, deploy-transfers.ts, deploy-lifecycle.ts, grant-admin-role.ts, export-abi.ts
+│   │   ├── scripts/                 # deploy-identity.ts, deploy-products.ts, deploy-services.ts, deploy-inspections.ts, deploy-transfers.ts, deploy-lifecycle.ts, grant-admin-role.ts, export-abi.ts; M13: benchmark.ts
 │   │   ├── test/                    # mocha + ethers
 │   │   └── hardhat.config.ts        # mạng monadTestnet, verify
 │   └── shared/                      # dùng chung cho API, Web, test contract
@@ -467,6 +478,10 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 | `pnpm --filter @dpp/api secret:new`                  | Sinh `JWT_SECRET`                                                                  |
 | `pnpm --filter @dpp/api registrar:new`               | Sinh khoá ký giấy phép `REGISTRAR_SIGNER_PRIVATE_KEY`                              |
 | `pnpm --filter @dpp/api admin:grant <email>`         | Cấp quyền Admin cho tài khoản (`admin:revoke` để thu hồi)                          |
+| `pnpm --filter @dpp/contracts bench:local`           | (M13) Đo gas, phí, độ trễ trên Hardhat node (`bench:monad` cho testnet, xem docs)  |
+| `pnpm --filter @dpp/api bench:baseline`              | (M13) Đo đường cơ sở PostgreSQL + chữ ký ECDSA                                     |
+| `pnpm --filter @dpp/api demo:seed`                   | (M13) Dựng bước 1–6 kịch bản demo trên Hardhat local (cần `DEMO_PASSWORD`)         |
+| `pnpm --filter @dpp/api demo:reverts <mã>`           | (M13) Contract từ chối ở bước 9, 11, 12 của kịch bản demo (gọi thử, không tốn MON) |
 
 ## 8. Test chứng minh traceability
 
@@ -501,6 +516,8 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 | `apps/web/src/features/verification/verification.spec.ts`               | (M11) Trình duyệt tự kiểm: băm lại hồ sơ, so từng mục, giao dịch của contract lạ bị loại         |
 | `apps/api/src/modules/monitoring/application/monitoring.spec.ts`        | (M12) Bảy luật nền đúng mức độ và khoá chống trùng, luật lỗi không chặn luật khác, chốt cảnh báo |
 | `apps/api/test/monitoring/monitoring.e2e-spec.ts`                       | (M12) AUD-01..04: phát hiện không trùng, chốt kèm ghi chú, 409, lọc nhật ký, dashboard           |
+| `apps/api/test/hardening/reorg.e2e-spec.ts`                             | (M13) Reorg ở block chưa finalized: event ORPHANED, không chiếu; gửi lại thì chốt một lần        |
+| `apps/api/test/lifecycle/lifecycle.e2e-spec.ts` (ca cuối)               | (M13) Quét lại từ block deploy: mọi bảng đã chiếu giữ nguyên từng dòng                           |
 
 Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự động mỗi lần chạy CI, nên một bên đổi mà quên bên kia thì test sẽ đỏ.
 
