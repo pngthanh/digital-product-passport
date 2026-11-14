@@ -15,8 +15,9 @@ Hệ thống quản lý vòng đời, bảo hành và chuyển quyền sở hữ
 | M8      | Kiểm định sản phẩm                             | Xong          |
 | M9      | Chuyển nhượng quyền sở hữu                     | Xong          |
 | M10     | Thu hồi, báo mất, ngừng sử dụng, thông báo     | Xong          |
-| **M11** | **Xác minh hộ chiếu công khai**                | **Xong**      |
-| M12–M13 | Audit và dashboard, đo hiệu năng               | Theo lộ trình |
+| M11     | Xác minh hộ chiếu công khai                    | Xong          |
+| **M12** | **Nhật ký kiểm toán, dashboard, cảnh báo**     | **Xong**      |
+| M13     | Đo hiệu năng, kiểm thử tổng thể, demo          | Theo lộ trình |
 
 ## M1 gồm những gì
 
@@ -139,6 +140,17 @@ Trang hộ chiếu công khai `/p/<mã>` tự chứng minh dữ liệu của mì
 - Không có contract mới, không có migration.
 - **565 test tự động** (445 unit và contract, 120 e2e). Test e2e M11 chạy trên Hardhat node: khớp mọi mục, hàng đang giao, lịch sử không có người mua, đang cập nhật khi Indexer chưa quét, sửa tay CSDL thì lệch và có đúng một cảnh báo, quá giới hạn thì 429.
 
+## M12 gồm những gì
+
+Khu Quản trị có thêm trang Tổng quan, Cảnh báo và Nhật ký; Worker tự phát hiện bất thường. Chi tiết quyết định D87–D96, bảy luật và ngưỡng: [docs/m12-audit-dashboard.md](docs/m12-audit-dashboard.md). Kiểm thử tay: [docs/m12-kiem-thu-tay.md](docs/m12-kiem-thu-tay.md).
+
+- **AUD-02 Tổng quan** (`/admin`): tài khoản, doanh nghiệp, sản phẩm theo trạng thái, bảo hành, sửa chữa, kiểm định, chuyển nhượng, event on-chain 14 ngày, giao dịch theo hàm contract (gas, thời gian chốt) và độ trễ Indexer. Mỗi module tự đếm bảng của mình qua cổng thống kê; module mới `monitoring` chỉ gộp lại.
+- **AUD-03 Luật chạy nền** (Worker, mỗi `ANOMALY_SCAN_INTERVAL_MINUTES` phút, mặc định 5): giao dịch treo quá 15 phút, ví revert từ 5 lần mỗi giờ, Indexer chậm quá 10 phút, một email đăng nhập sai từ 10 lần trong 15 phút, sản phẩm đổi chủ từ 3 lần trong 7 ngày, phiếu sửa mở quá 30 ngày, yêu cầu chờ quá 14 ngày. Mỗi đối tượng có khoá chống trùng.
+- **AUD-04 Xử lý cảnh báo** (`/admin/alerts`): lọc theo trạng thái, mức độ, luật; chốt **Đã xử lý** hoặc **Báo nhầm** kèm ghi chú bắt buộc, ghi vào nhật ký kiểm toán; hai Admin chốt cùng lúc thì người sau nhận 409.
+- **AUD-01 Nhật ký kiểm toán** (`/admin/audit`): mới nhất trước, lọc theo hành động, email người thực hiện, khoảng ngày.
+- Trang duyệt doanh nghiệp của M4 chuyển sang `/admin/organizations`. Không có contract mới, không có migration.
+- **583 test tự động** (458 unit và contract, 125 e2e). Test e2e M12: đăng nhập sai và giao dịch treo tạo đúng cảnh báo, quét lại không trùng, chốt với ghi chú, chốt lại thì 409, lọc nhật ký, dashboard đếm đúng khi RPC lỗi.
+
 ---
 
 ## 1. Chuẩn bị
@@ -228,7 +240,7 @@ Mở trình duyệt:
 - http://localhost:3000 — trang tổng quan.
 - http://localhost:3000/register — tạo tài khoản, sau đó vào **Tài khoản** để liên kết MetaMask.
 - http://localhost:3000/organization — nộp đơn doanh nghiệp, theo dõi duyệt, rút phí khi bị từ chối (cần ví đã liên kết).
-- http://localhost:3000/admin — khu Quản trị: duyệt, từ chối, khoá doanh nghiệp, đổi phí; bấm vào từng doanh nghiệp để xem mọi lần nộp đơn kèm txHash. Chỉ tài khoản Admin mới thấy (người khác nhận 404). Tài khoản Admin phải liên kết **đúng ví đã deploy** PartyRegistry.
+- http://localhost:3000/admin — khu Quản trị. (M12) Trang Tổng quan; thanh con dẫn tới **Doanh nghiệp** (`/admin/organizations`: duyệt, từ chối, khoá doanh nghiệp, đổi phí; bấm vào từng doanh nghiệp để xem mọi lần nộp đơn kèm txHash), **Cảnh báo** (`/admin/alerts`) và **Nhật ký** (`/admin/audit`). Chỉ tài khoản Admin mới thấy (người khác nhận 404). Tài khoản Admin phải liên kết **đúng ví đã deploy** PartyRegistry để ký quyết định doanh nghiệp.
 - http://localhost:3000/products — (M5) sản phẩm của nhà sản xuất: thêm từng cái hoặc nhập CSV, tải QR, in tem; (M10) chọn nhiều dòng để thu hồi. Chỉ hiện khi tài khoản đại diện nhà sản xuất đã duyệt.
 - http://localhost:3000/lookup — (M5) tra cứu công khai bằng mã, camera hoặc ảnh tem; hộ chiếu ở `/p/<mã>`, không cần đăng nhập; (M11) khung đối chiếu blockchain và nút tự kiểm tra bằng trình duyệt.
 - http://localhost:3000/inventory — (M6) kho hàng của nhà bán lẻ: nhận hoặc từ chối hàng, bán và kích hoạt bảo hành.
@@ -289,14 +301,15 @@ dpp/
 │   │   │       ├── lifecycle/       # M10: RCL-01, LIF-01..02, thu hồi theo lô, báo mất, ngừng sử dụng, projector ProductLifecycle
 │   │   │       ├── notifications/   # M10: thông báo trong ứng dụng (Notifier dùng chung cho các projector), chuông, đánh dấu đã đọc
 │   │   │       ├── verification/    # M11: VER-01 đối chiếu hộ chiếu công khai với contract tại mốc Indexer, cảnh báo khi lệch
-│   │   │       └── audit/           # ghi audit_logs, anomaly_alerts (màn hình xem ở M12)
+│   │   │       ├── monitoring/      # M12: AUD-01..04 dashboard, nhật ký, luật phát hiện bất thường chạy nền (Worker)
+│   │   │       └── audit/           # ghi audit_logs, anomaly_alerts; M12: đọc nhật ký, chốt cảnh báo kèm ghi chú
 │   │   ├── scripts/                 # sinh JWT_SECRET, khoá registrar, cấp quyền Admin
-│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm, bảo hành, kiểm định, chuyển nhượng, thu hồi, xác minh công khai
+│   │   └── test/                    # e2e: health, ràng buộc CSDL, đăng nhập, liên kết ví, Indexer, doanh nghiệp, sản phẩm, bảo hành, kiểm định, chuyển nhượng, thu hồi, xác minh công khai, giám sát
 │   └── web/                         # Next.js 16 + Tailwind 4
 │       └── src/
-│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin, /products, /inventory, /owned, /service, /inspection, /transfers, /notifications, /lookup, /p/[code], /system/status
+│           ├── app/                 # route: /, /login, /register, /account, /organization, /admin (tổng quan, organizations, alerts, audit), /products, /inventory, /owned, /service, /inspection, /transfers, /notifications, /lookup, /p/[code], /system/status
 │           ├── components/          # ui/ (button, badge, field, tabs, step-list, ...), layout/
-│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, distribution, warranty, service, inspection, transfer, lifecycle, notifications, verification, lookup, passport, ...
+│           ├── features/            # theo tính năng: auth, wallet-link, organization, admin, products, distribution, warranty, service, inspection, transfer, lifecycle, notifications, verification, monitoring, lookup, passport, ...
 │           ├── lib/                 # env, format, nhãn trạng thái; wallet/ (MetaMask, gửi giao dịch)
 │           └── proxy.ts             # M11: chuyển IP người dùng sang API cho /api/v1/public, /api/v1/auth
 ├── packages/
@@ -457,35 +470,37 @@ Ba điểm khác Ethereum cần nhớ khi code các module sau:
 
 ## 8. Test chứng minh traceability
 
-| Test                                                                    | Chứng minh                                                                                  |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `apps/api/src/infrastructure/database/prisma-enums.spec.ts`             | Enum PostgreSQL trùng tên và thứ tự với `@dpp/shared`                                       |
-| `packages/contracts/test/shared/dpp-types.test.ts`                      | Enum và role trong Solidity trùng với `@dpp/shared`                                         |
-| `apps/api/test/database/schema-constraints.e2e-spec.ts`                 | Từng ràng buộc CSDL chặn đúng dữ liệu sai                                                   |
-| `packages/contracts/test/registry/party-registry.test.ts`               | ACC-03/04 on-chain: mỗi điều kiện revert có một ca                                          |
-| `packages/contracts/test/shared/abi-export.test.ts`                     | ABI dùng ở API/Web trùng contract đã biên dịch                                              |
-| `apps/api/test/identity/auth.e2e-spec.ts`                               | ACC-01/02: Argon2id, cookie, session_version, CSRF                                          |
-| `apps/api/test/identity/wallet-link.e2e-spec.ts`                        | ACC-03/04 thật trên Hardhat node: UC → DB → contract → event                                |
-| `apps/api/test/chain-sync/indexer.e2e-spec.ts`                          | (M3) Indexer chiếu event một lần, đối soát tạo cảnh báo                                     |
-| `packages/contracts/test/registry/party-registry-organizations.test.ts` | (M4) Giữ phí, duyệt chuyển Treasury, từ chối và rút phí, nộp lại, đổi ví, khoá              |
-| `apps/api/test/organizations/organizations.e2e-spec.ts`                 | (M4) ORG-01..06 thật trên Hardhat node: nộp đơn → từ chối → rút phí → nộp lại → duyệt       |
-| `packages/contracts/test/product/product-passport.test.ts`              | (M5) Chỉ nhà sản xuất đã duyệt, lô 1–50, giấy phép sai/hết hạn, trùng productId, đổi ví     |
-| `apps/api/test/products/products.e2e-spec.ts`                           | (M5) PRD-01, PRD-02 thật trên Hardhat node, tra cứu công khai đọc lại contract              |
-| `apps/api/test/database/application-backfill.e2e-spec.ts`               | (M5) Migration dựng lại đúng lịch sử nộp đơn từ event cũ                                    |
-| `packages/contracts/test/product/product-distribution.test.ts`          | (M6) Gửi, huỷ, từ chối, nhận, bán; mọi điều kiện revert; điểm nối M9, M10                   |
-| `packages/contracts/test/warranty/warranty-manager.test.ts`             | (M6) Kích hoạt bảo hành, hết hạn theo thời gian, lịch Việt Nam khớp phía ứng dụng           |
-| `apps/api/test/products/distribution.e2e-spec.ts`                       | (M6) DST-01..03 thật trên Hardhat node, hành trình và hộ chiếu không lộ người mua           |
-| `packages/contracts/test/service/service-ticket-manager.test.ts`        | (M7) Mở phiếu trong/ngoài bảo hành, giấy phép dùng một lần, đóng phiếu, mọi revert          |
-| `apps/api/test/service/service.e2e-spec.ts`                             | (M7) SVC-01..04 thật trên Hardhat node, biên bản kèm ảnh khớp hash, sửa biên bản thì lệch   |
-| `packages/contracts/test/inspection/inspection-registry.test.ts`        | (M8) Ghi kết quả, quyền người gửi, giấy phép khoá kết quả và hash, mọi revert               |
-| `apps/api/test/inspection/inspection.e2e-spec.ts`                       | (M8) INS-01..04 thật trên Hardhat node, công khai trên hộ chiếu, cảnh báo, ràng buộc CSDL   |
-| `packages/contracts/test/transfer/ownership-transfer.test.ts`           | (M9) Tạo, chấp nhận, từ chối, huỷ, quá hạn; tổ chức làm chủ; phiếu sửa chặn; mọi revert     |
-| `apps/api/test/transfer/transfer.e2e-spec.ts`                           | (M9) TRF-01..06 thật trên Hardhat node, đổi chủ, bảo hành đi theo, dọn yêu cầu chủ cũ       |
-| `packages/contracts/test/lifecycle/product-lifecycle.test.ts`           | (M10) Thu hồi theo lô ở mọi giai đoạn, báo mất, ngừng sử dụng, trạng thái cuối, mọi revert  |
-| `apps/api/test/lifecycle/lifecycle.e2e-spec.ts`                         | (M10) RCL-01, LIF-01..02 thật trên Hardhat node, báo đúng các bên, thông báo M6–M9          |
-| `apps/api/test/verification/verification.e2e-spec.ts`                   | (M11) VER-01, VER-02 trên Hardhat node: khớp, đang cập nhật, lệch và cảnh báo, ẩn người mua |
-| `apps/api/test/verification/public-rate-limit.e2e-spec.ts`              | (M11) Giới hạn chung cho /public/* theo IP, 429 tiếng Việt, đăng nhập đếm riêng             |
-| `apps/web/src/features/verification/verification.spec.ts`               | (M11) Trình duyệt tự kiểm: băm lại hồ sơ, so từng mục, giao dịch của contract lạ bị loại    |
+| Test                                                                    | Chứng minh                                                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `apps/api/src/infrastructure/database/prisma-enums.spec.ts`             | Enum PostgreSQL trùng tên và thứ tự với `@dpp/shared`                                            |
+| `packages/contracts/test/shared/dpp-types.test.ts`                      | Enum và role trong Solidity trùng với `@dpp/shared`                                              |
+| `apps/api/test/database/schema-constraints.e2e-spec.ts`                 | Từng ràng buộc CSDL chặn đúng dữ liệu sai                                                        |
+| `packages/contracts/test/registry/party-registry.test.ts`               | ACC-03/04 on-chain: mỗi điều kiện revert có một ca                                               |
+| `packages/contracts/test/shared/abi-export.test.ts`                     | ABI dùng ở API/Web trùng contract đã biên dịch                                                   |
+| `apps/api/test/identity/auth.e2e-spec.ts`                               | ACC-01/02: Argon2id, cookie, session_version, CSRF                                               |
+| `apps/api/test/identity/wallet-link.e2e-spec.ts`                        | ACC-03/04 thật trên Hardhat node: UC → DB → contract → event                                     |
+| `apps/api/test/chain-sync/indexer.e2e-spec.ts`                          | (M3) Indexer chiếu event một lần, đối soát tạo cảnh báo                                          |
+| `packages/contracts/test/registry/party-registry-organizations.test.ts` | (M4) Giữ phí, duyệt chuyển Treasury, từ chối và rút phí, nộp lại, đổi ví, khoá                   |
+| `apps/api/test/organizations/organizations.e2e-spec.ts`                 | (M4) ORG-01..06 thật trên Hardhat node: nộp đơn → từ chối → rút phí → nộp lại → duyệt            |
+| `packages/contracts/test/product/product-passport.test.ts`              | (M5) Chỉ nhà sản xuất đã duyệt, lô 1–50, giấy phép sai/hết hạn, trùng productId, đổi ví          |
+| `apps/api/test/products/products.e2e-spec.ts`                           | (M5) PRD-01, PRD-02 thật trên Hardhat node, tra cứu công khai đọc lại contract                   |
+| `apps/api/test/database/application-backfill.e2e-spec.ts`               | (M5) Migration dựng lại đúng lịch sử nộp đơn từ event cũ                                         |
+| `packages/contracts/test/product/product-distribution.test.ts`          | (M6) Gửi, huỷ, từ chối, nhận, bán; mọi điều kiện revert; điểm nối M9, M10                        |
+| `packages/contracts/test/warranty/warranty-manager.test.ts`             | (M6) Kích hoạt bảo hành, hết hạn theo thời gian, lịch Việt Nam khớp phía ứng dụng                |
+| `apps/api/test/products/distribution.e2e-spec.ts`                       | (M6) DST-01..03 thật trên Hardhat node, hành trình và hộ chiếu không lộ người mua                |
+| `packages/contracts/test/service/service-ticket-manager.test.ts`        | (M7) Mở phiếu trong/ngoài bảo hành, giấy phép dùng một lần, đóng phiếu, mọi revert               |
+| `apps/api/test/service/service.e2e-spec.ts`                             | (M7) SVC-01..04 thật trên Hardhat node, biên bản kèm ảnh khớp hash, sửa biên bản thì lệch        |
+| `packages/contracts/test/inspection/inspection-registry.test.ts`        | (M8) Ghi kết quả, quyền người gửi, giấy phép khoá kết quả và hash, mọi revert                    |
+| `apps/api/test/inspection/inspection.e2e-spec.ts`                       | (M8) INS-01..04 thật trên Hardhat node, công khai trên hộ chiếu, cảnh báo, ràng buộc CSDL        |
+| `packages/contracts/test/transfer/ownership-transfer.test.ts`           | (M9) Tạo, chấp nhận, từ chối, huỷ, quá hạn; tổ chức làm chủ; phiếu sửa chặn; mọi revert          |
+| `apps/api/test/transfer/transfer.e2e-spec.ts`                           | (M9) TRF-01..06 thật trên Hardhat node, đổi chủ, bảo hành đi theo, dọn yêu cầu chủ cũ            |
+| `packages/contracts/test/lifecycle/product-lifecycle.test.ts`           | (M10) Thu hồi theo lô ở mọi giai đoạn, báo mất, ngừng sử dụng, trạng thái cuối, mọi revert       |
+| `apps/api/test/lifecycle/lifecycle.e2e-spec.ts`                         | (M10) RCL-01, LIF-01..02 thật trên Hardhat node, báo đúng các bên, thông báo M6–M9               |
+| `apps/api/test/verification/verification.e2e-spec.ts`                   | (M11) VER-01, VER-02 trên Hardhat node: khớp, đang cập nhật, lệch và cảnh báo, ẩn người mua      |
+| `apps/api/test/verification/public-rate-limit.e2e-spec.ts`              | (M11) Giới hạn chung cho /public/* theo IP, 429 tiếng Việt, đăng nhập đếm riêng                  |
+| `apps/web/src/features/verification/verification.spec.ts`               | (M11) Trình duyệt tự kiểm: băm lại hồ sơ, so từng mục, giao dịch của contract lạ bị loại         |
+| `apps/api/src/modules/monitoring/application/monitoring.spec.ts`        | (M12) Bảy luật nền đúng mức độ và khoá chống trùng, luật lỗi không chặn luật khác, chốt cảnh báo |
+| `apps/api/test/monitoring/monitoring.e2e-spec.ts`                       | (M12) AUD-01..04: phát hiện không trùng, chốt kèm ghi chú, 409, lọc nhật ký, dashboard           |
 
 Chuỗi `Database ↔ shared ↔ Solidity ↔ Web` được kiểm tra tự động mỗi lần chạy CI, nên một bên đổi mà quên bên kia thì test sẽ đỏ.
 
