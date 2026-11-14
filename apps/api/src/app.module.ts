@@ -11,6 +11,8 @@ import { OrganizationsModule } from './modules/organizations/index.js';
 import { ProductsModule } from './modules/products/index.js';
 import { ServiceModule } from './modules/service/index.js';
 import { TransferModule } from './modules/transfer/index.js';
+import { LifecycleModule } from './modules/lifecycle/index.js';
+import { NotificationsModule } from './modules/notifications/index.js';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -33,6 +35,8 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
     ServiceModule,
     InspectionModule,
     TransferModule,
+    LifecycleModule,
+    NotificationsModule,
   ],
 })
 export class AppModule implements NestModule {

@@ -9,6 +9,7 @@ import { OrganizationsWorkerModule } from './modules/organizations/index.js';
 import { ProductsWorkerModule } from './modules/products/index.js';
 import { ServiceWorkerModule } from './modules/service/index.js';
 import { TransferWorkerModule } from './modules/transfer/index.js';
+import { LifecycleWorkerModule } from './modules/lifecycle/index.js';
 
 /**
  * Module gốc của tiến trình Worker (không mở cổng HTTP).
@@ -26,6 +27,7 @@ import { TransferWorkerModule } from './modules/transfer/index.js';
     ServiceWorkerModule,
     InspectionWorkerModule,
     TransferWorkerModule,
+    LifecycleWorkerModule,
   ],
 })
 export class WorkerModule {}

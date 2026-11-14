@@ -17,6 +17,9 @@ export interface ProductRef {
   productState: ProductState;
   /** UUID Party của chủ sở hữu; `null` khi chưa bán. */
   currentOwnerPartyId: string | null;
+  /** (M10) Bên đang giữ hàng và nhà bán lẻ đang được giao tới, để báo khi thu hồi. */
+  currentCustodianPartyId: string | null;
+  pendingCustodianPartyId: string | null;
   warrantyMonths: number;
 }
 
@@ -39,6 +42,8 @@ function toRef(product: ProductRecord): ProductRef | null {
     issuerOrgId: product.issuerOrgId,
     productState: product.productState,
     currentOwnerPartyId: product.currentOwnerPartyId,
+    currentCustodianPartyId: product.currentCustodianPartyId,
+    pendingCustodianPartyId: product.pendingCustodianPartyId,
     warrantyMonths: product.warrantyMonths,
   };
 }

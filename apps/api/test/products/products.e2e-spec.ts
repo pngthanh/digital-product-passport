@@ -212,7 +212,7 @@ describe('PRD-01, PRD-02: đăng ký sản phẩm và tra cứu bằng mã QR (e
     const txHash = await sendRegistration(authorization);
 
     const { items, counts } = await myProducts();
-    expect(counts).toEqual({ ALL: 1, REGISTERED: 1, DRAFT: 0 });
+    expect(counts).toEqual({ ALL: 1, REGISTERED: 1, DRAFT: 0, RECALLED: 0 });
     expect(items[0]).toMatchObject({
       serialNumber: 'ABC-2026-000128',
       productState: 'CREATED',

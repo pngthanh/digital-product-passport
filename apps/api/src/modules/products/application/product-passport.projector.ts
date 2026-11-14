@@ -9,6 +9,7 @@ import type { TransactionScope } from '../../../common/persistence/transaction-s
 import { AnomalyAlerts, AnomalyRule, AuditAction, AuditTrail } from '../../audit/index.js';
 import type { ChainEvent, EventProjector } from '../../chain-sync/index.js';
 import { IdentityDirectory } from '../../identity/index.js';
+import { Notifier } from '../../notifications/index.js';
 import { isDraft, type ProductRecord } from '../domain/product.js';
 import { partyUuidOf } from './party-labels.js';
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
@@ -44,6 +45,7 @@ export class ProductPassportProjector implements EventProjector {
     private readonly identity: IdentityDirectory,
     private readonly alerts: AnomalyAlerts,
     private readonly audit: AuditTrail,
+    private readonly notifier: Notifier,
   ) {}
 
   async project(event: ChainEvent, scope: TransactionScope): Promise<void> {
@@ -60,6 +62,15 @@ export class ProductPassportProjector implements EventProjector {
         const retailer = await this.knownParty(event, 'toPartyId', product);
         if (retailer) {
           await this.products.markDispatched(product.id, retailer, scope);
+          await this.notifier.notify(
+            {
+              type: 'CUSTODY_DISPATCHED',
+              recipients: [retailer],
+              product,
+              organizationId: product.issuerOrgId,
+            },
+            scope,
+          );
         }
         return;
       }

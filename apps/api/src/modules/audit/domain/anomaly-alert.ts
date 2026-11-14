@@ -24,6 +24,8 @@ export const AnomalyRule = {
   INSPECTION_CONFLICT: 'INSPECTION_CONFLICT',
   /** (M9) Event chuyển nhượng không khớp sản phẩm, Party hay yêu cầu đang mở trong CSDL. */
   TRANSFER_UNKNOWN: 'TRANSFER_UNKNOWN',
+  /** (M10) Thu hồi on-chain có hash lý do khác lý do nhà sản xuất đã lưu (hoặc không lưu). */
+  RECALL_REASON_MISMATCH: 'RECALL_REASON_MISMATCH',
 } as const;
 
 export type AnomalyRule = (typeof AnomalyRule)[keyof typeof AnomalyRule];

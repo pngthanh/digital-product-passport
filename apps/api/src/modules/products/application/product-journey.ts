@@ -14,6 +14,7 @@ const PARTY_ARGS = [
   'activatedBy',
   'serviceCenterId',
   'inspectorId',
+  'ownerId',
 ] as const;
 
 const SIMPLE_STEPS: Readonly<Record<string, JourneyStepKind>> = {
@@ -68,7 +69,8 @@ function inspectionResultOf(value: string | number | boolean | undefined): Inspe
 
 /**
  * Hành trình của sản phẩm từ event FINALIZED (cũ nhất trước): phát hành, gửi, huỷ/từ chối, nhận,
- * bán, chuyển nhượng, kích hoạt bảo hành, mở và đóng phiếu sửa chữa (M7), kiểm định (M8). CustodyTransferred cùng
+ * bán, chuyển nhượng, kích hoạt bảo hành, mở và đóng phiếu sửa chữa (M7), kiểm định (M8), thu hồi,
+ * báo mất, ngừng sử dụng (M10). CustodyTransferred cùng
  * giao dịch với OwnershipTransferred thuộc về bước bán (hoặc chuyển nhượng) nên không tách thành
  * bước riêng; tạm dừng, tiếp tục bảo hành nằm trong bước mở, đóng phiếu.
  */
@@ -142,6 +144,23 @@ export function buildJourney(
           to: null,
         });
       }
+    } else if (event.eventName === 'ProductRecalled') {
+      steps.push({
+        ...base,
+        kind: 'RECALLED',
+        from: labels.chainParty(event.args.issuerId),
+        to: null,
+      });
+    } else if (
+      event.eventName === 'ProductReportedLostStolen' ||
+      event.eventName === 'ProductRetired'
+    ) {
+      steps.push({
+        ...base,
+        kind: event.eventName === 'ProductRetired' ? 'RETIRED' : 'REPORTED_LOST_STOLEN',
+        from: labels.chainParty(event.args.ownerId),
+        to: null,
+      });
     } else if (event.eventName === 'InspectionRecorded') {
       const result = inspectionResultOf(event.args.result);
       if (result) {

@@ -88,7 +88,7 @@ export const publicCodeSchema = z.string().transform((value, context) => {
 });
 
 export const productListQuerySchema = z.object({
-  filter: z.enum(['ALL', 'REGISTERED', 'DRAFT']).catch('ALL'),
+  filter: z.enum(['ALL', 'REGISTERED', 'DRAFT', 'RECALLED']).catch('ALL'),
   q: z
     .string()
     .trim()

@@ -117,7 +117,7 @@ function blockedReason(input: {
     return 'Hệ thống chưa cấu hình ServiceTicketManager nên chưa gửi yêu cầu bảo hành được.';
   }
   if (input.product.productState !== 'SOLD') {
-    return 'Chỉ gửi yêu cầu bảo hành cho sản phẩm đang có chủ.';
+    return 'Sản phẩm đã thu hồi, báo mất hoặc ngừng sử dụng nên không gửi bảo hành được.';
   }
   if (input.hasOpen) {
     return 'Sản phẩm đang có một yêu cầu chưa xong. Huỷ yêu cầu đó (khi trung tâm chưa tiếp nhận) hoặc chờ trung tâm đóng phiếu.';

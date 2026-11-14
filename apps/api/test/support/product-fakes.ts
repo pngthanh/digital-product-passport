@@ -119,7 +119,10 @@ export class InMemoryProducts implements ProductRepository {
     const items = this.rows.filter(
       (row) =>
         row.issuerOrgId === issuerOrgId &&
-        (query.filter === 'ALL' || (query.filter === 'DRAFT') === isDraft(row)),
+        (query.filter === 'ALL' ||
+          (query.filter === 'RECALLED'
+            ? row.productState === 'RECALLED'
+            : (query.filter === 'DRAFT') === isDraft(row))),
     );
     const start = (query.page - 1) * query.pageSize;
     return { items: items.slice(start, start + query.pageSize), total: items.length };
@@ -128,7 +131,8 @@ export class InMemoryProducts implements ProductRepository {
   async counts(issuerOrgId: string): Promise<Record<ProductListFilter, number>> {
     const own = this.rows.filter((row) => row.issuerOrgId === issuerOrgId);
     const drafts = own.filter(isDraft).length;
-    return { ALL: own.length, REGISTERED: own.length - drafts, DRAFT: drafts };
+    const recalled = own.filter((row) => row.productState === 'RECALLED').length;
+    return { ALL: own.length, REGISTERED: own.length - drafts, DRAFT: drafts, RECALLED: recalled };
   }
 
   async deleteDraft(id: string) {
@@ -308,7 +312,10 @@ export class InMemoryProducts implements ProductRepository {
       return row.pendingCustodianPartyId === retailerPartyId;
     }
     if (filter === 'IN_STOCK') {
-      return row.currentCustodianPartyId === retailerPartyId && row.productState === 'AT_RETAIL';
+      return (
+        row.currentCustodianPartyId === retailerPartyId &&
+        (row.productState === 'AT_RETAIL' || row.productState === 'RECALLED')
+      );
     }
     return this.custody.some(
       (record) => record.productId === row.id && record.fromPartyId === retailerPartyId,

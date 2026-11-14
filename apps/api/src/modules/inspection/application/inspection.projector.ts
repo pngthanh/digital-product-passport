@@ -3,7 +3,8 @@ import { decodeChainEnum, INSPECTION_REGISTRY_CONTRACT_NAME, partyIdFromUuid } f
 import type { TransactionScope } from '../../../common/persistence/transaction-scope.js';
 import { AnomalyAlerts, AnomalyRule } from '../../audit/index.js';
 import type { ChainEvent, EventProjector } from '../../chain-sync/index.js';
-import { ProductDirectory } from '../../products/index.js';
+import { Notifier } from '../../notifications/index.js';
+import { ProductDirectory, type ProductRef } from '../../products/index.js';
 import { type InspectionRequestRecord, requestIdOf } from '../domain/inspection-request.js';
 import {
   INSPECTION_REQUEST_REPOSITORY,
@@ -41,12 +42,15 @@ export class InspectionProjector implements EventProjector {
     @Inject(INSPECTION_REQUEST_REPOSITORY) private readonly requests: InspectionRequestRepository,
     private readonly products: ProductDirectory,
     private readonly alerts: AnomalyAlerts,
+    private readonly notifier: Notifier,
   ) {}
 
   async project(event: ChainEvent, scope: TransactionScope): Promise<void> {
-    const request = await this.matchingRequest(event, scope);
+    const matched = await this.matchingRequest(event, scope);
+    const request = matched?.request;
     const reportHash = textArg(event, 'reportHash');
-    if (!request || !reportHash || !resultOf(event.args.result)) {
+    const result = resultOf(event.args.result);
+    if (!matched || !request || !reportHash || !result) {
       await this.alerts.raise({
         ruleCode: AnomalyRule.INSPECTION_UNKNOWN,
         severity: 'HIGH',
@@ -91,13 +95,23 @@ export class InspectionProjector implements EventProjector {
         details: { requestId: request.id, reportHash, txHash: event.txHash },
       });
     }
+    await this.notifier.notify(
+      {
+        type: 'INSPECTION_RECORDED',
+        recipients: [request.requestedByPartyId],
+        product: matched.product,
+        organizationId: request.inspectorOrgId,
+        result,
+      },
+      scope,
+    );
   }
 
   /** Yêu cầu có id suy ra từ inspectionId, đúng sản phẩm và đúng đơn vị kiểm định trong event. */
   private async matchingRequest(
     event: ChainEvent,
     scope: TransactionScope,
-  ): Promise<InspectionRequestRecord | null> {
+  ): Promise<{ request: InspectionRequestRecord; product: ProductRef } | null> {
     const inspectionId = textArg(event, 'inspectionId');
     const chainProductId = textArg(event, 'productId');
     const requestId = inspectionId ? requestIdOf(inspectionId) : null;
@@ -116,6 +130,6 @@ export class InspectionProjector implements EventProjector {
     ) {
       return null;
     }
-    return request;
+    return { request, product };
   }
 }

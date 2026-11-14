@@ -26,6 +26,7 @@ import { CLOCK, type Clock } from '../../../common/time/clock.js';
 import { AuditAction, AuditTrail } from '../../audit/index.js';
 import { TRANSACTION_TRACKING, type TransactionTracking } from '../../chain-sync/index.js';
 import type { AuthenticatedUser } from '../../identity/index.js';
+import { Notifier } from '../../notifications/index.js';
 import { ProductDirectory } from '../../products/index.js';
 import {
   type InspectionRequestRecord,
@@ -178,6 +179,8 @@ export class DeclineInspectionRequest {
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly access: InspectorAccess,
     private readonly audit: AuditTrail,
+    private readonly products: ProductDirectory,
+    private readonly notifier: Notifier,
   ) {}
 
   async execute(
@@ -200,6 +203,16 @@ export class DeclineInspectionRequest {
       metadata: { productId: request.productId },
       client,
     });
+    const product = await this.products.findById(request.productId);
+    if (product) {
+      await this.notifier.notify({
+        type: 'INSPECTION_DECLINED',
+        recipients: [request.requestedByPartyId],
+        product,
+        organizationId: inspector.id,
+        reason: text,
+      });
+    }
   }
 }
 

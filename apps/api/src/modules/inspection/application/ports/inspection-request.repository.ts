@@ -53,6 +53,8 @@ export interface InspectionRequestRepository {
     at: Date,
     scope: TransactionScope,
   ): Promise<number>;
+  /** (M10) Sản phẩm thu hồi, báo mất, ngừng sử dụng: huỷ mọi yêu cầu REQUESTED; trả số đã huỷ. */
+  cancelAllRequested(productId: string, at: Date, scope: TransactionScope): Promise<number>;
   /** REQUESTED thành DECLINED kèm lý do; `false` nếu yêu cầu không còn chờ. */
   decline(id: string, reason: string, at: Date): Promise<boolean>;
   /**

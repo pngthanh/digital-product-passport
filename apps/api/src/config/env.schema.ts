@@ -75,6 +75,9 @@ export const envSchema = z.object({
   // M9: để trống thì phần chuyển nhượng báo "chưa cấu hình", phần còn lại vẫn chạy.
   OWNERSHIP_TRANSFER_ADDRESS: optionalAddress,
   OWNERSHIP_TRANSFER_DEPLOY_BLOCK: optionalBlockNumber,
+  // M10: để trống thì thu hồi, báo mất, ngừng sử dụng báo "chưa cấu hình", phần còn lại vẫn chạy.
+  PRODUCT_LIFECYCLE_ADDRESS: optionalAddress,
+  PRODUCT_LIFECYCLE_DEPLOY_BLOCK: optionalBlockNumber,
   // Thư mục lưu file biên bản sửa chữa, kiểm định (ảnh, PDF); tương đối tính từ thư mục apps/api.
   UPLOAD_DIR: z.preprocess(emptyAsUndefined, z.string().min(1).default('storage/uploads')),
 

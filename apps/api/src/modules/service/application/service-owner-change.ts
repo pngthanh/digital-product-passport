@@ -10,6 +10,8 @@ import {
  * - `onOwnerChanged`: Worker gọi khi sản phẩm đổi chủ; yêu cầu bảo hành chưa tiếp nhận của chủ cũ
  *   bị huỷ (chủ mới gửi yêu cầu của mình).
  * - `isUnderRepair`: sản phẩm đang có phiếu sửa mở thì không chuyển nhượng được.
+ * - `onProductClosed` (M10): sản phẩm thu hồi, báo mất, ngừng sử dụng thì yêu cầu chưa tiếp nhận bị
+ *   huỷ; phiếu đang mở vẫn để trung tâm đóng.
  */
 @Injectable()
 export class ServiceOwnerChange {
@@ -24,6 +26,10 @@ export class ServiceOwnerChange {
     scope: TransactionScope,
   ): Promise<number> {
     return this.requests.cancelRequestedBy(productId, previousOwnerPartyId, at, scope);
+  }
+
+  onProductClosed(productId: string, at: Date, scope: TransactionScope): Promise<number> {
+    return this.requests.cancelAllRequested(productId, at, scope);
   }
 
   async isUnderRepair(productId: string): Promise<boolean> {

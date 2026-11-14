@@ -66,7 +66,11 @@ function inventoryWhere(
     return { pendingCustodianPartyId: retailerPartyId, productState: 'IN_DISTRIBUTION' };
   }
   if (filter === 'IN_STOCK') {
-    return { currentCustodianPartyId: retailerPartyId, productState: 'AT_RETAIL' };
+    // (M10) Hàng bị thu hồi khi còn ở cửa hàng vẫn hiện để nhà bán lẻ biết mà gỡ khỏi kệ.
+    return {
+      currentCustodianPartyId: retailerPartyId,
+      productState: { in: ['AT_RETAIL', 'RECALLED'] },
+    };
   }
   return { custodyRecords: { some: { fromPartyId: retailerPartyId } } };
 }
@@ -77,6 +81,9 @@ function filterWhere(filter: ProductListFilter): Prisma.ProductWhereInput {
   }
   if (filter === 'DRAFT') {
     return { syncStatus: { not: 'CONFIRMED' } };
+  }
+  if (filter === 'RECALLED') {
+    return { productState: 'RECALLED' };
   }
   return {};
 }
@@ -189,11 +196,12 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async counts(issuerOrgId: string): Promise<Record<ProductListFilter, number>> {
-    const [all, registered] = await Promise.all([
+    const [all, registered, recalled] = await Promise.all([
       this.prisma.product.count({ where: { issuerOrgId } }),
       this.prisma.product.count({ where: { issuerOrgId, syncStatus: 'CONFIRMED' } }),
+      this.prisma.product.count({ where: { issuerOrgId, productState: 'RECALLED' } }),
     ]);
-    return { ALL: all, REGISTERED: registered, DRAFT: all - registered };
+    return { ALL: all, REGISTERED: registered, DRAFT: all - registered, RECALLED: recalled };
   }
 
   async deleteDraft(id: string): Promise<boolean> {

@@ -1,5 +1,6 @@
 import { partyIdFromUuid, productIdOf } from '@dpp/shared';
 import { InMemoryIdentityStore, recordingAudit } from '../../../../test/support/identity-fakes.js';
+import { inMemoryNotifier } from '../../../../test/support/notification-fakes.js';
 import { InMemoryProducts, RecordingAlerts } from '../../../../test/support/product-fakes.js';
 import { TransactionScope } from '../../../common/persistence/transaction-scope.js';
 import { AnomalyAlerts } from '../../audit/application/anomaly-alerts.service.js';
@@ -73,7 +74,8 @@ async function setup() {
   ]);
   const identity = new IdentityDirectory(store, store);
   const anomalies = new AnomalyAlerts(alerts);
-  const projector = new ProductPassportProjector(products, identity, anomalies, audit);
+  const { notifier, notifications } = inMemoryNotifier();
+  const projector = new ProductPassportProjector(products, identity, anomalies, audit, notifier);
   const warranty = new WarrantyManagerProjector(products, identity, anomalies);
   const productId = draft!.chainProductId;
   const buyer = partyIdFromUuid(buyerPartyId);
@@ -139,7 +141,17 @@ async function setup() {
     ],
   };
 
-  return { products, alerts, writer, project, steps, draft: draft!, buyerPartyId, productId };
+  return {
+    products,
+    alerts,
+    writer,
+    notifications,
+    project,
+    steps,
+    draft: draft!,
+    buyerPartyId,
+    productId,
+  };
 }
 
 describe('Projector ProductPassport (Worker)', () => {

@@ -667,6 +667,7 @@ model Inspection {
 }
 
 /// [A+P] Thu hồi sản phẩm (RECALLED là trạng thái cuối). Cột [P]: recalledAt, txHash, syncStatus.
+/// M10: một giao dịch thu hồi cả lô nên nhiều dòng chung txHash và lý do.
 model Recall {
   id          String     @id @default(uuid(7)) @db.Uuid
   productId   String     @unique @map("product_id") @db.Uuid
@@ -674,7 +675,7 @@ model Recall {
   reason      String
   reasonHash  String     @map("reason_hash") @db.Char(66)
   recalledAt  DateTime?  @map("recalled_at") @db.Timestamptz(6)
-  txHash      String?    @unique @map("tx_hash") @db.Char(66)
+  txHash      String?    @map("tx_hash") @db.Char(66)
   syncStatus  SyncStatus @default(PENDING) @map("sync_status")
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -683,6 +684,7 @@ model Recall {
   issuer  Organization @relation("RecallIssuer", fields: [issuerOrgId], references: [id], onDelete: Restrict)
 
   @@index([issuerOrgId])
+  @@index([txHash])
   @@map("recalls")
 }
 

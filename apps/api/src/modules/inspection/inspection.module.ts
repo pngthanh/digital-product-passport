@@ -5,6 +5,7 @@ import { AuditModule } from '../audit/index.js';
 import { ChainSyncModule } from '../chain-sync/index.js';
 import { IdentityModule } from '../identity/index.js';
 import { OrganizationsModule } from '../organizations/index.js';
+import { NotifierModule } from '../notifications/index.js';
 import { ProductsModule } from '../products/index.js';
 import {
   DeclineInspectionRequest,
@@ -44,6 +45,7 @@ import { RequesterInspectionController } from './presentation/requester-inspecti
     IdentityModule,
     OrganizationsModule,
     ProductsModule,
+    NotifierModule,
   ],
   controllers: [RequesterInspectionController, InspectionsController, PublicInspectionsController],
   providers: [

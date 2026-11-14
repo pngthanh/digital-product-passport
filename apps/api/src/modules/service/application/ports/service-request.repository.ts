@@ -61,6 +61,8 @@ export interface ServiceRequestRepository {
     at: Date,
     scope: TransactionScope,
   ): Promise<number>;
+  /** (M10) Sản phẩm thu hồi, báo mất, ngừng sử dụng: huỷ mọi yêu cầu REQUESTED; trả số đã huỷ. */
+  cancelAllRequested(productId: string, at: Date, scope: TransactionScope): Promise<number>;
   /**
    * Huỷ các yêu cầu REQUESTED khác của sản phẩm (trừ `exceptId`), khi chain đã mở phiếu cho một yêu
    * cầu mà chủ sở hữu vừa huỷ; trả số dòng đã huỷ.

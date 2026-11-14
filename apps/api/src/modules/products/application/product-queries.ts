@@ -18,7 +18,12 @@ import { PRODUCT_CHAIN, type ProductChain } from './ports/product-chain.port.js'
 import { PRODUCT_REPOSITORY, type ProductRepository } from './ports/product.repository.js';
 import { presentProduct, ProductViews } from './product-views.js';
 
-const EMPTY_COUNTS: Record<ProductListFilter, number> = { ALL: 0, REGISTERED: 0, DRAFT: 0 };
+const EMPTY_COUNTS: Record<ProductListFilter, number> = {
+  ALL: 0,
+  REGISTERED: 0,
+  DRAFT: 0,
+  RECALLED: 0,
+};
 
 export interface MyProductListQuery {
   filter: ProductListFilter;

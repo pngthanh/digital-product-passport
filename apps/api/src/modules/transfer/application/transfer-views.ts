@@ -58,6 +58,7 @@ export class TransferViews {
           requestId: request.chainRequestId.toString(),
           state: request.transferState,
           expired: isExpired(request, now),
+          productUnavailable: refs.get(request.productId)?.productState !== 'SOLD',
           direction: viewer.includes(request.toPartyId) ? 'INCOMING' : 'OUTGOING',
           from: labels.get(request.fromPartyId) ?? fallback,
           to: labels.get(request.toPartyId) ?? fallback,

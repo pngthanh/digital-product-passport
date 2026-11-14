@@ -6,6 +6,8 @@ import {
   OWNERSHIP_TRANSFER_CONTRACT_NAME,
   PARTY_REGISTRY_ABI,
   PARTY_REGISTRY_CONTRACT_NAME,
+  PRODUCT_LIFECYCLE_ABI,
+  PRODUCT_LIFECYCLE_CONTRACT_NAME,
   PRODUCT_PASSPORT_ABI,
   PRODUCT_PASSPORT_CONTRACT_NAME,
   SERVICE_TICKET_MANAGER_ABI,
@@ -97,6 +99,14 @@ export class AbiContractCatalog implements ContractCatalog {
         correlationArg: 'requestId',
         productArg: 'productId',
         startBlock: config.ownershipTransferDeployBlock,
+      },
+      {
+        name: PRODUCT_LIFECYCLE_CONTRACT_NAME,
+        address: config.productLifecycleAddress,
+        abi: PRODUCT_LIFECYCLE_ABI,
+        correlationArg: 'productId',
+        productArg: 'productId',
+        startBlock: config.productLifecycleDeployBlock,
       },
     ];
     this.entries = definitions.flatMap(({ address, abi, ...rest }) =>

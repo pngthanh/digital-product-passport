@@ -313,7 +313,7 @@ describe('Bản nháp chưa ghi lên blockchain', () => {
       page: 1,
       pageSize: 20,
     });
-    expect(view.counts).toEqual({ ALL: 1, REGISTERED: 1, DRAFT: 0 });
+    expect(view.counts).toEqual({ ALL: 1, REGISTERED: 1, DRAFT: 0, RECALLED: 0 });
     expect(view.manufacturer?.partyId).toBe(partyIdFromUuid(maker.organizationId));
   });
 

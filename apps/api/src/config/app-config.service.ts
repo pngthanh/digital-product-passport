@@ -36,6 +36,12 @@ export interface TransferChainConfig {
   readonly ownershipTransferAddress: string;
 }
 
+/** Cấu hình ProductLifecycle (M10). */
+export interface LifecycleChainConfig {
+  readonly registrarPrivateKey: string;
+  readonly productLifecycleAddress: string;
+}
+
 /** Cấu hình ProductPassport (M5). */
 export interface ProductChainConfig {
   readonly registrarPrivateKey: string;
@@ -195,6 +201,25 @@ export class AppConfigService {
     const ownershipTransferAddress = this.ownershipTransferAddress;
     return registrarPrivateKey && ownershipTransferAddress
       ? { registrarPrivateKey, ownershipTransferAddress }
+      : null;
+  }
+
+  get productLifecycleAddress(): string | null {
+    return this.config.get('PRODUCT_LIFECYCLE_ADDRESS', { infer: true }) ?? null;
+  }
+
+  /** Block lúc deploy ProductLifecycle; `null` nếu chưa khai báo. */
+  get productLifecycleDeployBlock(): bigint | null {
+    const block = this.config.get('PRODUCT_LIFECYCLE_DEPLOY_BLOCK', { infer: true });
+    return block === undefined ? null : BigInt(block);
+  }
+
+  /** ProductLifecycle cùng khoá registrar ký giấy phép thu hồi; `null` khi thiếu một trong hai. */
+  get lifecycleChain(): LifecycleChainConfig | null {
+    const registrarPrivateKey = this.config.get('REGISTRAR_SIGNER_PRIVATE_KEY', { infer: true });
+    const productLifecycleAddress = this.productLifecycleAddress;
+    return registrarPrivateKey && productLifecycleAddress
+      ? { registrarPrivateKey, productLifecycleAddress }
       : null;
   }
 

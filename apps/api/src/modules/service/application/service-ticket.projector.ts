@@ -7,7 +7,8 @@ import {
 import type { TransactionScope } from '../../../common/persistence/transaction-scope.js';
 import { AnomalyAlerts, AnomalyRule } from '../../audit/index.js';
 import type { ChainEvent, EventProjector } from '../../chain-sync/index.js';
-import { ProductDirectory } from '../../products/index.js';
+import { Notifier } from '../../notifications/index.js';
+import { ProductDirectory, type ProductRef } from '../../products/index.js';
 import { requestIdOf, type ServiceRequestRecord } from '../domain/service-request.js';
 import {
   SERVICE_REQUEST_REPOSITORY,
@@ -46,11 +47,12 @@ export class ServiceTicketProjector implements EventProjector {
     @Inject(SERVICE_REQUEST_REPOSITORY) private readonly requests: ServiceRequestRepository,
     private readonly products: ProductDirectory,
     private readonly alerts: AnomalyAlerts,
+    private readonly notifier: Notifier,
   ) {}
 
   async project(event: ChainEvent, scope: TransactionScope): Promise<void> {
-    const request = await this.matchingRequest(event, scope);
-    if (!request) {
+    const matched = await this.matchingRequest(event, scope);
+    if (!matched) {
       await this.alerts.raise({
         ruleCode: AnomalyRule.SERVICE_TICKET_UNKNOWN,
         severity: 'HIGH',
@@ -63,10 +65,32 @@ export class ServiceTicketProjector implements EventProjector {
       });
       return;
     }
+    const { request, product } = matched;
     if (event.eventName === 'ServiceTicketOpened') {
       await this.opened(event, request, scope);
+      await this.notifier.notify(
+        {
+          type: 'SERVICE_TICKET_OPENED',
+          recipients: [request.requestedByPartyId],
+          product,
+          organizationId: request.serviceCenterOrgId,
+        },
+        scope,
+      );
     } else {
-      await this.closed(event, request, scope);
+      const state = await this.closed(event, request, scope);
+      if (state) {
+        await this.notifier.notify(
+          {
+            type: 'SERVICE_TICKET_CLOSED',
+            recipients: [request.requestedByPartyId],
+            product,
+            organizationId: request.serviceCenterOrgId,
+            repaired: state === 'REPAIRED',
+          },
+          scope,
+        );
+      }
     }
   }
 
@@ -74,7 +98,7 @@ export class ServiceTicketProjector implements EventProjector {
   private async matchingRequest(
     event: ChainEvent,
     scope: TransactionScope,
-  ): Promise<ServiceRequestRecord | null> {
+  ): Promise<{ request: ServiceRequestRecord; product: ProductRef } | null> {
     const ticketId = textArg(event, 'ticketId');
     const chainProductId = textArg(event, 'productId');
     const requestId = ticketId ? requestIdOf(ticketId) : null;
@@ -95,7 +119,7 @@ export class ServiceTicketProjector implements EventProjector {
     ) {
       return null;
     }
-    return request;
+    return { request, product };
   }
 
   private async opened(
@@ -131,11 +155,12 @@ export class ServiceTicketProjector implements EventProjector {
     );
   }
 
+  /** Trả kết quả đóng phiếu; `null` khi event lạ (đã cảnh báo). */
   private async closed(
     event: ChainEvent,
     request: ServiceRequestRecord,
     scope: TransactionScope,
-  ): Promise<void> {
+  ): Promise<'REPAIRED' | 'REJECTED' | null> {
     const state = closedState(event.args.state);
     const evidenceHash = textArg(event, 'evidenceHash');
     if (!state || !evidenceHash) {
@@ -145,7 +170,7 @@ export class ServiceTicketProjector implements EventProjector {
         productId: request.productId,
         details: { requestId: request.id, eventName: event.eventName, txHash: event.txHash },
       });
-      return;
+      return null;
     }
     await this.requests.markClosed(
       {
@@ -170,5 +195,6 @@ export class ServiceTicketProjector implements EventProjector {
         details: { requestId: request.id, evidenceHash, txHash: event.txHash },
       });
     }
+    return state;
   }
 }

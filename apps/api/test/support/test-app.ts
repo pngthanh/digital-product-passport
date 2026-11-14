@@ -8,6 +8,7 @@ import { ChainProviderService } from '../../src/infrastructure/blockchain/chain-
 import { ChainSyncWorkerModule } from '../../src/modules/chain-sync/index.js';
 import { IdentityWorkerModule } from '../../src/modules/identity/index.js';
 import { InspectionWorkerModule } from '../../src/modules/inspection/index.js';
+import { LifecycleWorkerModule } from '../../src/modules/lifecycle/index.js';
 import { TransferWorkerModule } from '../../src/modules/transfer/index.js';
 import { OrganizationsWorkerModule } from '../../src/modules/organizations/index.js';
 import { ProductsWorkerModule } from '../../src/modules/products/index.js';
@@ -72,6 +73,7 @@ export async function createWorkerContext(config: AppConfigService): Promise<Tes
       ServiceWorkerModule,
       InspectionWorkerModule,
       TransferWorkerModule,
+      LifecycleWorkerModule,
     ],
   })
     .overrideProvider(AppConfigService)

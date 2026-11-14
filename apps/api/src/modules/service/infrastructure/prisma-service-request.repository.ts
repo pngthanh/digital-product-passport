@@ -157,6 +157,14 @@ export class PrismaServiceRequestRepository implements ServiceRequestRepository 
     return count;
   }
 
+  async cancelAllRequested(productId: string, at: Date, scope: TransactionScope): Promise<number> {
+    const { count } = await prismaFrom(this.prisma, scope).serviceRequest.updateMany({
+      where: { productId, serviceState: 'REQUESTED' },
+      data: { serviceState: 'CANCELLED', cancelledAt: at },
+    });
+    return count;
+  }
+
   async cancelOtherRequests(
     productId: string,
     exceptId: string,

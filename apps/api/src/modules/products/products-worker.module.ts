@@ -4,6 +4,7 @@ import { DatabaseModule } from '../../infrastructure/database/database.module.js
 import { AuditModule } from '../audit/index.js';
 import { ChainSyncWorkerModule, EventProjectorRegistry } from '../chain-sync/index.js';
 import { IdentityWorkerModule } from '../identity/index.js';
+import { NotifierModule } from '../notifications/index.js';
 import { ExpireWarranties } from './application/expire-warranties.use-case.js';
 import { ProductDirectory } from './application/product-directory.service.js';
 import { ProductPassportProjector } from './application/product-passport.projector.js';
@@ -19,6 +20,7 @@ import { WarrantyExpiryScheduler } from './presentation/warranty-expiry.schedule
     AuditModule,
     ChainSyncWorkerModule,
     IdentityWorkerModule,
+    NotifierModule,
   ],
   providers: [
     ...PRODUCT_PORT_PROVIDERS,

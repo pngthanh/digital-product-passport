@@ -5,6 +5,7 @@ import { AnomalyAlerts, AnomalyRule } from '../../audit/index.js';
 import type { ChainEvent, EventProjector } from '../../chain-sync/index.js';
 import { IdentityDirectory } from '../../identity/index.js';
 import { InspectionOwnerChange } from '../../inspection/index.js';
+import { Notifier, type NotificationInput } from '../../notifications/index.js';
 import { ProductDirectory } from '../../products/index.js';
 import { ServiceOwnerChange } from '../../service/index.js';
 import {
@@ -64,6 +65,7 @@ export class TransferProjector implements EventProjector {
     private readonly service: ServiceOwnerChange,
     private readonly inspection: InspectionOwnerChange,
     private readonly alerts: AnomalyAlerts,
+    private readonly notifier: Notifier,
   ) {}
 
   async project(event: ChainEvent, scope: TransactionScope): Promise<void> {
@@ -85,6 +87,19 @@ export class TransferProjector implements EventProjector {
     if (!closed) {
       await this.unknown(event);
       return;
+    }
+    const outcome: NotificationInput['type'] | null =
+      state === 'COMPLETED'
+        ? 'TRANSFER_ACCEPTED'
+        : state === 'REJECTED'
+          ? 'TRANSFER_REJECTED'
+          : null;
+    const product = outcome ? await this.products.findById(closed.productId) : null;
+    if (outcome && product) {
+      await this.notifier.notify(
+        { type: outcome, recipients: [closed.fromPartyId], product },
+        scope,
+      );
     }
     if (state === 'COMPLETED') {
       await this.products.linkOwnershipTransfer(
@@ -135,7 +150,7 @@ export class TransferProjector implements EventProjector {
       await this.unknown(event, product?.id);
       return;
     }
-    await this.requests.create(
+    const created = await this.requests.create(
       {
         chainRequestId: requestId,
         productId: product.id,
@@ -147,6 +162,12 @@ export class TransferProjector implements EventProjector {
       },
       scope,
     );
+    if (created) {
+      await this.notifier.notify(
+        { type: 'TRANSFER_REQUESTED', recipients: [toPartyId], product },
+        scope,
+      );
+    }
   }
 
   private async unknown(event: ChainEvent, productId?: string): Promise<void> {
