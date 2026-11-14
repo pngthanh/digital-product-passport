@@ -24,6 +24,8 @@
     "admin-role:local": "hardhat run --network localhost scripts/grant-admin-role.ts",
     "admin-role:monad": "hardhat run --network monadTestnet scripts/grant-admin-role.ts",
     "abi:export": "hardhat run scripts/export-abi.ts",
+    "bench:local": "hardhat run --network localhost scripts/benchmark.ts",
+    "bench:monad": "hardhat run --network monadTestnet scripts/benchmark.ts",
     "clean": "hardhat clean",
     "typecheck": "hardhat build --quiet && tsc --noEmit",
     "lint": "oxlint -c ../../.oxlintrc.json test scripts ignition hardhat.config.ts"

@@ -264,6 +264,24 @@ describe('ServiceTicketManager – đóng phiếu (SVC-04)', () => {
       .withArgs(TICKET);
   });
 
+  it('Mục 21.2: Admin khoá trung tâm sau khi đã ghi phiếu: phiếu cũ còn nguyên, không mở phiếu mới được', async () => {
+    const { registry, service, admin, dave, sold, authorizeOpening, open } =
+      await networkHelpers.loadFixture(deployService);
+    const productId = await sold();
+    await open(dave, await authorizeOpening({ productId }));
+    await service.connect(dave).closeTicket(TICKET, true, EVIDENCE);
+
+    await registry.connect(admin).disableOrganization(CENTER, id('vi pham quy trinh'));
+
+    const ticket = await service.ticket(TICKET);
+    expect(ticket.state).to.equal(TICKET_STATE.REPAIRED);
+    expect(ticket.serviceCenterId).to.equal(CENTER);
+    expect(ticket.evidenceHash).to.equal(EVIDENCE);
+    await expect(open(dave, await authorizeOpening({ productId, ticketId: TICKET_2 })))
+      .to.be.revertedWithCustomError(service, 'NotAuthorizedServiceCenter')
+      .withArgs(dave.address);
+  });
+
   it('thiếu SERVICE_CONTRACT_ROLE thì không tạm dừng được bảo hành', async () => {
     const { registry, service, admin, dave, sold, authorizeOpening, open, warranty } =
       await networkHelpers.loadFixture(deployService);
