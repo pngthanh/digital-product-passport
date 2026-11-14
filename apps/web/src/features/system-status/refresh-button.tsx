@@ -6,7 +6,13 @@ import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 
-export function RefreshButton() {
+export function RefreshButton({
+  label = 'Kiểm tra lại',
+  pendingLabel = 'Đang kiểm tra…',
+}: {
+  label?: string;
+  pendingLabel?: string;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -18,7 +24,7 @@ export function RefreshButton() {
       onClick={() => startTransition(() => router.refresh())}
     >
       <RotateCw aria-hidden className={cn('size-3.5', pending && 'animate-spin')} />
-      {pending ? 'Đang kiểm tra…' : 'Kiểm tra lại'}
+      {pending ? pendingLabel : label}
     </Button>
   );
 }

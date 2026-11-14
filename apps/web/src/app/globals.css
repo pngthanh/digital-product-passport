@@ -43,6 +43,9 @@
   --warn-tint: #fbf2e2;
   --bad: #b4232c;
   --bad-tint: #fbeaeb;
+  /* Biểu đồ (M12): một chuỗi số liệu, đã kiểm độ tương phản >= 3:1 với nền surface. */
+  --chart-1: var(--color-ocean-500);
+  --chart-grid: #e8edf2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -64,6 +67,8 @@
     --warn-tint: #2c2210;
     --bad: #f06a72;
     --bad-tint: #321619;
+    --chart-1: var(--color-ocean-400);
+    --chart-grid: #1c2935;
   }
 }
 
@@ -86,6 +91,8 @@
   --color-warn-tint: var(--warn-tint);
   --color-bad: var(--bad);
   --color-bad-tint: var(--bad-tint);
+  --color-chart-1: var(--chart-1);
+  --color-chart-grid: var(--chart-grid);
 }
 
 @layer base {

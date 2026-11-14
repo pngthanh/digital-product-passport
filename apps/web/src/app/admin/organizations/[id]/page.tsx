@@ -46,12 +46,12 @@ export default async function AdminOrganizationPage({
   const canDecide = organization.stage === 'PENDING' || organization.stage === 'AUTHORIZED';
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <Link
-        href={{ pathname: '/admin', query: { stage: organization.stage } }}
+        href={{ pathname: '/admin/organizations', query: { stage: organization.stage } }}
         className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline"
       >
-        ← Quản trị
+        ← Doanh nghiệp
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <h1 className="text-3xl font-semibold tracking-tight">{organization.name}</h1>
