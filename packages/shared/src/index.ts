@@ -41,3 +41,4 @@ export * from './api/products.js';
 export * from './api/service.js';
 export * from './api/transfer.js';
 export * from './api/verification.js';
+export * from './api/monitoring.js';
