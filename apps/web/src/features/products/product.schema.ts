@@ -53,7 +53,7 @@ export const organizationLabelSchema: z.ZodType<OrganizationLabel> = z.object({
   partyId: bytes32,
 });
 
-const partyLabelSchema: z.ZodType<PartyLabel> = z.discriminatedUnion('kind', [
+export const partyLabelSchema: z.ZodType<PartyLabel> = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('ORGANIZATION'), organization: organizationLabelSchema }),
   z.object({ kind: z.literal('PERSON'), isYou: z.boolean() }),
 ]);
@@ -242,7 +242,7 @@ export const publicPassportSchema: z.ZodType<PublicPassportView> = z.object({
     partyId: bytes32,
   }),
   holder: partyLabelSchema.nullable(),
-  pendingRetailer: z.object({ name: z.string() }).nullable(),
+  pendingRetailer: z.object({ name: z.string(), partyId: bytes32 }).nullable(),
   hasOwner: z.boolean(),
   warranty: warrantySchema.nullable(),
   proof: proofSchema,

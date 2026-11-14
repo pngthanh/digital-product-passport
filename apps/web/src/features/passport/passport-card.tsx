@@ -83,7 +83,7 @@ export function PassportCard({ passport }: { passport: PublicPassportView }) {
           ) : null}
         </dd>
         <dt className="text-muted">Chủ sở hữu</dt>
-        <dd>{passport.hasOwner ? 'Đã có chủ (người dùng cá nhân)' : 'Chưa bán'}</dd>
+        <dd>{passport.hasOwner ? 'Đã có chủ (không hiện danh tính)' : 'Chưa bán'}</dd>
         <dt className="text-muted">Mã tra cứu</dt>
         <dd className="font-mono tracking-wider">{formatPublicCode(passport.publicCode)}</dd>
       </dl>

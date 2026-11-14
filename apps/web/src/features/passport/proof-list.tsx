@@ -34,29 +34,40 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * Bằng chứng để tự kiểm chứng: hash của hồ sơ đang hiển thị, kết quả đọc trực tiếp ProductPassport
- * lúc tải trang, và giao dịch đăng ký mở được trên explorer.
+ * lúc tải trang, và giao dịch đăng ký mở được trên explorer. `checks={false}` khi trang đã có khung
+ * đối chiếu đầy đủ (hộ chiếu công khai, M11) và chỉ cần phần mã.
  */
-export function ProofList({ proof, registered }: { proof: ProductProof; registered: boolean }) {
+export function ProofList({
+  proof,
+  registered,
+  checks = true,
+}: {
+  proof: ProductProof;
+  registered: boolean;
+  checks?: boolean;
+}) {
   return (
     <div className="grid gap-4">
-      <ul className="grid gap-1.5 text-sm">
-        <Check ok={proof.metadataMatchesHash}>
-          {proof.metadataMatchesHash
-            ? 'Băm lại hồ sơ đang hiển thị ra đúng hash đã ghi on-chain.'
-            : 'Hồ sơ đang hiển thị không khớp hash đã ghi.'}
-        </Check>
-        {registered ? (
-          <Check ok={proof.onchainMatches}>
-            {proof.onchainMatches === null
-              ? 'Chưa đọc được ProductPassport lúc tải trang (RPC bận). Tải lại để đối chiếu.'
-              : proof.onchainMatches
-                ? 'Đọc trực tiếp ProductPassport: nhà sản xuất và hash hồ sơ khớp.'
-                : 'Dữ liệu trên ProductPassport khác hồ sơ đang hiển thị.'}
+      {checks ? (
+        <ul className="grid gap-1.5 text-sm">
+          <Check ok={proof.metadataMatchesHash}>
+            {proof.metadataMatchesHash
+              ? 'Băm lại hồ sơ đang hiển thị ra đúng hash đã ghi on-chain.'
+              : 'Hồ sơ đang hiển thị không khớp hash đã ghi.'}
           </Check>
-        ) : (
-          <Check ok={null}>Chưa ghi lên blockchain.</Check>
-        )}
-      </ul>
+          {registered ? (
+            <Check ok={proof.onchainMatches}>
+              {proof.onchainMatches === null
+                ? 'Chưa đọc được ProductPassport lúc tải trang (RPC bận). Tải lại để đối chiếu.'
+                : proof.onchainMatches
+                  ? 'Đọc trực tiếp ProductPassport: nhà sản xuất và hash hồ sơ khớp.'
+                  : 'Dữ liệu trên ProductPassport khác hồ sơ đang hiển thị.'}
+            </Check>
+          ) : (
+            <Check ok={null}>Chưa ghi lên blockchain.</Check>
+          )}
+        </ul>
+      ) : null}
       <dl className="grid gap-3">
         {proof.registrationTxHash ? (
           <Row label="Giao dịch đăng ký">
