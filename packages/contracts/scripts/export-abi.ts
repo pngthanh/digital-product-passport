@@ -24,6 +24,11 @@ const EXPORTS = [
     file: 'product-passport.abi.ts',
   },
   {
+    contract: 'ProductLifecycle',
+    constant: 'PRODUCT_LIFECYCLE_ABI',
+    file: 'product-lifecycle.abi.ts',
+  },
+  {
     contract: 'ServiceTicketManager',
     constant: 'SERVICE_TICKET_MANAGER_ABI',
     file: 'service-ticket-manager.abi.ts',

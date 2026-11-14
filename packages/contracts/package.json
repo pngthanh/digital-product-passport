@@ -19,6 +19,8 @@
     "deploy:inspections:monad": "hardhat run --network monadTestnet scripts/deploy-inspections.ts",
     "deploy:transfers:local": "hardhat run --network localhost scripts/deploy-transfers.ts",
     "deploy:transfers:monad": "hardhat run --network monadTestnet scripts/deploy-transfers.ts",
+    "deploy:lifecycle:local": "hardhat run --network localhost scripts/deploy-lifecycle.ts",
+    "deploy:lifecycle:monad": "hardhat run --network monadTestnet scripts/deploy-lifecycle.ts",
     "admin-role:local": "hardhat run --network localhost scripts/grant-admin-role.ts",
     "admin-role:monad": "hardhat run --network monadTestnet scripts/grant-admin-role.ts",
     "abi:export": "hardhat run scripts/export-abi.ts",
